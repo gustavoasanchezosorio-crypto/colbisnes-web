@@ -1,0 +1,41 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Product {
+  id                String   @id @default(cuid())
+  title             String
+  description       String
+  priceCOP          Int
+  city              String
+
+  status            String   @default("AVAILABLE")
+
+  acceptedOfferId   String?
+  paymentExpiresAt  DateTime?   // 👈 CAMBIADO DE BigInt A DateTime
+
+  paidAt            DateTime?   
+  soldAt            DateTime?   
+
+  createdAt         DateTime @default(now())
+
+  offers            Offer[]
+}
+
+model Offer {
+  id        String   @id @default(cuid())
+  productId String
+  amountCOP Int
+  message   String?
+  status    String   @default("OPEN")
+
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id])
+}
