@@ -1,14 +1,14 @@
+cat > app/api/payments/mock/route.ts << 'EOF'
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { productId } = body;
+    const { productId } = await request.json();
 
     if (!productId) {
       return NextResponse.json(
-        { error: "productId requerido" },
+        { error: "productId es requerido" },
         { status: 400 }
       );
     }
@@ -26,30 +26,28 @@ export async function POST(req: Request) {
 
     if (product.status !== "PAYMENT_PENDING") {
       return NextResponse.json(
-        { error: "El producto no está en proceso de pago" },
+        { error: "El producto no está pendiente de pago" },
         { status: 400 }
       );
     }
 
-    await prisma.product.update({
+    // Simular pago exitoso → pasa a IN_ESCROW
+    const updated = await prisma.product.update({
       where: { id: productId },
       data: {
-        status: "SOLD",
+        status: "IN_ESCROW",
         paidAt: new Date(),
-        soldAt: new Date(),
         paymentExpiresAt: null,
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Pago confirmado, producto vendido",
-    });
+    return NextResponse.json({ success: true, product: updated });
   } catch (error) {
-    console.error("Error confirmando pago:", error);
+    console.error("POST /api/payments/mock error:", error);
     return NextResponse.json(
       { error: "Error interno" },
       { status: 500 }
     );
   }
 }
+EOF

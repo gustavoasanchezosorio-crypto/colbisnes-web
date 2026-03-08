@@ -2,8 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 
 const colors = {
   primary: "#00589F",
@@ -26,7 +24,7 @@ type Product = {
   paymentExpiresAt?: string | number | null;
   paidAt?: string | null;
   soldAt?: string | null;
-  seller?: { id: string; name: string | null; city: string | null; avgRating?: number; totalReviews?: number };
+  seller?: { id: string; name: string | null; city: string | null };
   _count?: { offers: number };
 };
 
@@ -79,16 +77,10 @@ function etiquetaEstadoOferta(estado: Offer["status"]) {
 
 export default function Page() {
   const { data: session } = useSession();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Estados para el formulario de publicación
   const [title, setTitle] = useState("");
   const [priceCOP, setPriceCOP] = useState("");
   const [city, setCity] = useState("Bogotá");
   const [description, setDescription] = useState("");
-
-  // Estados para productos y ofertas
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -104,16 +96,6 @@ export default function Page() {
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Estados para filtros
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [filterCity, setFilterCity] = useState(searchParams.get("city") || "");
-  const [filterMinPrice, setFilterMinPrice] = useState(searchParams.get("minPrice") || "");
-  const [filterMaxPrice, setFilterMaxPrice] = useState(searchParams.get("maxPrice") || "");
-  const [filterStatus, setFilterStatus] = useState(searchParams.get("status") || "");
-
-  // Ciudades disponibles para el filtro (podrías obtenerlas de la BD)
-  const cities = ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena"];
-
   useEffect(() => {
     const interval = setInterval(() => {
       setProducts(prev => [...prev]); // Forzar re-render para el contador
@@ -121,10 +103,9 @@ export default function Page() {
     return () => clearInterval(interval);
   }, []);
 
-  // Efecto para cargar productos cuando cambian los filtros
   useEffect(() => {
     fetchProducts();
-  }, [searchQuery, filterCity, filterMinPrice, filterMaxPrice, filterStatus]);
+  }, []);
 
   useEffect(() => {
     if (selectedProductId) fetchOffers(selectedProductId);
@@ -134,15 +115,7 @@ export default function Page() {
   async function fetchProducts() {
     setLoadingProducts(true);
     try {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append("q", searchQuery);
-      if (filterCity) params.append("city", filterCity);
-      if (filterMinPrice) params.append("minPrice", filterMinPrice);
-      if (filterMaxPrice) params.append("maxPrice", filterMaxPrice);
-      if (filterStatus) params.append("status", filterStatus);
-
-      const url = `/api/products${params.toString() ? `?${params.toString()}` : ""}`;
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch("/api/products", { cache: "no-store" });
       if (!res.ok) throw new Error(`GET /api/products -> ${res.status}`);
       const data = await res.json();
       setProducts(Array.isArray(data) ? data : []);
@@ -271,6 +244,7 @@ export default function Page() {
     }
   }
 
+  // Función para enviar calificación
   async function handleSubmitReview(productId: string) {
     if (!session) return alert("Debes iniciar sesión");
     if (reviewRating < 1 || reviewRating > 5) return alert("La calificación debe ser entre 1 y 5");
@@ -294,7 +268,6 @@ export default function Page() {
       setReviewingProductId(null);
       setReviewRating(5);
       setReviewComment("");
-      await fetchProducts(); // para actualizar calificaciones si es necesario
     } catch (e: any) {
       console.error(e);
       alert(e.message);
@@ -303,25 +276,11 @@ export default function Page() {
     }
   }
 
-  // Manejar envío del formulario de búsqueda
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Actualizar la URL con los filtros (opcional)
-    const params = new URLSearchParams();
-    if (searchQuery) params.append("q", searchQuery);
-    if (filterCity) params.append("city", filterCity);
-    if (filterMinPrice) params.append("minPrice", filterMinPrice);
-    if (filterMaxPrice) params.append("maxPrice", filterMaxPrice);
-    if (filterStatus) params.append("status", filterStatus);
-    router.push(`/?${params.toString()}`);
-    // fetchProducts se dispara por el useEffect
-  };
-
   return (
     <div style={{ backgroundColor: colors.background, minHeight: "100vh", color: colors.text }}>
       <header style={{ backgroundColor: colors.primary, color: colors.white, padding: "1rem 2rem" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0 }}>COLBISNES</h1>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h1 style={{ fontSize: "1.8rem", fontWeight: 700 }}>COLBISNES</h1>
           <div>
             {session ? (
               <>
@@ -339,111 +298,32 @@ export default function Page() {
       </header>
 
       <main style={{ maxWidth: 1200, margin: "2rem auto", padding: "0 1rem" }}>
-        {/* Formulario de publicación (solo para usuarios logueados) */}
         {session && (
           <section style={{ backgroundColor: colors.white, borderRadius: 20, padding: "1.5rem", marginBottom: "2rem", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-            <h2 style={{ color: colors.primary, marginTop: 0 }}>Publicar producto</h2>
+            <h2 style={{ color: colors.primary }}>Publicar producto</h2>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título" style={{ width: "100%", padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}`, marginBottom: "1rem" }} />
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-              <input value={priceCOP} onChange={e => setPriceCOP(e.target.value)} placeholder="Precio COP" style={{ flex: 2, minWidth: 200, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }} />
+            <div style={{ display: "flex", gap: "1rem" }}>
+              <input value={priceCOP} onChange={e => setPriceCOP(e.target.value)} placeholder="Precio COP" style={{ flex: 2, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }} />
               <select value={city} onChange={e => setCity(e.target.value)} style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}>
                 <option>Bogotá</option><option>Medellín</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option>
               </select>
             </div>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descripción" rows={3} style={{ width: "100%", padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}`, marginBottom: "1rem" }} />
-            <div style={{ display: "flex", gap: "1rem" }}>
-              <button onClick={onPublish} disabled={publishing} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600, cursor: publishing ? "not-allowed" : "pointer" }}>
-                {publishing ? "Publicando..." : "Publicar"}
-              </button>
-              <button onClick={fetchProducts} disabled={loadingProducts} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600 }}>
-                Recargar
-              </button>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descripción" rows={3} style={{ width: "100%", padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}`, marginTop: "1rem" }} />
+            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+              <button onClick={onPublish} disabled={publishing} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600 }}>{publishing ? "Publicando..." : "Publicar"}</button>
+              <button onClick={fetchProducts} disabled={loadingProducts} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600 }}>Recargar</button>
             </div>
           </section>
         )}
 
-        {/* Barra de búsqueda y filtros */}
-        <section style={{ backgroundColor: colors.white, borderRadius: 20, padding: "1.5rem", marginBottom: "2rem", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <h2 style={{ color: colors.primary, marginTop: 0, marginBottom: "1rem" }}>Buscar productos</h2>
-          <form onSubmit={handleSearch}>
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-              <input
-                type="text"
-                placeholder="Buscar por título o descripción..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ flex: 3, minWidth: 250, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              />
-              <select
-                value={filterCity}
-                onChange={e => setFilterCity(e.target.value)}
-                style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              >
-                <option value="">Todas las ciudades</option>
-                {cities.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
-              <input
-                type="number"
-                placeholder="Precio mínimo"
-                value={filterMinPrice}
-                onChange={e => setFilterMinPrice(e.target.value)}
-                style={{ flex: 1, minWidth: 120, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              />
-              <span>a</span>
-              <input
-                type="number"
-                placeholder="Precio máximo"
-                value={filterMaxPrice}
-                onChange={e => setFilterMaxPrice(e.target.value)}
-                style={{ flex: 1, minWidth: 120, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              />
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="AVAILABLE">Disponible</option>
-                <option value="PAYMENT_PENDING">Pago pendiente</option>
-                <option value="IN_ESCROW">En custodia</option>
-                <option value="SOLD">Vendido</option>
-              </select>
-              <button type="submit" style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.primary, color: colors.white, fontWeight: 600, cursor: "pointer" }}>
-                Buscar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setFilterCity("");
-                  setFilterMinPrice("");
-                  setFilterMaxPrice("");
-                  setFilterStatus("");
-                  router.push("/");
-                }}
-                style={{ padding: "0.75rem 2rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600, cursor: "pointer" }}
-              >
-                Limpiar
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {/* Lista de productos */}
         <section>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h2 style={{ color: colors.primary, margin: 0 }}>Productos</h2>
-            <span style={{ background: colors.lightGray, padding: "0.25rem 1rem", borderRadius: 20 }}>{products.length} encontrados</span>
+            <h2 style={{ color: colors.primary }}>Productos</h2>
+            <span style={{ background: colors.lightGray, padding: "0.25rem 1rem", borderRadius: 20 }}>{products.length} publicados</span>
           </div>
 
-          {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "2rem" }}>Cargando productos...</div>
-          ) : products.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "3rem", background: colors.white, borderRadius: 20, border: `2px dashed ${colors.lightGray}` }}>
-              No hay productos que coincidan con los filtros.
-            </div>
+          {products.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "3rem", background: colors.white, borderRadius: 20, border: `2px dashed ${colors.lightGray}` }}>No hay productos aún.</div>
           ) : (
             <div style={{ display: "grid", gap: "1.5rem" }}>
               {products.map(p => {
@@ -484,15 +364,15 @@ export default function Page() {
                           border: "4px solid #ff0000",
                           padding: "0.5rem 2rem",
                           borderRadius: 20,
-                        }}>VENDIDO POR COLBISNES</span>
+                        }}>VENDIDO</span>
                       </div>
                     )}
 
                     <div style={{ position: "relative", zIndex: isSold ? 5 : 2 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
-                        <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
                           <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.4rem" }}>{p.title}</h3>
-                          <div style={{ display: "flex", gap: "1rem", color: "#666", fontSize: "0.9rem", alignItems: "center", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", gap: "1rem", color: "#666", fontSize: "0.9rem", alignItems: "center" }}>
                             <span>📍 {p.city}</span>
                             <span>📦 {estado}</span>
                             {!isSold && pendingOffersCount > 0 && (
@@ -502,24 +382,9 @@ export default function Page() {
                             )}
                           </div>
                           <p style={{ margin: "0.5rem 0 0 0" }}>{p.description}</p>
-                          {p.seller && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", color: colors.primary, marginTop: "0.5rem" }}>
-                              <Link href={`/user/${p.seller.id}`} style={{ textDecoration: "none", color: colors.primary, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <span>Vendedor: {p.seller.name || "Anónimo"}</span>
-                                {p.seller.avgRating ? (
-                                  <span style={{ background: colors.secondary, color: colors.primary, padding: "0.2rem 0.6rem", borderRadius: 20, fontSize: "0.8rem", fontWeight: 600 }}>
-                                    {p.seller.avgRating} ⭐ ({p.seller.totalReviews})
-                                  </span>
-                                ) : (
-                                  <span style={{ background: colors.lightGray, color: "#666", padding: "0.2rem 0.6rem", borderRadius: 20, fontSize: "0.8rem" }}>
-                                    Nuevo vendedor
-                                  </span>
-                                )}
-                              </Link>
-                            </div>
-                          )}
+                          {p.seller {p.seller {p.seller && <p style={{ fontSize: "0.9rem", color: colors.primary }}>Vendedor: {p.seller.name || "Anónimo"}</p>}{p.seller && <p style={{ fontSize: "0.9rem", color: colors.primary }}>Vendedor: {p.seller.name || "Anónimo"}</p>} <Link href={`/user/${p.seller.id}`} style={{ textDecoration: "none", color: colors.primary }}><span style={{ fontSize: "0.9rem" }}>Vendedor: {p.seller.name || "Anónimo"}</span></Link>}{p.seller {p.seller && <p style={{ fontSize: "0.9rem", color: colors.primary }}>Vendedor: {p.seller.name || "Anónimo"}</p>}{p.seller && <p style={{ fontSize: "0.9rem", color: colors.primary }}>Vendedor: {p.seller.name || "Anónimo"}</p>} <Link href={`/user/${p.seller.id}`} style={{ textDecoration: "none", color: colors.primary }}><span style={{ fontSize: "0.9rem" }}>Vendedor: {p.seller.name || "Anónimo"}</span></Link>} <Link href={`/user/${p.seller.id}`} style={{ textDecoration: "none", color: colors.primary }}><span style={{ fontSize: "0.9rem" }}>Vendedor: {p.seller.name || "Anónimo"}</span></Link>}
                         </div>
-                        <div style={{ fontSize: "1.8rem", fontWeight: 700, color: colors.secondary, marginLeft: "1rem" }}>{moneyCOP(p.priceCOP)}</div>
+                        <div style={{ fontSize: "1.8rem", fontWeight: 700, color: colors.secondary }}>{moneyCOP(p.priceCOP)}</div>
                       </div>
 
                       {enPago && tiempo && tiempo !== "00:00" && (
@@ -609,7 +474,7 @@ export default function Page() {
                         <div style={{ marginTop: "2rem", borderTop: `1px solid ${colors.lightGray}`, paddingTop: "1.5rem" }}>
                           {!isOwner && (
                             <>
-                              <h4 style={{ color: colors.primary, marginTop: 0 }}>Nueva oferta</h4>
+                              <h4 style={{ color: colors.primary }}>Nueva oferta</h4>
                               <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
                                 <input value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Monto en COP" style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }} />
                                 <button onClick={() => onMakeOffer(p.id)} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600 }}>Enviar</button>
@@ -625,7 +490,7 @@ export default function Page() {
                             <div style={{ display: "grid", gap: "1rem" }}>
                               {offers.map(o => (
                                 <div key={o.id} style={{ border: `1px solid ${colors.lightGray}`, borderRadius: 16, padding: "1rem", background: colors.white }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <span style={{ fontWeight: 700, fontSize: "1.2rem", color: colors.primary }}>{moneyCOP(o.amountCOP)}</span>
                                     <span style={{
                                       background: o.status === "PENDING" ? colors.secondary : o.status === "ACCEPTED" ? "#4CAF50" : "#f44336",
@@ -661,7 +526,7 @@ export default function Page() {
       </main>
 
       <footer style={{ backgroundColor: colors.primary, color: colors.white, padding: "2rem 1rem", marginTop: "3rem", textAlign: "center" }}>
-        <h3 style={{ color: colors.secondary, marginBottom: "1.5rem" }}>Medios de pago aceptados</h3>
+        <h3 style={{ color: colors.secondary }}>Medios de pago aceptados</h3>
         <div style={{ display: "flex", justifyContent: "center", gap: "2rem", flexWrap: "wrap", fontSize: "1.2rem" }}>
           <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>PSE</span>
           <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>Nequi</span>

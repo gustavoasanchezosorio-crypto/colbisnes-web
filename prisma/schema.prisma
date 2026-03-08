@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,34 +7,101 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?
+  name          String?
+  phone         String?
+  city          String?
+  image         String?   // URL de la foto de perfil
+  emailVerified DateTime?
+  role          String    @default("USER")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  products      Product[]
+  offers        Offer[]
+  sessions      Session[]
+  accounts      Account[]
+  sentReviews   Review[]  @relation("sender")
+  receivedReviews Review[] @relation("receiver")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Product {
   id                String   @id @default(cuid())
   title             String
   description       String
   priceCOP          Int
   city              String
-
-  status            String   @default("AVAILABLE")
-
+  status            String   @default("AVAILABLE") // AVAILABLE, PAYMENT_PENDING, IN_ESCROW, SOLD
   acceptedOfferId   String?
-  paymentExpiresAt  DateTime?   // 👈 CAMBIADO DE BigInt A DateTime
-
-  paidAt            DateTime?   
-  soldAt            DateTime?   
-
+  paymentExpiresAt  DateTime?
+  paidAt            DateTime?
+  soldAt            DateTime?
   createdAt         DateTime @default(now())
 
+  sellerId          String
+  seller            User     @relation(fields: [sellerId], references: [id])
+
   offers            Offer[]
+  reviews           Review[]
 }
 
 model Offer {
   id        String   @id @default(cuid())
-  productId String
   amountCOP Int
   message   String?
-  status    String   @default("OPEN")
-
+  status    String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
   createdAt DateTime @default(now())
 
+  productId String
   product   Product  @relation(fields: [productId], references: [id])
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+
+  fromUserId  String
+  fromUser    User     @relation("sender", fields: [fromUserId], references: [id])
+
+  toUserId    String
+  toUser      User     @relation("receiver", fields: [toUserId], references: [id])
+
+  @@unique([productId, fromUserId])
 }

@@ -1,29 +1,43 @@
-import { prisma } from "./prisma";
+// lib/releaseExpired.ts
+import { prisma } from "@/lib/prisma";
 
 /**
- * Libera automáticamente productos cuyo tiempo de pago ya venció.
- * Regla:
- * - Si status = PAYMENT_PENDING
- * - y paymentExpiresAt < ahora
- * → vuelve a AVAILABLE
+ * Libera productos que quedaron en PAYMENT_PENDING y ya vencieron.
+ * Reglas:
+ * - status = PAYMENT_PENDING
+ * - paymentExpiresAt != null
+ * - paymentExpiresAt < now (now ES Date, NO number)
  */
-export async function releaseExpiredReservations() {
-  const now = new Date();
+export async function releaseExpiredProducts() {
+  const now = new Date(); // ✅ DateTime real
 
-  await prisma.product.updateMany({
+  const expired = await prisma.product.findMany({
     where: {
       status: "PAYMENT_PENDING",
       paymentExpiresAt: {
         not: null,
-        lt: now,
+        lt: now, // ✅ Date
       },
-      paidAt: null,
-      soldAt: null,
     },
+    select: {
+      id: true,
+    },
+  });
+
+  if (expired.length === 0) {
+    return { released: 0, ids: [] as string[] };
+  }
+
+  const ids = expired.map((p) => p.id);
+
+  await prisma.product.updateMany({
+    where: { id: { in: ids } },
     data: {
       status: "AVAILABLE",
       acceptedOfferId: null,
       paymentExpiresAt: null,
     },
   });
+
+  return { released: ids.length, ids };
 }
