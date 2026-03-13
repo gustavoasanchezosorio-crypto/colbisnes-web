@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendEmail } from '@/lib/email';
 
 export async function GET(request: Request) {
   try {
@@ -34,7 +35,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "productId y amountCOP requeridos" }, { status: 400 });
     }
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { seller: true },
+    });
     if (!product || product.status !== "AVAILABLE") {
       return NextResponse.json({ error: "Producto no disponible" }, { status: 400 });
     }
@@ -55,6 +59,18 @@ export async function POST(request: Request) {
         userId: session.user.id,
       },
     });
+
+    // Notificar al vendedor con HTML plano
+    try {
+      const html = `<p>Hola ${product.seller.name || 'Vendedor'}, tienes una nueva oferta de ${session.user.name || 'Comprador'} por tu producto <strong>${product.title}</strong> por $${amountCOP}.</p>`;
+      await sendEmail({
+        to: product.seller.email,
+        subject: 'Nueva oferta en Colbisnes',
+        html,
+      });
+    } catch (emailError) {
+      console.error('Error enviando email de nueva oferta:', emailError);
+    }
 
     return NextResponse.json(offer, { status: 201 });
   } catch (error) {
@@ -78,7 +94,7 @@ export async function PATCH(request: Request) {
 
     const offer = await prisma.offer.findUnique({
       where: { id: offerId },
-      include: { product: true },
+      include: { product: { include: { seller: true } }, user: true },
     });
 
     if (!offer) {
@@ -116,6 +132,18 @@ export async function PATCH(request: Request) {
       });
       return { updatedOffer, updatedProduct };
     });
+
+    // Notificar al comprador con HTML plano
+    try {
+      const html = `<p>Hola ${offer.user.name || 'Comprador'}, tu oferta por <strong>${offer.product.title}</strong> por $${offer.amountCOP} ha sido aceptada. Ahora tienes 10 minutos para pagar.</p>`;
+      await sendEmail({
+        to: offer.user.email,
+        subject: '¡Tu oferta fue aceptada!',
+        html,
+      });
+    } catch (emailError) {
+      console.error('Error enviando email de oferta aceptada:', emailError);
+    }
 
     return NextResponse.json({ success: true, status: "ACCEPTED", product: result.updatedProduct });
   } catch (error) {
