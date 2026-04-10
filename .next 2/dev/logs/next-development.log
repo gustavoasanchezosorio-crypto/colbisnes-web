@@ -1,0 +1,8 @@
+[00:00:01.192] Server  LOG     ✓ Ready in 1031ms
+[00:00:03.627] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:03.632] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:03.679] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:04.179] Server  LOG     Iniciando GET /api/products
+[00:00:04.182] Server  LOG     Filtros: {}
+[00:00:04.182] Server  LOG     Ejecutando consulta Prisma...
+[00:00:04.184] Server  LOG     Se encontraron 70 productos

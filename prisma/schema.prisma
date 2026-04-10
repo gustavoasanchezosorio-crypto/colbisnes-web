@@ -14,7 +14,7 @@ model User {
   name          String?
   phone         String?
   city          String?
-  image         String?   // URL de la foto de perfil
+  image         String?
   emailVerified DateTime?
   role          String    @default("USER")
   createdAt     DateTime  @default(now())
@@ -26,6 +26,16 @@ model User {
   accounts      Account[]
   sentReviews   Review[]  @relation("sender")
   receivedReviews Review[] @relation("receiver")
+  sentMessages  Message[] @relation("sentMessages")
+  receivedMessages Message[] @relation("receivedMessages")
+  auditLogs     AuditLog[]
+
+  kycLevel       Int      @default(0)
+  kycStatus      String   @default("pending")
+  kycDocumentId  String?
+  kycRequestedAt DateTime?
+  kycApprovedAt  DateTime?
+  kycRejectedAt  DateTime?
 }
 
 model Account {
@@ -60,7 +70,8 @@ model Product {
   description       String
   priceCOP          Int
   city              String
-  status            String   @default("AVAILABLE") // AVAILABLE, PAYMENT_PENDING, IN_ESCROW, SOLD
+  condition         String   @default("NUEVO") // NUEVO o USADO
+  status            String   @default("AVAILABLE")
   acceptedOfferId   String?
   paymentExpiresAt  DateTime?
   paidAt            DateTime?
@@ -72,13 +83,14 @@ model Product {
 
   offers            Offer[]
   reviews           Review[]
+  messages          Message[]
 }
 
 model Offer {
   id        String   @id @default(cuid())
   amountCOP Int
   message   String?
-  status    String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  status    String   @default("PENDING")
   createdAt DateTime @default(now())
 
   productId String
@@ -104,4 +116,31 @@ model Review {
   toUser      User     @relation("receiver", fields: [toUserId], references: [id])
 
   @@unique([productId, fromUserId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  fromUserId String
+  toUserId   String
+  productId  String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  fromUser   User     @relation("sentMessages", fields: [fromUserId], references: [id])
+  toUser     User     @relation("receivedMessages", fields: [toUserId], references: [id])
+  product    Product? @relation(fields: [productId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
 }

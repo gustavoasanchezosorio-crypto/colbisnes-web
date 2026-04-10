@@ -1,224 +1,189 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import InfiniteScroll from "react-infinite-scroll-component";
+import { z } from "zod";
 
-const colors = {
-  primary: "#00589F",
-  secondary: "#D4AF37",
-  background: "#f5f7fa",
-  text: "#1e2b3c",
-  lightGray: "#eef2f6",
-  white: "#ffffff",
-};
+import { useProducts, FilterState } from "@/hooks/useProducts";
+import { useToast } from "@/components/Toast";
+import { productSchema, ProductFormData } from "@/utils/validations";
+import { THEME, PRODUCT_STATUS, CITIES } from "@/lib/theme";
+import { Button, OutlineButton, Input, Select, TextArea } from "@/components/FormComponents";
+import { ProductCard } from "@/components/ProductCard";
+import { OfferModal } from "@/components/OfferModal";
+import { ReviewModal } from "@/components/ReviewModal";
+import { SkeletonGrid } from "@/components/Skeleton";
+import { EpaycoCheckout } from "@/components/EpaycoCheckout";
 
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  priceCOP: number;
-  city: string;
-  status?: string;
-  createdAt: string;
-  acceptedOfferId?: string | null;
-  paymentExpiresAt?: string | number | null;
-  paidAt?: string | null;
-  soldAt?: string | null;
-  seller?: { id: string; name: string | null; city: string | null; avgRating?: number; totalReviews?: number };
-  _count?: { offers: number };
-};
+const extendedProductSchema = productSchema.extend({
+  condition: z.enum(["NUEVO", "USADO"]),
+});
+type ExtendedProductFormData = z.infer<typeof extendedProductSchema>;
 
-type Offer = {
-  id: string;
-  productId: string;
-  amountCOP: number;
-  message?: string | null;
-  status: "PENDING" | "ACCEPTED" | "REJECTED";
-  createdAt: string;
-  user?: { name: string | null };
-};
+const STORAGE_KEYS = {
+  FILTERS: "colbisnes_filters",
+} as const;
 
-function moneyCOP(n: number) {
-  try {
-    return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
-  } catch {
-    return `$ ${Math.round(n).toString()}`;
-  }
-}
-
-function calcularTiempoRestante(expiraEn: string | number | null | undefined) {
-  if (!expiraEn) return null;
-  let expMs = typeof expiraEn === "string" ? new Date(expiraEn).getTime() : expiraEn;
-  if (isNaN(expMs)) return null;
-  const diff = expMs - Date.now();
-  if (diff <= 0) return "00:00";
-  const minutos = Math.floor(diff / 60000);
-  const segundos = Math.floor((diff % 60000) / 1000);
-  return `${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
-}
-
-function etiquetaEstado(estado?: string) {
-  switch (estado) {
-    case "AVAILABLE": return "DISPONIBLE";
-    case "PAYMENT_PENDING": return "PAGO EN PROCESO";
-    case "IN_ESCROW": return "EN CUSTODIA";
-    case "SOLD": return "VENDIDO";
-    default: return "DISPONIBLE";
-  }
-}
-
-function etiquetaEstadoOferta(estado: Offer["status"]) {
-  switch (estado) {
-    case "PENDING": return "PENDIENTE";
-    case "ACCEPTED": return "ACEPTADA";
-    case "REJECTED": return "RECHAZADA";
-  }
-}
+const PAYMENT_METHODS = ["PSE", "Nequi", "Daviplata", "Visa", "Mastercard"] as const;
 
 export default function Page() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Estados para el formulario de publicación
-  const [title, setTitle] = useState("");
-  const [priceCOP, setPriceCOP] = useState("");
-  const [city, setCity] = useState("Bogotá");
-  const [description, setDescription] = useState("");
+  const [filters, setFilters] = useState<FilterState & { condition?: string }>(() => {
+    const urlFilters = {
+      searchQuery: searchParams.get("q") || "",
+      city: searchParams.get("city") || "",
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+      status: searchParams.get("status") || "",
+      condition: searchParams.get("condition") || "",
+    };
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(STORAGE_KEYS.FILTERS);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            searchQuery: urlFilters.searchQuery || parsed.searchQuery || "",
+            city: urlFilters.city || parsed.city || "",
+            minPrice: urlFilters.minPrice || parsed.minPrice || "",
+            maxPrice: urlFilters.maxPrice || parsed.maxPrice || "",
+            status: urlFilters.status || parsed.status || "",
+            condition: urlFilters.condition || parsed.condition || "",
+          };
+        } catch {}
+      }
+    }
+    return urlFilters;
+  });
 
-  // Estados para productos y ofertas
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const { products, loading, error, hasMore, fetchMore, refetch } = useProducts(filters);
+
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const [reviewingProduct, setReviewingProduct] = useState<any | null>(null);
+  const [offers, setOffers] = useState<any[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(false);
-  const [offerAmount, setOfferAmount] = useState("");
-  const [offerMessage, setOfferMessage] = useState("");
+  const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [epaycoSessionId, setEpaycoSessionId] = useState<string | null>(null);
+  const [isEpaycoModalOpen, setIsEpaycoModalOpen] = useState(false);
 
-  // Estados para calificación
-  const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting, isValid },
+    watch,
+  } = useForm<ExtendedProductFormData>({
+    resolver: zodResolver(extendedProductSchema),
+    defaultValues: { city: "Bogotá", condition: "NUEVO" },
+    mode: "onChange",
+  });
 
-  // Estados para filtros
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [filterCity, setFilterCity] = useState(searchParams.get("city") || "");
-  const [filterMinPrice, setFilterMinPrice] = useState(searchParams.get("minPrice") || "");
-  const [filterMaxPrice, setFilterMaxPrice] = useState(searchParams.get("maxPrice") || "");
-  const [filterStatus, setFilterStatus] = useState(searchParams.get("status") || "");
-
-  // Ciudades disponibles para el filtro (podrías obtenerlas de la BD)
-  const cities = ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena"];
+  const titleValue = watch("title");
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProducts(prev => [...prev]); // Forzar re-render para el contador
-    }, 1000);
-    return () => clearInterval(interval);
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+    router.replace(`/?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEYS.FILTERS, JSON.stringify(filters));
+    }
+  }, [filters, router]);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
   }, []);
 
-  // Efecto para cargar productos cuando cambian los filtros
-  useEffect(() => {
-    fetchProducts();
-  }, [searchQuery, filterCity, filterMinPrice, filterMaxPrice, filterStatus]);
+  const fetchOffers = useCallback(async (productId: string) => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+    setLoadingOffers(true);
+    try {
+      const res = await fetch(`/api/offers?productId=${encodeURIComponent(productId)}`, {
+        signal: abortControllerRef.current.signal,
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Error ${res.status}`);
+      }
+      const data = await res.json();
+      setOffers(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        showToast(err.message || "Error cargando ofertas", "error");
+      }
+    } finally {
+      setLoadingOffers(false);
+      abortControllerRef.current = null;
+    }
+  }, [showToast]);
 
   useEffect(() => {
     if (selectedProductId) fetchOffers(selectedProductId);
     else setOffers([]);
-  }, [selectedProductId]);
+  }, [selectedProductId, fetchOffers]);
 
-  async function fetchProducts() {
-    setLoadingProducts(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append("q", searchQuery);
-      if (filterCity) params.append("city", filterCity);
-      if (filterMinPrice) params.append("minPrice", filterMinPrice);
-      if (filterMaxPrice) params.append("maxPrice", filterMaxPrice);
-      if (filterStatus) params.append("status", filterStatus);
-
-      const url = `/api/products${params.toString() ? `?${params.toString()}` : ""}`;
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`GET /api/products -> ${res.status}`);
-      const data = await res.json();
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      console.error(e);
-      alert("Error cargando productos.");
-    } finally {
-      setLoadingProducts(false);
+  const onPublish = useCallback(async (data: ExtendedProductFormData) => {
+    if (sessionStatus !== "authenticated") {
+      showToast("Debes iniciar sesión para publicar", "warning");
+      return;
     }
-  }
-
-  async function fetchOffers(productId: string) {
-    setLoadingOffers(true);
-    try {
-      const res = await fetch(`/api/offers?productId=${encodeURIComponent(productId)}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(`GET /api/offers -> ${res.status}`);
-      const data = await res.json();
-      setOffers(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      console.error(e);
-      alert("Error cargando ofertas.");
-    } finally {
-      setLoadingOffers(false);
-    }
-  }
-
-  async function onPublish() {
-    if (!session) return alert("Debes iniciar sesión");
-    const p = Number(priceCOP);
-    if (!title.trim() || !description.trim() || !city.trim() || !Number.isFinite(p) || p <= 0) {
-      return alert("Completa todos los campos.");
-    }
-    setPublishing(true);
     try {
       const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), priceCOP: p, city: city.trim() }),
+        body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error(`POST /api/products -> ${res.status}`);
-      setTitle(""); setPriceCOP(""); setDescription("");
-      await fetchProducts();
-    } catch (e: any) {
-      console.error(e);
-      alert("Error al publicar.");
-    } finally {
-      setPublishing(false);
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
+      reset();
+      await refetch();
+      showToast("Producto publicado exitosamente", "success");
+    } catch (err: any) {
+      showToast(err.message || "Error al publicar", "error");
     }
-  }
+  }, [sessionStatus, reset, refetch, showToast]);
 
-  async function onMakeOffer(productId: string) {
-    if (!session) return alert("Inicia sesión");
-    const a = Number(offerAmount);
-    if (!Number.isFinite(a) || a <= 0) return alert("Monto inválido");
+  const handleMakeOffer = useCallback(async (productId: string, amount: number, message: string) => {
+    if (sessionStatus !== "authenticated") {
+      showToast("Inicia sesión para hacer una oferta", "warning");
+      return;
+    }
+    setIsSubmittingOffer(true);
     try {
       const res = await fetch("/api/offers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ productId, amountCOP: a, message: offerMessage.trim() || null }),
+        body: JSON.stringify({ productId, amountCOP: amount, message: message?.trim() || null }),
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`POST /api/offers -> ${res.status} ${txt}`);
-      }
-      setOfferAmount(""); setOfferMessage("");
-      await fetchOffers(productId);
-      await fetchProducts(); // actualizar contador
-    } catch (e: any) {
-      console.error(e);
-      alert("Error al crear oferta.");
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
+      showToast("Oferta enviada exitosamente", "success");
+      await Promise.all([fetchOffers(productId), refetch()]);
+    } catch (err: any) {
+      showToast(err.message || "Error al crear la oferta", "error");
+    } finally {
+      setIsSubmittingOffer(false);
     }
-  }
+  }, [sessionStatus, showToast, fetchOffers, refetch]);
 
-  async function onUpdateOffer(offerId: string, status: "ACCEPTED" | "REJECTED") {
+  const handleUpdateOffer = useCallback(async (offerId: string, status: string) => {
     try {
       const res = await fetch("/api/offers", {
         method: "PATCH",
@@ -226,35 +191,39 @@ export default function Page() {
         credentials: "include",
         body: JSON.stringify({ offerId, status }),
       });
-      if (!res.ok) throw new Error(`PATCH /api/offers -> ${res.status}`);
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
       if (selectedProductId) {
-        await fetchOffers(selectedProductId);
-        await fetchProducts();
+        await Promise.all([fetchOffers(selectedProductId), refetch()]);
       }
-    } catch (e: any) {
-      console.error(e);
-      alert("Error al actualizar oferta.");
+      showToast(`Oferta ${status === "ACCEPTED" ? "aceptada" : "rechazada"}`, "success");
+    } catch (err: any) {
+      showToast(err.message || "Error al actualizar la oferta", "error");
     }
-  }
+  }, [selectedProductId, fetchOffers, refetch, showToast]);
 
-  async function handleMockPayment(productId: string) {
+  const handleEpaycoPayment = useCallback(async (productId: string) => {
     try {
-      const res = await fetch("/api/payments/mock", {
+      const res = await fetch("/api/payments/epayco/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ productId }),
       });
-      if (!res.ok) throw new Error(`POST /api/payments/mock -> ${res.status}`);
-      await fetchProducts();
-      if (selectedProductId === productId) await fetchOffers(productId);
-    } catch (e: any) {
-      console.error(e);
-      alert("Error en pago simulado.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al iniciar pago");
+      if (data.sessionId) {
+        setEpaycoSessionId(data.sessionId);
+        setIsEpaycoModalOpen(true);
+      } else {
+        throw new Error("No se pudo obtener sessionId de Epayco");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Error al iniciar pago", "error");
     }
-  }
+  }, [showToast]);
 
-  async function handleConfirmDelivery(productId: string) {
+  const handleConfirmDelivery = useCallback(async (productId: string) => {
     try {
       const res = await fetch("/api/payments/confirm-delivery", {
         method: "POST",
@@ -262,415 +231,295 @@ export default function Page() {
         credentials: "include",
         body: JSON.stringify({ productId }),
       });
-      if (!res.ok) throw new Error(`POST /api/payments/confirm-delivery -> ${res.status}`);
-      await fetchProducts();
-      if (selectedProductId === productId) await fetchOffers(productId);
-    } catch (e: any) {
-      console.error(e);
-      alert("Error al confirmar entrega.");
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
+      await Promise.all([refetch(), selectedProductId === productId && fetchOffers(productId)]);
+      showToast("Entrega confirmada exitosamente", "success");
+    } catch (err: any) {
+      showToast(err.message || "Error al confirmar la entrega", "error");
     }
-  }
+  }, [refetch, selectedProductId, fetchOffers, showToast]);
 
-  async function handleSubmitReview(productId: string) {
-    if (!session) return alert("Debes iniciar sesión");
-    if (reviewRating < 1 || reviewRating > 5) return alert("La calificación debe ser entre 1 y 5");
-    setSubmittingReview(true);
+  const handleSubmitReview = useCallback(async (productId: string, rating: number, comment: string) => {
+    if (rating < 1 || rating > 5) {
+      showToast("La calificación debe ser entre 1 y 5 estrellas", "error");
+      return;
+    }
     try {
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          productId,
-          rating: reviewRating,
-          comment: reviewComment.trim() || undefined,
-        }),
+        body: JSON.stringify({ productId, rating, comment: comment?.trim() || undefined }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Error al enviar calificación");
-      }
-      alert("Calificación enviada correctamente");
-      setReviewingProductId(null);
-      setReviewRating(5);
-      setReviewComment("");
-      await fetchProducts(); // para actualizar calificaciones si es necesario
-    } catch (e: any) {
-      console.error(e);
-      alert(e.message);
-    } finally {
-      setSubmittingReview(false);
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response.error || `Error ${res.status}`);
+      showToast("Calificación enviada correctamente", "success");
+      await refetch();
+      setReviewingProduct(null);
+    } catch (err: any) {
+      showToast(err.message || "Error al enviar calificación", "error");
     }
-  }
+  }, [refetch, showToast]);
 
-  // Manejar envío del formulario de búsqueda
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Actualizar la URL con los filtros (opcional)
-    const params = new URLSearchParams();
-    if (searchQuery) params.append("q", searchQuery);
-    if (filterCity) params.append("city", filterCity);
-    if (filterMinPrice) params.append("minPrice", filterMinPrice);
-    if (filterMaxPrice) params.append("maxPrice", filterMaxPrice);
-    if (filterStatus) params.append("status", filterStatus);
-    router.push(`/?${params.toString()}`);
-    // fetchProducts se dispara por el useEffect
-  };
+  const clearFilters = useCallback(() => {
+    setFilters({
+      searchQuery: "",
+      city: "",
+      minPrice: "",
+      maxPrice: "",
+      status: "",
+      condition: "",
+    });
+    if (typeof window !== "undefined") localStorage.removeItem(STORAGE_KEYS.FILTERS);
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => e.preventDefault();
+
+  const productsCount = useMemo(() => products.length, [products]);
+  const isAuthenticated = useMemo(() => sessionStatus === "authenticated", [sessionStatus]);
+
+  const Header = useMemo(() => (
+    <header style={{ background: THEME.primary, padding: "18px 28px", boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
+      <div style={{ maxWidth: 1200, margin: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Link href="/" style={{ textDecoration: "none" }}>
+          <h1 style={{ fontWeight: 800, fontSize: "1.6rem", color: "white", margin: 0 }}>COLBISNES</h1>
+        </Link>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          {isAuthenticated && session?.user ? (
+            <>
+              <Link
+                href={`/user/${session.user.id}`}
+                style={{
+                  color: "white",
+                  textDecoration: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 16px",
+                  borderRadius: 30,
+                  background: "rgba(255,255,255,0.1)",
+                  transition: "background 0.2s",
+                }}
+              >
+                <span>👤 {session.user?.name || session.user?.email}</span>
+              </Link>
+              <Button onClick={() => signOut()}>Cerrar sesión</Button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth/login" style={{ textDecoration: "none" }}>
+                <Button>Iniciar sesión</Button>
+              </Link>
+              <Link href="/auth/register" style={{ textDecoration: "none" }}>
+                <Button>Registrarse</Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  ), [isAuthenticated, session]);
+
+  const ProductFormSection = useMemo(() => {
+    if (!isAuthenticated) return null;
+    return (
+      <section style={{ background: THEME.surface, borderRadius: 20, padding: 24, border: `1px solid ${THEME.border}`, marginBottom: 40 }}>
+        <h2 style={{ fontSize: "1.5rem", marginBottom: 16, color: THEME.primary }}>Publicar producto</h2>
+        <form onSubmit={handleSubmit(onPublish)}>
+          <Input placeholder="Título *" {...register('title')} error={errors.title?.message} />
+          {titleValue && titleValue.length < 3 && (
+            <p style={{ color: THEME.muted, fontSize: "0.8rem", marginTop: 4 }}>Mínimo 3 caracteres</p>
+          )}
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+            <Input placeholder="Precio COP *" type="number" {...register('priceCOP', { valueAsNumber: true })} error={errors.priceCOP?.message} step="1000" />
+            <Select {...register('city')}>
+              {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+            </Select>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <Select {...register('condition')}>
+              <option value="NUEVO">Nuevo</option>
+              <option value="USADO">Usado</option>
+            </Select>
+          </div>
+          <TextArea placeholder="Descripción *" rows={4} {...register('description')} error={errors.description?.message} style={{ marginTop: 10 }} />
+          <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+            <Button type="submit" disabled={isSubmitting || !isValid}>{isSubmitting ? "Publicando..." : "Publicar"}</Button>
+            <OutlineButton onClick={() => refetch()} disabled={loading}>Recargar</OutlineButton>
+          </div>
+        </form>
+      </section>
+    );
+  }, [isAuthenticated, handleSubmit, onPublish, register, errors, isSubmitting, isValid, refetch, loading, titleValue]);
+
+  const FilterSection = useMemo(() => (
+    <section style={{ background: THEME.surface, borderRadius: 20, padding: 24, border: `1px solid ${THEME.border}`, marginBottom: 40 }}>
+      <h2 style={{ fontSize: "1.5rem", marginBottom: 16, color: THEME.primary }}>Buscar productos</h2>
+      <form onSubmit={handleSearch}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+          <Input
+            placeholder="Buscar por título o descripción..."
+            value={filters.searchQuery}
+            onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+            style={{ flex: 2, minWidth: 250 }}
+          />
+          <Select value={filters.city} onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ flex: 1, minWidth: 150 }}>
+            <option value="">Todas las ciudades</option>
+            {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+          </Select>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <Input type="number" placeholder="Mín" value={filters.minPrice} onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value }))} style={{ width: 100 }} min="0" step="1000" />
+          <span>a</span>
+          <Input type="number" placeholder="Máx" value={filters.maxPrice} onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value }))} style={{ width: 100 }} min="0" step="1000" />
+          <Select value={filters.condition} onChange={(e) => setFilters(prev => ({ ...prev, condition: e.target.value }))} style={{ width: 120 }}>
+            <option value="">Condición</option>
+            <option value="NUEVO">Nuevo</option>
+            <option value="USADO">Usado</option>
+          </Select>
+          <Select value={filters.status} onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: 140 }}>
+            <option value="">Todos</option>
+            <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
+            <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
+            <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
+            <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
+          </Select>
+          <Button type="submit">Buscar</Button>
+          <OutlineButton onClick={clearFilters}>Limpiar</OutlineButton>
+        </div>
+      </form>
+    </section>
+  ), [filters, clearFilters]);
+
+  const Footer = useMemo(() => (
+    <footer style={{ marginTop: 80, padding: 40, textAlign: "center", borderTop: `1px solid ${THEME.border}`, background: THEME.surface }}>
+      <h3 style={{ fontSize: "1.2rem", marginBottom: 16, color: THEME.primary }}>Medios de pago aceptados</h3>
+      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
+        {PAYMENT_METHODS.map(method => (
+          <span key={method} style={{ background: THEME.secondary, color: THEME.text, padding: "8px 20px", borderRadius: 30, fontWeight: 600 }}>
+            {method}
+          </span>
+        ))}
+      </div>
+      <p style={{ marginTop: 24, color: THEME.muted }}>© {new Date().getFullYear()} COLBISNES - Todos los derechos reservados</p>
+    </footer>
+  ), []);
 
   return (
-    <div style={{ backgroundColor: colors.background, minHeight: "100vh", color: colors.text }}>
-      <header style={{ backgroundColor: colors.primary, color: colors.white, padding: "1rem 2rem" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0 }}>COLBISNES</h1>
-          <div>
-            {session ? (
-              <>
-                <span style={{ marginRight: "1rem" }}>👤 {session.user?.name || session.user?.email}</span>
-                <button onClick={() => signOut()} style={{ padding: "0.5rem 1rem", borderRadius: 30, background: colors.secondary, color: colors.primary, border: "none", fontWeight: 600, cursor: "pointer" }}>Cerrar sesión</button>
-              </>
-            ) : (
-              <>
-                <a href="/auth/login" style={{ color: colors.white, marginRight: "1rem" }}>Iniciar sesión</a>
-                <a href="/auth/register" style={{ color: colors.white }}>Registrarse</a>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+    <div style={{ minHeight: "100vh", background: THEME.background, color: THEME.text }}>
+      {Header}
+      <main style={{ maxWidth: 1200, margin: "auto", padding: "40px 20px" }}>
+        {ProductFormSection}
+        {FilterSection}
 
-      <main style={{ maxWidth: 1200, margin: "2rem auto", padding: "0 1rem" }}>
-        {/* Formulario de publicación (solo para usuarios logueados) */}
-        {session && (
-          <section style={{ backgroundColor: colors.white, borderRadius: 20, padding: "1.5rem", marginBottom: "2rem", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-            <h2 style={{ color: colors.primary, marginTop: 0 }}>Publicar producto</h2>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título" style={{ width: "100%", padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}`, marginBottom: "1rem" }} />
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-              <input value={priceCOP} onChange={e => setPriceCOP(e.target.value)} placeholder="Precio COP" style={{ flex: 2, minWidth: 200, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }} />
-              <select value={city} onChange={e => setCity(e.target.value)} style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}>
-                <option>Bogotá</option><option>Medellín</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option>
-              </select>
-            </div>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descripción" rows={3} style={{ width: "100%", padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}`, marginBottom: "1rem" }} />
-            <div style={{ display: "flex", gap: "1rem" }}>
-              <button onClick={onPublish} disabled={publishing} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600, cursor: publishing ? "not-allowed" : "pointer" }}>
-                {publishing ? "Publicando..." : "Publicar"}
-              </button>
-              <button onClick={fetchProducts} disabled={loadingProducts} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600 }}>
-                Recargar
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* Barra de búsqueda y filtros */}
-        <section style={{ backgroundColor: colors.white, borderRadius: 20, padding: "1.5rem", marginBottom: "2rem", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <h2 style={{ color: colors.primary, marginTop: 0, marginBottom: "1rem" }}>Buscar productos</h2>
-          <form onSubmit={handleSearch}>
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-              <input
-                type="text"
-                placeholder="Buscar por título o descripción..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ flex: 3, minWidth: 250, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              />
-              <select
-                value={filterCity}
-                onChange={e => setFilterCity(e.target.value)}
-                style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              >
-                <option value="">Todas las ciudades</option>
-                {cities.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
-              <input
-                type="number"
-                placeholder="Precio mínimo"
-                value={filterMinPrice}
-                onChange={e => setFilterMinPrice(e.target.value)}
-                style={{ flex: 1, minWidth: 120, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              />
-              <span>a</span>
-              <input
-                type="number"
-                placeholder="Precio máximo"
-                value={filterMaxPrice}
-                onChange={e => setFilterMaxPrice(e.target.value)}
-                style={{ flex: 1, minWidth: 120, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              />
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="AVAILABLE">Disponible</option>
-                <option value="PAYMENT_PENDING">Pago pendiente</option>
-                <option value="IN_ESCROW">En custodia</option>
-                <option value="SOLD">Vendido</option>
-              </select>
-              <button type="submit" style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.primary, color: colors.white, fontWeight: 600, cursor: "pointer" }}>
-                Buscar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setFilterCity("");
-                  setFilterMinPrice("");
-                  setFilterMaxPrice("");
-                  setFilterStatus("");
-                  router.push("/");
-                }}
-                style={{ padding: "0.75rem 2rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600, cursor: "pointer" }}
-              >
-                Limpiar
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {/* Lista de productos */}
         <section>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h2 style={{ color: colors.primary, margin: 0 }}>Productos</h2>
-            <span style={{ background: colors.lightGray, padding: "0.25rem 1rem", borderRadius: 20 }}>{products.length} encontrados</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: "1.5rem", color: THEME.primary }}>Productos</h2>
+            <span style={{ background: THEME.border, padding: "6px 14px", borderRadius: 30, fontSize: "0.9rem" }}>
+              {productsCount} encontrado{productsCount !== 1 ? 's' : ''}
+            </span>
           </div>
 
-          {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "2rem" }}>Cargando productos...</div>
-          ) : products.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "3rem", background: colors.white, borderRadius: 20, border: `2px dashed ${colors.lightGray}` }}>
-              No hay productos que coincidan con los filtros.
+          {error && (
+            <div style={{ textAlign: "center", padding: 40, color: "red", background: "rgba(255,0,0,0.1)", borderRadius: 12, marginBottom: 20 }}>
+              ⚠️ {error}
             </div>
-          ) : (
-            <div style={{ display: "grid", gap: "1.5rem" }}>
-              {products.map(p => {
-                const estado = etiquetaEstado(p.status);
-                const enPago = p.status === "PAYMENT_PENDING";
-                const tiempo = enPago ? calcularTiempoRestante(p.paymentExpiresAt) : null;
-                const isOwner = session?.user?.id === p.seller?.id;
-                const isSold = p.status === "SOLD";
-                const pendingOffersCount = p._count?.offers || 0;
-                const isReviewing = reviewingProductId === p.id;
+          )}
 
+          <InfiniteScroll
+            dataLength={productsCount}
+            next={fetchMore}
+            hasMore={hasMore}
+            loader={<SkeletonGrid count={4} />}
+            endMessage={
+              productsCount > 0 ? (
+                <p style={{ textAlign: "center", padding: 20, color: THEME.muted }}>🎉 No hay más productos para mostrar</p>
+              ) : null
+            }
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
+              {products.map((product) => {
+                const isOwner = session?.user?.id === product.seller?.id;
+                const pendingOffersCount = product._count?.offers || 0;
                 return (
-                  <div key={p.id} style={{ position: "relative", backgroundColor: colors.white, borderRadius: 20, padding: "1.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", border: `1px solid ${colors.lightGray}` }}>
-                    {isSold && (
-                      <div style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "rgba(255, 0, 0, 0.15)",
-                        transform: "rotate(-5deg) scale(1.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        pointerEvents: "none",
-                        borderRadius: 20,
-                        zIndex: 10,
-                      }}>
-                        <span style={{
-                          color: "#ff0000",
-                          fontSize: "3rem",
-                          fontWeight: 900,
-                          textTransform: "uppercase",
-                          transform: "rotate(-5deg)",
-                          opacity: 0.8,
-                          textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
-                          border: "4px solid #ff0000",
-                          padding: "0.5rem 2rem",
-                          borderRadius: 20,
-                        }}>VENDIDO POR COLBISNES</span>
-                      </div>
-                    )}
-
-                    <div style={{ position: "relative", zIndex: isSold ? 5 : 2 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.4rem" }}>{p.title}</h3>
-                          <div style={{ display: "flex", gap: "1rem", color: "#666", fontSize: "0.9rem", alignItems: "center", flexWrap: "wrap" }}>
-                            <span>📍 {p.city}</span>
-                            <span>📦 {estado}</span>
-                            {!isSold && pendingOffersCount > 0 && (
-                              <span style={{ background: colors.secondary, color: colors.primary, padding: "0.3rem 0.8rem", borderRadius: 20, fontSize: "0.9rem", fontWeight: 700 }}>
-                                {pendingOffersCount} oferta{pendingOffersCount !== 1 ? 's' : ''}
-                              </span>
-                            )}
-                          </div>
-                          <p style={{ margin: "0.5rem 0 0 0" }}>{p.description}</p>
-                          {p.seller && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", color: colors.primary, marginTop: "0.5rem" }}>
-                              <Link href={`/user/${p.seller.id}`} style={{ textDecoration: "none", color: colors.primary, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <span>Vendedor: {p.seller.name || "Anónimo"}</span>
-                                {p.seller.avgRating ? (
-                                  <span style={{ background: colors.secondary, color: colors.primary, padding: "0.2rem 0.6rem", borderRadius: 20, fontSize: "0.8rem", fontWeight: 600 }}>
-                                    {p.seller.avgRating} ⭐ ({p.seller.totalReviews})
-                                  </span>
-                                ) : (
-                                  <span style={{ background: colors.lightGray, color: "#666", padding: "0.2rem 0.6rem", borderRadius: 20, fontSize: "0.8rem" }}>
-                                    Nuevo vendedor
-                                  </span>
-                                )}
-                              </Link>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ fontSize: "1.8rem", fontWeight: 700, color: colors.secondary, marginLeft: "1rem" }}>{moneyCOP(p.priceCOP)}</div>
-                      </div>
-
-                      {enPago && tiempo && tiempo !== "00:00" && (
-                        <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: 16, background: colors.lightGray, display: "flex", alignItems: "center", gap: "1rem" }}>
-                          <span>⏳</span> <span><strong>Pago en proceso</strong> — Tiempo restante: <span style={{ fontWeight: 700, color: colors.primary }}>{tiempo}</span></span>
-                        </div>
-                      )}
-
-                      {!isSold && (
-                        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
-                          {p.status === "PAYMENT_PENDING" && (
-                            <button onClick={() => handleMockPayment(p.id)} style={{ padding: "0.5rem 1.5rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600, cursor: "pointer" }}>Pagar (simulado)</button>
-                          )}
-                          {p.status === "IN_ESCROW" && (
-                            <button onClick={() => handleConfirmDelivery(p.id)} style={{ padding: "0.5rem 1.5rem", borderRadius: 30, border: "none", background: colors.primary, color: colors.white, fontWeight: 600, cursor: "pointer" }}>Confirmar entrega</button>
-                          )}
-                          {!isOwner ? (
-                            <button onClick={() => setSelectedProductId(p.id)} style={{ padding: "0.5rem 1.5rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: selectedProductId === p.id ? colors.primary : "transparent", color: selectedProductId === p.id ? colors.white : colors.primary, fontWeight: 600, cursor: "pointer" }}>
-                              {selectedProductId === p.id ? "Ofertas abiertas" : "Hacer oferta"}
-                            </button>
-                          ) : (
-                            pendingOffersCount > 0 && (
-                              <button onClick={() => setSelectedProductId(p.id)} style={{ padding: "0.5rem 1.5rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: selectedProductId === p.id ? colors.primary : "transparent", color: selectedProductId === p.id ? colors.white : colors.primary, fontWeight: 600, cursor: "pointer" }}>
-                                {selectedProductId === p.id ? "Ocultar ofertas" : `Ver ofertas (${pendingOffersCount})`}
-                              </button>
-                            )
-                          )}
-                        </div>
-                      )}
-
-                      {isSold && session && (
-                        <div style={{ marginTop: "1rem" }}>
-                          {!isReviewing ? (
-                            <button
-                              onClick={() => setReviewingProductId(p.id)}
-                              style={{ padding: "0.5rem 1.5rem", borderRadius: 30, border: "none", background: colors.primary, color: colors.white, fontWeight: 600, cursor: "pointer" }}
-                            >
-                              Calificar transacción
-                            </button>
-                          ) : (
-                            <div style={{ background: colors.lightGray, padding: "1rem", borderRadius: 16, marginTop: "1rem" }}>
-                              <h4 style={{ color: colors.primary, margin: "0 0 1rem 0" }}>Calificar</h4>
-                              <div style={{ marginBottom: "1rem" }}>
-                                <label style={{ display: "block", marginBottom: "0.5rem" }}>Puntuación (1-5):</label>
-                                <select
-                                  value={reviewRating}
-                                  onChange={e => setReviewRating(Number(e.target.value))}
-                                  style={{ width: "100%", padding: "0.5rem", borderRadius: 8, border: `1px solid ${colors.lightGray}` }}
-                                >
-                                  <option value={1}>1 ⭐</option>
-                                  <option value={2}>2 ⭐</option>
-                                  <option value={3}>3 ⭐</option>
-                                  <option value={4}>4 ⭐</option>
-                                  <option value={5}>5 ⭐</option>
-                                </select>
-                              </div>
-                              <div style={{ marginBottom: "1rem" }}>
-                                <label style={{ display: "block", marginBottom: "0.5rem" }}>Comentario (opcional):</label>
-                                <textarea
-                                  value={reviewComment}
-                                  onChange={e => setReviewComment(e.target.value)}
-                                  rows={3}
-                                  style={{ width: "100%", padding: "0.5rem", borderRadius: 8, border: `1px solid ${colors.lightGray}` }}
-                                />
-                              </div>
-                              <div style={{ display: "flex", gap: "0.5rem" }}>
-                                <button
-                                  onClick={() => handleSubmitReview(p.id)}
-                                  disabled={submittingReview}
-                                  style={{ padding: "0.5rem 1rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600, cursor: submittingReview ? "not-allowed" : "pointer" }}
-                                >
-                                  {submittingReview ? "Enviando..." : "Enviar calificación"}
-                                </button>
-                                <button
-                                  onClick={() => setReviewingProductId(null)}
-                                  style={{ padding: "0.5rem 1rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600, cursor: "pointer" }}
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {!isSold && selectedProductId === p.id && (
-                        <div style={{ marginTop: "2rem", borderTop: `1px solid ${colors.lightGray}`, paddingTop: "1.5rem" }}>
-                          {!isOwner && (
-                            <>
-                              <h4 style={{ color: colors.primary, marginTop: 0 }}>Nueva oferta</h4>
-                              <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-                                <input value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Monto en COP" style={{ flex: 1, padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}` }} />
-                                <button onClick={() => onMakeOffer(p.id)} style={{ padding: "0.75rem 2rem", borderRadius: 30, border: "none", background: colors.secondary, color: colors.primary, fontWeight: 600 }}>Enviar</button>
-                              </div>
-                              <textarea value={offerMessage} onChange={e => setOfferMessage(e.target.value)} placeholder="Mensaje (opcional)" rows={2} style={{ width: "100%", padding: "0.75rem", borderRadius: 12, border: `1px solid ${colors.lightGray}`, marginBottom: "1.5rem" }} />
-                            </>
-                          )}
-
-                          <h4 style={{ color: colors.primary }}>Ofertas {loadingOffers && "(cargando...)"}</h4>
-                          {offers.length === 0 ? (
-                            <p>No hay ofertas.</p>
-                          ) : (
-                            <div style={{ display: "grid", gap: "1rem" }}>
-                              {offers.map(o => (
-                                <div key={o.id} style={{ border: `1px solid ${colors.lightGray}`, borderRadius: 16, padding: "1rem", background: colors.white }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-                                    <span style={{ fontWeight: 700, fontSize: "1.2rem", color: colors.primary }}>{moneyCOP(o.amountCOP)}</span>
-                                    <span style={{
-                                      background: o.status === "PENDING" ? colors.secondary : o.status === "ACCEPTED" ? "#4CAF50" : "#f44336",
-                                      color: o.status === "PENDING" ? colors.primary : "white",
-                                      padding: "0.25rem 1rem",
-                                      borderRadius: 20,
-                                      fontSize: "0.8rem",
-                                      fontWeight: 600
-                                    }}>{etiquetaEstadoOferta(o.status)}</span>
-                                  </div>
-                                  {o.message && <p style={{ margin: "0.5rem 0 0 0", color: "#666" }}>{o.message}</p>}
-                                  {o.user && <p style={{ fontSize: "0.8rem", color: colors.primary }}>Ofertante: {o.user.name || "Anónimo"}</p>}
-                                  {isOwner && o.status === "PENDING" && (
-                                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                                      <button onClick={() => onUpdateOffer(o.id, "ACCEPTED")} style={{ padding: "0.4rem 1.2rem", borderRadius: 30, border: "none", background: "#4CAF50", color: "white", fontWeight: 600, cursor: "pointer" }}>Aceptar</button>
-                                      <button onClick={() => onUpdateOffer(o.id, "REJECTED")} style={{ padding: "0.4rem 1.2rem", borderRadius: 30, border: "none", background: "#f44336", color: "white", fontWeight: 600, cursor: "pointer" }}>Rechazar</button>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <button onClick={() => setSelectedProductId(null)} style={{ marginTop: "1rem", padding: "0.5rem 1.5rem", borderRadius: 30, border: `1px solid ${colors.primary}`, background: "transparent", color: colors.primary, fontWeight: 600, cursor: "pointer" }}>Cerrar panel</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onSelect={setSelectedProductId}
+                    onEpaycoPayment={handleEpaycoPayment}
+                    onConfirmDelivery={handleConfirmDelivery}
+                    onReviewClick={setReviewingProduct}
+                    isSelected={selectedProductId === product.id}
+                    isOwner={isOwner}
+                    pendingOffersCount={pendingOffersCount}
+                  />
                 );
               })}
             </div>
+          </InfiniteScroll>
+
+          {!loading && productsCount === 0 && !error && (
+            <div style={{ textAlign: "center", padding: 60, background: THEME.surface, borderRadius: 20, border: `1px solid ${THEME.border}` }}>
+              <p style={{ fontSize: "1.2rem", color: THEME.muted }}>🔍 No se encontraron productos con los filtros actuales</p>
+              <OutlineButton onClick={clearFilters} style={{ marginTop: 20 }}>Limpiar filtros</OutlineButton>
+            </div>
           )}
         </section>
-      </main>
 
-      <footer style={{ backgroundColor: colors.primary, color: colors.white, padding: "2rem 1rem", marginTop: "3rem", textAlign: "center" }}>
-        <h3 style={{ color: colors.secondary, marginBottom: "1.5rem" }}>Medios de pago aceptados</h3>
-        <div style={{ display: "flex", justifyContent: "center", gap: "2rem", flexWrap: "wrap", fontSize: "1.2rem" }}>
-          <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>PSE</span>
-          <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>Nequi</span>
-          <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>Daviplata</span>
-          <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>Visa</span>
-          <span style={{ background: colors.white, color: colors.primary, padding: "0.5rem 1.5rem", borderRadius: 40 }}>Mastercard</span>
-        </div>
-        <p style={{ marginTop: "2rem", opacity: 0.8, fontSize: "0.9rem" }}>© 2026 COLBISNES - Tu mercado de segunda mano en Colombia</p>
-      </footer>
+        {selectedProductId && (
+          <OfferModal
+            productId={selectedProductId}
+            products={products}
+            offers={offers}
+            loading={loadingOffers || isSubmittingOffer}
+            session={session}
+            onClose={() => setSelectedProductId(null)}
+            onCreateOffer={handleMakeOffer}
+            onUpdateOffer={handleUpdateOffer}
+          />
+        )}
+
+        {reviewingProduct && (
+          <ReviewModal
+            product={reviewingProduct}
+            session={session}
+            onClose={() => setReviewingProduct(null)}
+            onSubmitReview={handleSubmitReview}
+          />
+        )}
+
+        {isEpaycoModalOpen && epaycoSessionId && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: 20,
+          }}>
+            <div style={{
+              background: THEME.surface,
+              borderRadius: 20,
+              padding: "2rem",
+              maxWidth: 500,
+              width: "100%",
+            }}>
+              <h3 style={{ marginBottom: "1rem", color: THEME.primary }}>Procesando pago</h3>
+              <EpaycoCheckout
+                sessionId={epaycoSessionId}
+                onClose={() => {
+                  setIsEpaycoModalOpen(false);
+                  setEpaycoSessionId(null);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </main>
+      {Footer}
     </div>
   );
 }

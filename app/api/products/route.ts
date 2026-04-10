@@ -33,7 +33,6 @@ async function releaseExpiredProducts() {
 
 export async function GET(request: Request) {
   try {
-    console.log("Iniciando GET /api/products");
     await releaseExpiredProducts();
 
     const { searchParams } = new URL(request.url);
@@ -42,8 +41,7 @@ export async function GET(request: Request) {
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
     const status = searchParams.get("status") || "";
-
-    console.log("Filtros:", { query, city, minPrice, maxPrice, status });
+    const condition = searchParams.get("condition") || "";
 
     const where: any = {};
 
@@ -53,11 +51,8 @@ export async function GET(request: Request) {
         { description: { contains: query } },
       ];
     }
-
-    if (city) {
-      where.city = city;
-    }
-
+    if (city) where.city = city;
+    if (condition) where.condition = condition;
     if (minPrice || maxPrice) {
       where.priceCOP = {};
       if (minPrice) {
@@ -69,12 +64,10 @@ export async function GET(request: Request) {
         if (!isNaN(max)) where.priceCOP.lte = max;
       }
     }
-
     if (status && ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW", "SOLD"].includes(status)) {
       where.status = status;
     }
 
-    console.log("Ejecutando consulta Prisma...");
     const products = await prisma.product.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -90,8 +83,6 @@ export async function GET(request: Request) {
         _count: { select: { offers: true } },
       },
     });
-
-    console.log(`Se encontraron ${products.length} productos`);
 
     const productsWithRating = products.map(product => {
       const reviews = product.seller.receivedReviews;
@@ -111,7 +102,8 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("❌ ERROR en GET /api/products:", error);
-    return NextResponse.json({ error: "Error interno", details: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    return NextResponse.json({ error: "Error interno", details: errorMessage }, { status: 500 });
   }
 }
 
@@ -123,12 +115,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, priceCOP, city } = body;
-    if (!title || !description || !priceCOP || !city) {
+    const { title, description, priceCOP, city, condition } = body;
+    if (!title || !description || !priceCOP || !city || !condition) {
       return NextResponse.json({ error: "Faltan campos" }, { status: 400 });
     }
     if (typeof priceCOP !== "number" || priceCOP <= 0) {
       return NextResponse.json({ error: "Precio inválido" }, { status: 400 });
+    }
+    if (!["NUEVO", "USADO"].includes(condition)) {
+      return NextResponse.json({ error: "Condición inválida" }, { status: 400 });
     }
 
     const product = await prisma.product.create({
@@ -137,6 +132,7 @@ export async function POST(request: Request) {
         description,
         priceCOP,
         city,
+        condition,
         status: "AVAILABLE",
         sellerId: session.user.id,
       },
@@ -145,6 +141,7 @@ export async function POST(request: Request) {
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
     console.error("POST /api/products error:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Error interno";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

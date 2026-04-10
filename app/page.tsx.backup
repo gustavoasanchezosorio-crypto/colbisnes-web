@@ -1,0 +1,428 @@
+"use client";
+
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signOut } from 'next-auth/react';
+import InfiniteScroll from 'react-infinite-scroll-component';
+
+import { useApp } from '@/context/AppContext';
+import { useToast } from '@/components/Toast';
+import { useProducts, FilterState, Product } from '@/hooks/useProducts';
+import { productSchema, ProductFormData } from '@/utils/validations';
+import { PRODUCT_STATUS, OFFER_STATUS, CITIES } from '@/lib/theme';
+import { Button, OutlineButton, Input, Select, TextArea } from '@/components/FormComponents'; // Crearemos estos después
+import { ProductCard } from '@/components/ProductCard'; // También lo moveremos
+import { OfferModal } from '@/components/OfferModal';
+import { ReviewModal } from '@/components/ReviewModal';
+import { SkeletonGrid } from '@/components/Skeleton';
+
+// Importamos utilidades
+import { formatMoney, getTimeLeft, getStatusLabel, getOfferStatusLabel, getOfferStatusColor } from '@/lib/utils';
+
+export default function Page() {
+  const { session, isAuthenticated } = useApp();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Filtros desde URL
+  const [filters, setFilters] = useState<FilterState>({
+    searchQuery: searchParams.get("q") || "",
+    city: searchParams.get("city") || "",
+    minPrice: searchParams.get("minPrice") || "",
+    maxPrice: searchParams.get("maxPrice") || "",
+    status: searchParams.get("status") || "",
+  });
+
+  // Hook de productos con paginación
+  const { products, loading, error, hasMore, fetchMore, refetch } = useProducts(filters);
+
+  // Estados locales
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [reviewingProduct, setReviewingProduct] = useState<Product | null>(null);
+  const [offers, setOffers] = useState<any[]>([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
+
+  // Formulario de publicación con React Hook Form
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      city: "Bogotá",
+    },
+  });
+
+  // Sincronizar filtros con URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+    router.push(`/?${params.toString()}`);
+  }, [filters, router]);
+
+  // Cargar ofertas cuando se selecciona un producto
+  useEffect(() => {
+    if (selectedProductId) {
+      fetchOffers(selectedProductId);
+    } else {
+      setOffers([]);
+    }
+  }, [selectedProductId]);
+
+  const fetchOffers = useCallback(async (productId: string) => {
+    setLoadingOffers(true);
+    try {
+      const res = await fetch(`/api/offers?productId=${encodeURIComponent(productId)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setOffers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      showToast("Error cargando ofertas", "error");
+    } finally {
+      setLoadingOffers(false);
+    }
+  }, [showToast]);
+
+  const onPublish = useCallback(async (data: ProductFormData) => {
+    try {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      reset();
+      refetch();
+      showToast("Producto publicado exitosamente", "success");
+    } catch (error) {
+      showToast("Error al publicar", "error");
+    }
+  }, [reset, refetch, showToast]);
+
+  const handleMakeOffer = useCallback(async (productId: string, amount: number, message: string) => {
+    if (!isAuthenticated) {
+      showToast("Inicia sesión para hacer una oferta", "warning");
+      return;
+    }
+    try {
+      const res = await fetch("/api/offers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ productId, amountCOP: amount, message: message || null }),
+      });
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
+      showToast("Oferta enviada exitosamente", "success");
+      fetchOffers(productId);
+      refetch();
+    } catch (error) {
+      showToast("Error al crear la oferta", "error");
+    }
+  }, [isAuthenticated, showToast, fetchOffers, refetch]);
+
+  const handleUpdateOffer = useCallback(async (offerId: string, status: string) => {
+    try {
+      const res = await fetch("/api/offers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ offerId, status }),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      if (selectedProductId) {
+        fetchOffers(selectedProductId);
+        refetch();
+      }
+      showToast(`Oferta ${status === OFFER_STATUS.ACCEPTED ? 'aceptada' : 'rechazada'}`, "success");
+    } catch (error) {
+      showToast("Error al actualizar la oferta", "error");
+    }
+  }, [selectedProductId, fetchOffers, refetch, showToast]);
+
+  const handleMockPayment = useCallback(async (productId: string) => {
+    try {
+      const res = await fetch("/api/payments/mock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ productId }),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      refetch();
+      if (selectedProductId === productId) fetchOffers(productId);
+      showToast("Pago procesado exitosamente", "success");
+    } catch (error) {
+      showToast("Error al procesar el pago", "error");
+    }
+  }, [refetch, selectedProductId, fetchOffers, showToast]);
+
+  const handleConfirmDelivery = useCallback(async (productId: string) => {
+    try {
+      const res = await fetch("/api/payments/confirm-delivery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ productId }),
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      refetch();
+      if (selectedProductId === productId) fetchOffers(productId);
+      showToast("Entrega confirmada exitosamente", "success");
+    } catch (error) {
+      showToast("Error al confirmar la entrega", "error");
+    }
+  }, [refetch, selectedProductId, fetchOffers, showToast]);
+
+  const handleSubmitReview = useCallback(async (productId: string, rating: number, comment: string) => {
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ productId, rating, comment: comment || undefined }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Error al enviar calificación");
+      }
+      showToast("Calificación enviada correctamente", "success");
+      refetch();
+      setReviewingProduct(null);
+    } catch (error: any) {
+      showToast(error.message, "error");
+    }
+  }, [refetch, showToast]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Los filtros ya se aplican en el useEffect
+  };
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      searchQuery: "",
+      city: "",
+      minPrice: "",
+      maxPrice: "",
+      status: "",
+    });
+  }, []);
+
+  return (
+    <div className="min-h-screen" style={{ background: THEME.background, color: THEME.text }}>
+      {/* Header */}
+      <header className="py-4 px-7 shadow-lg" style={{ background: `linear-gradient(135deg, ${THEME.electricBlueDark}, ${THEME.electricBlue}, ${THEME.electricBlueLight})` }}>
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-black text-white">COLBISNES</h1>
+          <div className="flex gap-4 items-center">
+            {session ? (
+              <>
+                <Link href={`/user/${session.user.id}`} className="text-white no-underline hover:opacity-80 transition-opacity flex items-center gap-1">
+                  👤 {session.user?.name || session.user?.email}
+                </Link>
+                <Button onClick={() => signOut()}>Cerrar sesión</Button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login" className="text-white no-underline hover:opacity-80">Iniciar sesión</Link>
+                <Link href="/auth/register" className="text-white no-underline hover:opacity-80">Registrarse</Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto py-10 px-5">
+        {/* Formulario de publicación (solo para usuarios logueados) */}
+        {session && (
+          <section className="rounded-2xl p-6 mb-10" style={{ background: THEME.surface, border: `1px solid ${THEME.border}` }}>
+            <h2 className="text-xl mb-4" style={{ color: THEME.electricBlue }}>Publicar producto</h2>
+            <form onSubmit={handleSubmit(onPublish)}>
+              <Input
+                placeholder="Título"
+                {...register('title')}
+                error={errors.title?.message}
+              />
+              <div className="flex gap-2.5 mt-2.5">
+                <Input
+                  placeholder="Precio COP"
+                  type="number"
+                  {...register('priceCOP', { valueAsNumber: true })}
+                  error={errors.priceCOP?.message}
+                />
+                <Select {...register('city')}>
+                  {CITIES.map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </Select>
+              </div>
+              <TextArea
+                placeholder="Descripción"
+                rows={4}
+                {...register('description')}
+                error={errors.description?.message}
+                className="mt-2.5"
+              />
+              <div className="mt-4 flex gap-3">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Publicando..." : "Publicar"}
+                </Button>
+                <OutlineButton onClick={() => refetch()} disabled={loading}>
+                  Recargar
+                </OutlineButton>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Buscador y filtros */}
+        <section className="rounded-2xl p-6 mb-10" style={{ background: THEME.surface, border: `1px solid ${THEME.border}` }}>
+          <h2 className="text-xl mb-4" style={{ color: THEME.electricBlue }}>Buscar productos</h2>
+          <form onSubmit={handleSearch}>
+            <div className="flex gap-2.5 mb-2.5 flex-wrap">
+              <Input
+                placeholder="Buscar por título o descripción..."
+                value={filters.searchQuery}
+                onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                className="flex-2 min-w-[200px]"
+              />
+              <Select
+                value={filters.city}
+                onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
+                className="flex-1 min-w-[150px]"
+              >
+                <option value="">Todas las ciudades</option>
+                {CITIES.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex gap-2.5 flex-wrap items-center">
+              <Input
+                type="number"
+                placeholder="Mín"
+                value={filters.minPrice}
+                onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                className="w-24"
+              />
+              <span>a</span>
+              <Input
+                type="number"
+                placeholder="Máx"
+                value={filters.maxPrice}
+                onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                className="w-24"
+              />
+              <Select
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                className="w-36"
+              >
+                <option value="">Todos</option>
+                <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
+                <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
+                <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
+                <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
+              </Select>
+              <Button type="submit">Buscar</Button>
+              <OutlineButton onClick={clearFilters}>
+                Limpiar
+              </OutlineButton>
+            </div>
+          </form>
+        </section>
+
+        {/* Lista de productos con infinite scroll */}
+        <section>
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-xl" style={{ color: THEME.electricBlue }}>Productos</h2>
+            <span className="px-3.5 py-1.5 rounded-full text-sm" style={{ background: THEME.border }}>
+              {products.length} encontrados
+            </span>
+          </div>
+
+          {error && <div className="text-center py-10 text-red-500">{error}</div>}
+
+          <InfiniteScroll
+            dataLength={products.length}
+            next={fetchMore}
+            hasMore={hasMore}
+            loader={<SkeletonGrid count={4} />}
+            endMessage={<p className="text-center py-4" style={{ color: THEME.muted }}>No hay más productos</p>}
+          >
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-6">
+              {products.map((product) => {
+                const isOwner = session?.user?.id === product.seller?.id;
+                const pendingOffersCount = product._count?.offers || 0;
+                return (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onSelect={setSelectedProductId}
+                    onPay={handleMockPayment}
+                    onConfirmDelivery={handleConfirmDelivery}
+                    onReviewClick={setReviewingProduct}
+                    isSelected={selectedProductId === product.id}
+                    isOwner={isOwner}
+                    pendingOffersCount={pendingOffersCount}
+                  />
+                );
+              })}
+            </div>
+          </InfiniteScroll>
+        </section>
+
+        {/* Modal de ofertas */}
+        {selectedProductId && (
+          <OfferModal
+            productId={selectedProductId}
+            products={products}
+            offers={offers}
+            loading={loadingOffers}
+            session={session}
+            onClose={() => setSelectedProductId(null)}
+            onCreateOffer={handleMakeOffer}
+            onUpdateOffer={handleUpdateOffer}
+          />
+        )}
+
+        {/* Modal de calificación */}
+        {reviewingProduct && (
+          <ReviewModal
+            product={reviewingProduct}
+            session={session}
+            onClose={() => setReviewingProduct(null)}
+            onSubmitReview={handleSubmitReview}
+          />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-20 py-10 text-center" style={{ borderTop: `1px solid ${THEME.border}`, background: THEME.surface }}>
+        <h3 className="text-lg mb-4" style={{ color: THEME.electricBlue }}>Medios de pago aceptados</h3>
+        <div className="flex justify-center gap-6 flex-wrap">
+          {["PSE", "Nequi", "Daviplata", "Visa", "Mastercard"].map(method => (
+            <span key={method} className="px-5 py-2 rounded-full font-semibold" style={{ background: THEME.gold, color: THEME.text }}>
+              {method}
+            </span>
+          ))}
+        </div>
+        <p className="mt-6 text-sm" style={{ color: THEME.muted }}>© 2026 COLBISNES</p>
+      </footer>
+    </div>
+  );
+}

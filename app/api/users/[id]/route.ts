@@ -3,18 +3,16 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Resolver la promesa de params
-    const { id: userId } = await context.params;
+    const { id: userId } = await params;
     console.log("🔍 Iniciando GET /api/users/[id] para ID:", userId);
 
     if (!userId) {
       return NextResponse.json({ error: "ID de usuario no proporcionado" }, { status: 400 });
     }
 
-    // 1. Obtener datos básicos del usuario
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -25,6 +23,8 @@ export async function GET(
         phone: true,
         image: true,
         createdAt: true,
+        kycStatus: true,
+        kycLevel: true,
       },
     });
 
@@ -35,8 +35,6 @@ export async function GET(
 
     console.log("✅ Usuario encontrado:", user.email);
 
-    // 2. Obtener productos activos
-    console.log("🔍 Buscando productos activos...");
     const products = await prisma.product.findMany({
       where: { sellerId: userId, status: "AVAILABLE" },
       orderBy: { createdAt: "desc" },
@@ -52,8 +50,6 @@ export async function GET(
     });
     console.log(`✅ Productos activos encontrados: ${products.length}`);
 
-    // 3. Obtener productos vendidos
-    console.log("🔍 Buscando productos vendidos...");
     const soldProducts = await prisma.product.findMany({
       where: { sellerId: userId, status: "SOLD" },
       orderBy: { soldAt: "desc" },
@@ -68,8 +64,6 @@ export async function GET(
     });
     console.log(`✅ Productos vendidos encontrados: ${soldProducts.length}`);
 
-    // 4. Obtener reseñas recibidas
-    console.log("🔍 Buscando reseñas...");
     const receivedReviews = await prisma.review.findMany({
       where: { toUserId: userId },
       orderBy: { createdAt: "desc" },
@@ -84,7 +78,6 @@ export async function GET(
     });
     console.log(`✅ Reseñas encontradas: ${receivedReviews.length}`);
 
-    // 5. Calcular promedio
     const avgRating = receivedReviews.length
       ? receivedReviews.reduce((sum, r) => sum + r.rating, 0) / receivedReviews.length
       : 0;
@@ -102,8 +95,9 @@ export async function GET(
     return NextResponse.json(response);
   } catch (error) {
     console.error("❌ ERROR en GET /api/users/[id]:", error);
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
     return NextResponse.json(
-      { error: "Error interno", details: error.message },
+      { error: "Error interno", details: errorMessage },
       { status: 500 }
     );
   }
