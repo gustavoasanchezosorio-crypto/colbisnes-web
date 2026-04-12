@@ -6,10 +6,23 @@ import { authOptions } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, name: true, email: true, phone: true, city: true, image: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        city: true,
+        image: true,
+        nequiNumber: true,
+        brebId: true,
+        createdAt: true,
+      },
     });
     return NextResponse.json(user);
   } catch (error) {
@@ -21,18 +34,35 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { name, phone, city, image } = body;
+    const { name, phone, city, image, nequiNumber, brebId } = body;
+
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
     if (city !== undefined) updateData.city = city;
     if (image !== undefined) updateData.image = image;
+    if (nequiNumber !== undefined) updateData.nequiNumber = nequiNumber;
+    if (brebId !== undefined) updateData.brebId = brebId;
+
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
-      select: { id: true, name: true, email: true, phone: true, city: true, image: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        city: true,
+        image: true,
+        nequiNumber: true,
+        brebId: true,
+        createdAt: true,
+      },
     });
     return NextResponse.json(updatedUser);
   } catch (error) {

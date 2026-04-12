@@ -18,7 +18,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { OfferModal } from "@/components/OfferModal";
 import { ReviewModal } from "@/components/ReviewModal";
 import { SkeletonGrid } from "@/components/Skeleton";
-import { EpaycoCheckout } from "@/components/EpaycoCheckout";
+import { formatMoney } from "@/lib/utils";
 
 const extendedProductSchema = productSchema.extend({
   condition: z.enum(["NUEVO", "USADO"]),
@@ -73,8 +73,8 @@ export default function Page() {
   const [loadingOffers, setLoadingOffers] = useState(false);
   const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [epaycoSessionId, setEpaycoSessionId] = useState<string | null>(null);
-  const [isEpaycoModalOpen, setIsEpaycoModalOpen] = useState(false);
+  const [paymentModalProduct, setPaymentModalProduct] = useState<any | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const {
     register,
@@ -202,26 +202,44 @@ export default function Page() {
     }
   }, [selectedProductId, fetchOffers, refetch, showToast]);
 
-  const handleEpaycoPayment = useCallback(async (productId: string) => {
+  const handleMockPayment = useCallback(async (productId: string) => {
     try {
-      const res = await fetch("/api/payments/epayco/create", {
+      const res = await fetch("/api/payments/mock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ productId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al iniciar pago");
-      if (data.sessionId) {
-        setEpaycoSessionId(data.sessionId);
-        setIsEpaycoModalOpen(true);
-      } else {
-        throw new Error("No se pudo obtener sessionId de Epayco");
-      }
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
+      await Promise.all([refetch(), selectedProductId === productId && fetchOffers(productId)]);
+      showToast("Pago procesado exitosamente", "success");
     } catch (err: any) {
-      showToast(err.message || "Error al iniciar pago", "error");
+      showToast(err.message || "Error al procesar el pago", "error");
     }
-  }, [showToast]);
+  }, [refetch, selectedProductId, fetchOffers, showToast]);
+
+  const handlePaymentRequest = useCallback(async (productId: string) => {
+    // Buscar el producto y sus datos del vendedor
+    const product = products.find(p => p.id === productId);
+    if (!product || !product.seller) {
+      showToast("No se pudo obtener la información del vendedor", "error");
+      return;
+    }
+    // Obtener los datos de pago del vendedor (necesitamos endpoint /api/user/[id] que devuelva nequiNumber y brebId)
+    try {
+      const res = await fetch(`/api/users/${product.seller.id}`);
+      if (!res.ok) throw new Error("Error al obtener datos de pago");
+      const sellerData = await res.json();
+      product.seller.nequiNumber = sellerData.nequiNumber;
+      product.seller.brebId = sellerData.brebId;
+    } catch (err) {
+      console.error(err);
+      // Si falla, mostrar el modal igualmente con datos por defecto
+    }
+    setPaymentModalProduct(product);
+    setIsPaymentModalOpen(true);
+  }, [products, showToast]);
 
   const handleConfirmDelivery = useCallback(async (productId: string) => {
     try {
@@ -447,7 +465,7 @@ export default function Page() {
                     key={product.id}
                     product={product}
                     onSelect={setSelectedProductId}
-                    onEpaycoPayment={handleEpaycoPayment}
+                    onPaymentRequest={handlePaymentRequest}
                     onConfirmDelivery={handleConfirmDelivery}
                     onReviewClick={setReviewingProduct}
                     isSelected={selectedProductId === product.id}
@@ -489,7 +507,8 @@ export default function Page() {
           />
         )}
 
-        {isEpaycoModalOpen && epaycoSessionId && (
+        {/* Modal de pago con Nequi / Bre-B */}
+        {isPaymentModalOpen && paymentModalProduct && (
           <div style={{
             position: "fixed",
             inset: 0,
@@ -506,15 +525,37 @@ export default function Page() {
               padding: "2rem",
               maxWidth: 500,
               width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
             }}>
-              <h3 style={{ marginBottom: "1rem", color: THEME.primary }}>Procesando pago</h3>
-              <EpaycoCheckout
-                sessionId={epaycoSessionId}
-                onClose={() => {
-                  setIsEpaycoModalOpen(false);
-                  setEpaycoSessionId(null);
-                }}
-              />
+              <h3 style={{ marginBottom: "1rem", color: THEME.primary }}>Pagar con Nequi / Bre-B</h3>
+              <p><strong>Producto:</strong> {paymentModalProduct.title}</p>
+              <p><strong>Monto:</strong> {formatMoney(paymentModalProduct.priceCOP)}</p>
+              <p><strong>Vendedor:</strong> {paymentModalProduct.seller?.name || "Anónimo"}</p>
+              <div style={{ marginTop: "1.5rem", padding: "1rem", background: THEME.border, borderRadius: 12 }}>
+                <p><strong>Instrucciones de pago:</strong></p>
+                <p>📱 <strong>Nequi:</strong> {paymentModalProduct.seller?.nequiNumber || "No registrado"}</p>
+                <p>🏦 <strong>Bre-B ID:</strong> {paymentModalProduct.seller?.brebId || "No registrado"}</p>
+                <p style={{ marginTop: "1rem", fontSize: "0.9rem", color: THEME.muted }}>
+                  Realiza el pago a través de Nequi o Bre-B y luego confirma la transacción.
+                </p>
+              </div>
+              <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
+                <Button onClick={() => {
+                  // Aquí podrías llamar al endpoint de confirmación de pago simulado
+                  handleMockPayment(paymentModalProduct.id);
+                  setIsPaymentModalOpen(false);
+                  setPaymentModalProduct(null);
+                }}>
+                  Ya pagué (confirmar)
+                </Button>
+                <OutlineButton onClick={() => {
+                  setIsPaymentModalOpen(false);
+                  setPaymentModalProduct(null);
+                }}>
+                  Cancelar
+                </OutlineButton>
+              </div>
             </div>
           </div>
         )}

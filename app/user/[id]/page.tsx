@@ -19,6 +19,8 @@ type UserProfile = {
   avgRating: number;
   totalReviews: number;
   kycStatus?: string;
+  nequiNumber?: string;
+  brebId?: string;
   products: Array<{
     id: string;
     title: string;
@@ -51,26 +53,39 @@ export default function UserProfilePage() {
   const { data: session } = useSession();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"products" | "sold" | "reviews">("products");
 
   useEffect(() => {
     if (!id) return;
     fetch(`/api/users/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        setUser(data);
+        // Asegurar que los arrays existan
+        setUser({
+          ...data,
+          products: data.products || [],
+          soldProducts: data.soldProducts || [],
+          receivedReviews: data.receivedReviews || [],
+        });
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
+        setError(err.message);
         setLoading(false);
       });
   }, [id]);
 
   if (loading) return <div style={{ textAlign: "center", padding: "2rem" }}>Cargando...</div>;
+  if (error) return <div style={{ textAlign: "center", padding: "2rem", color: "red" }}>Error: {error}</div>;
   if (!user) return <div style={{ textAlign: "center", padding: "2rem" }}>Usuario no encontrado</div>;
 
   const isOwnProfile = session?.user?.id === user.id;
+  const isVerified = user.kycStatus === "approved";
 
   return (
     <div style={{ background: THEME.background, minHeight: "100vh", color: THEME.text }}>
@@ -126,7 +141,7 @@ export default function UserProfilePage() {
           <div style={{ flex: 1 }}>
             <h1 style={{ color: THEME.primary, margin: "0 0 0.5rem 0", display: "flex", alignItems: "center", gap: 8 }}>
               {user.name || "Usuario"}
-              {user.kycStatus === "approved" && (
+              {isVerified && (
                 <span style={{ background: THEME.secondary, color: THEME.text, padding: "0.2rem 0.6rem", borderRadius: 20, fontSize: "0.8rem", fontWeight: 600 }}>
                   ✓ Verificado
                 </span>
@@ -143,11 +158,18 @@ export default function UserProfilePage() {
               <span>⭐ ({user.totalReviews} reseñas)</span>
             </div>
           </div>
-          {isOwnProfile && (
-            <Link href="/perfil/editar" style={{ textDecoration: "none" }}>
-              <Button>Editar perfil</Button>
-            </Link>
-          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {isOwnProfile && (
+              <Link href="/perfil/editar" style={{ textDecoration: "none" }}>
+                <Button>Editar perfil</Button>
+              </Link>
+            )}
+            {isOwnProfile && !isVerified && (
+              <Link href="/kyc" style={{ textDecoration: "none" }}>
+                <OutlineButton>Verificar perfil como vendedor</OutlineButton>
+              </Link>
+            )}
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", borderBottom: `2px solid ${THEME.border}` }}>

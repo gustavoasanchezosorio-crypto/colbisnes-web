@@ -3,30 +3,31 @@
 import React, { useState } from 'react';
 import { Button, OutlineButton } from './FormComponents';
 import { THEME } from '@/lib/theme';
-import { formatMoney } from '@/lib/utils';
 
 interface PaymentModalProps {
-  product: any;
+  seller: {
+    name: string | null;
+    nequiPhone: string | null;
+    brebId: string | null;
+  };
+  productTitle: string;
+  amount: number;
   onClose: () => void;
-  onConfirm: (productId: string) => Promise<void>;
+  onConfirmPayment: () => Promise<void>;
 }
 
-export const PaymentModal: React.FC<PaymentModalProps> = ({
-  product,
-  onClose,
-  onConfirm,
-}) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function PaymentModal({ seller, productTitle, amount, onClose, onConfirmPayment }: PaymentModalProps) {
+  const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
-    setIsSubmitting(true);
+    setLoading(true);
     try {
-      await onConfirm(product.id);
+      await onConfirmPayment();
       onClose();
     } catch (error) {
-      // error already handled in parent
+      console.error(error);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -38,28 +39,42 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 1000,
+      zIndex: 2000,
       padding: 20,
     }}>
       <div style={{
-        background: "white",
-        padding: 30,
+        background: THEME.surface,
         borderRadius: 20,
-        width: 400,
+        padding: "2rem",
+        maxWidth: 500,
+        width: "100%",
+        textAlign: "center",
       }}>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: 20, color: THEME.primary }}>
-          Confirmar pago
-        </h2>
-        <p>Producto: <strong>{product.title}</strong></p>
-        <p>Precio: <strong>{formatMoney(product.priceCOP)}</strong></p>
-        <p>¿Deseas proceder con el pago simulado?</p>
-        <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-          <Button onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? "Procesando..." : "Pagar"}
+        <h2 style={{ color: THEME.primary, marginBottom: "1rem" }}>Pagar con Nequi o Bre-B</h2>
+        <p><strong>Producto:</strong> {productTitle}</p>
+        <p><strong>Monto:</strong> ${amount.toLocaleString('es-CO')}</p>
+        <p><strong>Vendedor:</strong> {seller.name || "Anónimo"}</p>
+        <hr style={{ margin: "1rem 0", borderColor: THEME.border }} />
+        <h3 style={{ color: THEME.primary }}>Datos para el pago</h3>
+        {seller.nequiPhone && (
+          <p><strong>Nequi:</strong> {seller.nequiPhone}</p>
+        )}
+        {seller.brebId && (
+          <p><strong>Bre-B:</strong> {seller.brebId}</p>
+        )}
+        {(!seller.nequiPhone && !seller.brebId) && (
+          <p style={{ color: THEME.error }}>El vendedor no ha configurado sus datos de pago. Contacta con él por el chat.</p>
+        )}
+        <div style={{ marginTop: "2rem", display: "flex", gap: "1rem", justifyContent: "center" }}>
+          <Button onClick={handleConfirm} disabled={loading}>
+            {loading ? "Procesando..." : "Ya realicé el pago"}
           </Button>
           <OutlineButton onClick={onClose}>Cancelar</OutlineButton>
         </div>
+        <p style={{ fontSize: "0.8rem", marginTop: "1rem", color: THEME.muted }}>
+          Al hacer clic en "Ya realicé el pago", confirmas que transferiste el dinero al vendedor. El producto quedará en custodia hasta que el vendedor confirme la entrega.
+        </p>
       </div>
     </div>
   );
-};
+}

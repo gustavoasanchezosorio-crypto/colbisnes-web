@@ -17,6 +17,8 @@ export default function EditarPerfilPage() {
     phone: "",
     city: "",
     image: "",
+    nequiNumber: "",
+    brebId: "",
   });
 
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function EditarPerfilPage() {
             phone: data.phone || "",
             city: data.city || "",
             image: data.image || "",
+            nequiNumber: data.nequiNumber || "",
+            brebId: data.brebId || "",
           });
           setLoading(false);
         })
@@ -52,7 +56,6 @@ export default function EditarPerfilPage() {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
       alert("Solo se permiten imágenes");
       return;
@@ -61,7 +64,6 @@ export default function EditarPerfilPage() {
       alert("La imagen no debe superar 5MB");
       return;
     }
-
     setUploading(true);
     try {
       const uploadForm = new FormData();
@@ -141,6 +143,24 @@ export default function EditarPerfilPage() {
                 type="text"
                 value={formData.city}
                 onChange={e => setFormData({ ...formData, city: e.target.value })}
+              />
+            </div>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Número de Nequi</label>
+              <Input
+                type="text"
+                value={formData.nequiNumber}
+                onChange={e => setFormData({ ...formData, nequiNumber: e.target.value })}
+                placeholder="Ej: 3001234567"
+              />
+            </div>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>ID de Bre-B</label>
+              <Input
+                type="text"
+                value={formData.brebId}
+                onChange={e => setFormData({ ...formData, brebId: e.target.value })}
+                placeholder="Ej: 1234567890"
               />
             </div>
             <div style={{ marginBottom: "1.5rem" }}>

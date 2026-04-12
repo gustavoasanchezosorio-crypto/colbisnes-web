@@ -10,7 +10,7 @@ import { Product } from '@/hooks/useProducts';
 interface ProductCardProps {
   product: Product;
   onSelect: (id: string) => void;
-  onEpaycoPayment: (productId: string) => Promise<void>;
+  onPaymentRequest: (productId: string) => Promise<void>;
   onConfirmDelivery: (id: string) => Promise<void>;
   onReviewClick: (product: Product) => void;
   isSelected: boolean;
@@ -21,7 +21,7 @@ interface ProductCardProps {
 export const ProductCard = React.memo(function ProductCard({
   product,
   onSelect,
-  onEpaycoPayment,
+  onPaymentRequest,
   onConfirmDelivery,
   onReviewClick,
   isSelected,
@@ -33,7 +33,7 @@ export const ProductCard = React.memo(function ProductCard({
   const status = getStatusLabel(product.status);
 
   const handleSelect = useCallback(() => onSelect(product.id), [product.id, onSelect]);
-  const handleEpaycoPayment = useCallback(() => onEpaycoPayment(product.id), [product.id, onEpaycoPayment]);
+  const handlePaymentRequest = useCallback(() => onPaymentRequest(product.id), [product.id, onPaymentRequest]);
   const handleConfirmDelivery = useCallback(() => onConfirmDelivery(product.id), [product.id, onConfirmDelivery]);
   const handleReviewClick = useCallback(() => onReviewClick(product), [product.id, onReviewClick]);
 
@@ -175,7 +175,7 @@ export const ProductCard = React.memo(function ProductCard({
           {!isSold && (
             <>
               {product.status === 'PAYMENT_PENDING' && !isOwner && (
-                <Button onClick={handleEpaycoPayment}>Pagar con Epayco</Button>
+                <Button onClick={handlePaymentRequest}>Pagar por Nequi / Bre-B</Button>
               )}
               {product.status === 'IN_ESCROW' && isOwner && (
                 <Button onClick={handleConfirmDelivery}>Confirmar entrega</Button>

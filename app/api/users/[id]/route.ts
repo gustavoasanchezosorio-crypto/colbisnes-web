@@ -7,12 +7,6 @@ export async function GET(
 ) {
   try {
     const { id: userId } = await params;
-    console.log("🔍 Iniciando GET /api/users/[id] para ID:", userId);
-
-    if (!userId) {
-      return NextResponse.json({ error: "ID de usuario no proporcionado" }, { status: 400 });
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -25,16 +19,16 @@ export async function GET(
         createdAt: true,
         kycStatus: true,
         kycLevel: true,
+        nequiNumber: true,
+        brebId: true,
       },
     });
 
     if (!user) {
-      console.log("❌ Usuario no encontrado");
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    console.log("✅ Usuario encontrado:", user.email);
-
+    // Obtener productos activos (siempre un array)
     const products = await prisma.product.findMany({
       where: { sellerId: userId, status: "AVAILABLE" },
       orderBy: { createdAt: "desc" },
@@ -48,8 +42,8 @@ export async function GET(
         createdAt: true,
       },
     });
-    console.log(`✅ Productos activos encontrados: ${products.length}`);
 
+    // Obtener productos vendidos
     const soldProducts = await prisma.product.findMany({
       where: { sellerId: userId, status: "SOLD" },
       orderBy: { soldAt: "desc" },
@@ -62,8 +56,8 @@ export async function GET(
         soldAt: true,
       },
     });
-    console.log(`✅ Productos vendidos encontrados: ${soldProducts.length}`);
 
+    // Obtener reseñas
     const receivedReviews = await prisma.review.findMany({
       where: { toUserId: userId },
       orderBy: { createdAt: "desc" },
@@ -76,29 +70,22 @@ export async function GET(
         product: { select: { title: true } },
       },
     });
-    console.log(`✅ Reseñas encontradas: ${receivedReviews.length}`);
 
     const avgRating = receivedReviews.length
       ? receivedReviews.reduce((sum, r) => sum + r.rating, 0) / receivedReviews.length
       : 0;
 
-    const response = {
+    return NextResponse.json({
       ...user,
       products,
       soldProducts,
       receivedReviews,
       avgRating: Math.round(avgRating * 10) / 10,
       totalReviews: receivedReviews.length,
-    };
-
-    console.log("✅ Respuesta preparada, enviando...");
-    return NextResponse.json(response);
+    });
   } catch (error) {
-    console.error("❌ ERROR en GET /api/users/[id]:", error);
+    console.error("GET /api/users/[id] error:", error);
     const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-    return NextResponse.json(
-      { error: "Error interno", details: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error interno", details: errorMessage }, { status: 500 });
   }
 }

@@ -144,3 +144,10 @@ model AuditLog {
   metadata  Json?
   createdAt DateTime @default(now())
 }
+  // Medios de pago del usuario (para recibir pagos como vendedor)
+  nequiPhone   String?
+  brebId       String?
+  nequiNumber   String?
+  brebId        String?
+  nequiNumber   String?
+  brebId        String?
