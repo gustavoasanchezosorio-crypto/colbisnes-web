@@ -36,6 +36,8 @@ model User {
   kycRequestedAt DateTime?
   kycApprovedAt  DateTime?
   kycRejectedAt  DateTime?
+  nequiNumber    String?
+  brebId         String?
 }
 
 model Account {
@@ -70,7 +72,7 @@ model Product {
   description       String
   priceCOP          Int
   city              String
-  condition         String   @default("NUEVO") // NUEVO o USADO
+  condition         String   @default("NUEVO")
   status            String   @default("AVAILABLE")
   acceptedOfferId   String?
   paymentExpiresAt  DateTime?
@@ -84,6 +86,7 @@ model Product {
   offers            Offer[]
   reviews           Review[]
   messages          Message[]
+  images            ProductImage[]
 }
 
 model Offer {
@@ -132,6 +135,14 @@ model Message {
   product    Product? @relation(fields: [productId], references: [id])
 }
 
+model ProductImage {
+  id        String   @id @default(cuid())
+  url       String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String
@@ -144,10 +155,3 @@ model AuditLog {
   metadata  Json?
   createdAt DateTime @default(now())
 }
-  // Medios de pago del usuario (para recibir pagos como vendedor)
-  nequiPhone   String?
-  brebId       String?
-  nequiNumber   String?
-  brebId        String?
-  nequiNumber   String?
-  brebId        String?

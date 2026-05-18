@@ -17,6 +17,7 @@
     "@tailwindcss/postcss": "^4.2.1",
     "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
     "crypto": "^1.0.1",
     "dotenv": "^17.2.4",
     "express-rate-limit": "^8.3.1",
@@ -29,6 +30,7 @@
     "resend": "^6.9.3",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
+    "styled-jsx": "^5.1.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {

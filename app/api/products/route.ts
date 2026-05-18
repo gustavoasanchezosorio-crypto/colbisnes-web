@@ -80,6 +80,10 @@ export async function GET(request: Request) {
             receivedReviews: { select: { rating: true } },
           },
         },
+        images: {
+          select: { url: true },
+          take: 1,
+        },
         _count: { select: { offers: true } },
       },
     });
@@ -94,6 +98,7 @@ export async function GET(request: Request) {
           avgRating: Math.round(avgRating * 10) / 10,
           totalReviews: reviews.length,
         },
+        firstImage: product.images[0]?.url || null,
       };
     });
 
@@ -115,7 +120,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, priceCOP, city, condition } = body;
+    const { title, description, priceCOP, city, condition, images } = body;
     if (!title || !description || !priceCOP || !city || !condition) {
       return NextResponse.json({ error: "Faltan campos" }, { status: 400 });
     }
@@ -135,7 +140,11 @@ export async function POST(request: Request) {
         condition,
         status: "AVAILABLE",
         sellerId: session.user.id,
+        images: images?.length ? {
+          create: images.map((url: string) => ({ url })),
+        } : undefined,
       },
+      include: { images: true },
     });
 
     return NextResponse.json(product, { status: 201 });

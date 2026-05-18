@@ -76,6 +76,11 @@ export default function Page() {
   const [paymentModalProduct, setPaymentModalProduct] = useState<any | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
+  // Estados para imágenes
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -137,27 +142,58 @@ export default function Page() {
     else setOffers([]);
   }, [selectedProductId, fetchOffers]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 5) {
+      showToast("Máximo 5 imágenes por producto", "warning");
+      return;
+    }
+    setImageFiles(files);
+    setImagePreviews(files.map(f => URL.createObjectURL(f)));
+  };
+
   const onPublish = useCallback(async (data: ExtendedProductFormData) => {
     if (sessionStatus !== "authenticated") {
       showToast("Debes iniciar sesión para publicar", "warning");
       return;
     }
+    setUploadingImages(true);
     try {
+      // 1. Subir imágenes a Cloudinary
+      let imageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        const formDataImages = new FormData();
+        imageFiles.forEach((file) => formDataImages.append("images", file));
+        const uploadRes = await fetch("/api/upload-images", {
+          method: "POST",
+          credentials: "include",
+          body: formDataImages,
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || "Error al subir imágenes");
+        imageUrls = uploadData.urls;
+      }
+
+      // 2. Crear producto con las URLs
       const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, images: imageUrls }),
       });
       const response = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
       reset();
+      setImageFiles([]);
+      setImagePreviews([]);
       await refetch();
       showToast("Producto publicado exitosamente", "success");
     } catch (err: any) {
       showToast(err.message || "Error al publicar", "error");
+    } finally {
+      setUploadingImages(false);
     }
-  }, [sessionStatus, reset, refetch, showToast]);
+  }, [sessionStatus, reset, refetch, showToast, imageFiles]);
 
   const handleMakeOffer = useCallback(async (productId: string, amount: number, message: string) => {
     if (sessionStatus !== "authenticated") {
@@ -220,13 +256,11 @@ export default function Page() {
   }, [refetch, selectedProductId, fetchOffers, showToast]);
 
   const handlePaymentRequest = useCallback(async (productId: string) => {
-    // Buscar el producto y sus datos del vendedor
     const product = products.find(p => p.id === productId);
     if (!product || !product.seller) {
       showToast("No se pudo obtener la información del vendedor", "error");
       return;
     }
-    // Obtener los datos de pago del vendedor (necesitamos endpoint /api/user/[id] que devuelva nequiNumber y brebId)
     try {
       const res = await fetch(`/api/users/${product.seller.id}`);
       if (!res.ok) throw new Error("Error al obtener datos de pago");
@@ -235,7 +269,6 @@ export default function Page() {
       product.seller.brebId = sellerData.brebId;
     } catch (err) {
       console.error(err);
-      // Si falla, mostrar el modal igualmente con datos por defecto
     }
     setPaymentModalProduct(product);
     setIsPaymentModalOpen(true);
@@ -362,14 +395,43 @@ export default function Page() {
             </Select>
           </div>
           <TextArea placeholder="Descripción *" rows={4} {...register('description')} error={errors.description?.message} style={{ marginTop: 10 }} />
+
+          {/* Imágenes */}
+          <div style={{ marginTop: 16 }}>
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Imágenes (máx 5)</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              disabled={uploadingImages}
+              style={{
+                padding: "8px",
+                borderRadius: 8,
+                border: `1px solid ${THEME.border}`,
+                background: "white",
+                width: "100%",
+              }}
+            />
+            {imagePreviews.length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                {imagePreviews.map((src, idx) => (
+                  <img key={idx} src={src} alt={`preview-${idx}`} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8 }} />
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
-            <Button type="submit" disabled={isSubmitting || !isValid}>{isSubmitting ? "Publicando..." : "Publicar"}</Button>
+            <Button type="submit" disabled={isSubmitting || !isValid || uploadingImages}>
+              {uploadingImages ? "Subiendo imágenes..." : isSubmitting ? "Publicando..." : "Publicar"}
+            </Button>
             <OutlineButton onClick={() => refetch()} disabled={loading}>Recargar</OutlineButton>
           </div>
         </form>
       </section>
     );
-  }, [isAuthenticated, handleSubmit, onPublish, register, errors, isSubmitting, isValid, refetch, loading, titleValue]);
+  }, [isAuthenticated, handleSubmit, onPublish, register, errors, isSubmitting, isValid, refetch, loading, titleValue, imagePreviews, uploadingImages]);
 
   const FilterSection = useMemo(() => (
     <section style={{ background: THEME.surface, borderRadius: 20, padding: 24, border: `1px solid ${THEME.border}`, marginBottom: 40 }}>
@@ -507,7 +569,6 @@ export default function Page() {
           />
         )}
 
-        {/* Modal de pago con Nequi / Bre-B */}
         {isPaymentModalOpen && paymentModalProduct && (
           <div style={{
             position: "fixed",
@@ -542,7 +603,6 @@ export default function Page() {
               </div>
               <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
                 <Button onClick={() => {
-                  // Aquí podrías llamar al endpoint de confirmación de pago simulado
                   handleMockPayment(paymentModalProduct.id);
                   setIsPaymentModalOpen(false);
                   setPaymentModalProduct(null);

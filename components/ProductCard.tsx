@@ -5,14 +5,13 @@ import Link from 'next/link';
 import { Button, OutlineButton } from './FormComponents';
 import { THEME } from '@/lib/theme';
 import { formatMoney, getTimeLeft, getStatusLabel } from '@/lib/utils';
-import { Product } from '@/hooks/useProducts';
 
 interface ProductCardProps {
-  product: Product;
+  product: any;
   onSelect: (id: string) => void;
-  onPaymentRequest: (productId: string) => Promise<void>;
+  onPaymentRequest: (productId: string) => void;
   onConfirmDelivery: (id: string) => Promise<void>;
-  onReviewClick: (product: Product) => void;
+  onReviewClick: (product: any) => void;
   isSelected: boolean;
   isOwner: boolean;
   pendingOffersCount: number;
@@ -31,6 +30,7 @@ export const ProductCard = React.memo(function ProductCard({
   const timer = getTimeLeft(product.paymentExpiresAt);
   const isSold = product.status === 'SOLD';
   const status = getStatusLabel(product.status);
+  const firstImage = product.firstImage;
 
   const handleSelect = useCallback(() => onSelect(product.id), [product.id, onSelect]);
   const handlePaymentRequest = useCallback(() => onPaymentRequest(product.id), [product.id, onPaymentRequest]);
@@ -81,6 +81,19 @@ export const ProductCard = React.memo(function ProductCard({
       )}
 
       <div style={{ position: "relative", zIndex: isSold ? 5 : 2 }}>
+        {firstImage && (
+          <img
+            src={firstImage}
+            alt={product.title}
+            style={{
+              width: "100%",
+              height: "200px",
+              objectFit: "cover",
+              borderRadius: "12px",
+              marginBottom: "12px",
+            }}
+          />
+        )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ flex: 1 }}>
             <h3 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 6, color: THEME.text }}>
@@ -175,7 +188,7 @@ export const ProductCard = React.memo(function ProductCard({
           {!isSold && (
             <>
               {product.status === 'PAYMENT_PENDING' && !isOwner && (
-                <Button onClick={handlePaymentRequest}>Pagar por Nequi / Bre-B</Button>
+                <Button onClick={handlePaymentRequest}>Pagar con Nequi / Bre-B</Button>
               )}
               {product.status === 'IN_ESCROW' && isOwner && (
                 <Button onClick={handleConfirmDelivery}>Confirmar entrega</Button>
