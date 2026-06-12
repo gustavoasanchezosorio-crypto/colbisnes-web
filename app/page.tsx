@@ -221,7 +221,7 @@ function PageInner() {
                 <Input placeholder="Titulo del producto *" {...register("title")} />
                 {errors.title && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.title.message}</p>}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  <Input placeholder="Precio COP *" inputMode="numeric" {...register("priceCOP", { setValueAs: (v) => parseInt(String(v).replace(/\D/g, "")) || 0 })} />
+                  <Input placeholder="Precio COP *" type="text" inputMode="numeric" {...register("priceCOP", { setValueAs: (v) => parseInt(String(v).replace(/\D/g, "")) || 0 })} />
                   <Select {...register("city")}>{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</Select>
                   <Select {...register("condition")}><option value="NUEVO">Nuevo</option><option value="USADO">Usado</option></Select>
                 </div>
