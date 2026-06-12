@@ -4,6 +4,7 @@ export const WOMPI_IVA            = 0.19;
 export const GMF_PCT              = 0.004;
 export const COLBISNES_PCT_ONLINE = 0.10;
 export const COLBISNES_PCT_CE     = 0.03;
+export const COLBISNES_PCT_USDT   = 0.05;
 
 export interface PricingBreakdown {
   precioBase: number;
@@ -13,6 +14,14 @@ export interface PricingBreakdown {
   gmf: number;
   gananciaColbisnes: number;
   recibeVendedor: number;
+}
+
+export interface USDTPricing {
+  precioBaseUSD: number;
+  comisionUSD: number;
+  totalUSD: number;
+  wallet: string;
+  red: string;
 }
 
 export function calcularPrecioOnline(precioBase: number): PricingBreakdown {
@@ -29,16 +38,6 @@ export function calcularPrecioContraEntrega(precioBase: number): PricingBreakdow
   const comisionColbisnes = Math.round(precioBase * COLBISNES_PCT_CE);
   const totalComprador    = precioBase + comisionColbisnes;
   return { precioBase, comisionColbisnes, totalComprador, costoWompi: 0, gmf: 0, gananciaColbisnes: comisionColbisnes, recibeVendedor: precioBase };
-}
-
-export const COLBISNES_PCT_USDT = 0.05; // 5% USDT — sin pasarela bancaria
-
-export interface USDTPricing {
-  precioBaseUSD: number;
-  comisionUSD: number;
-  totalUSD: number;
-  wallet: string;
-  red: string;
 }
 
 export function calcularPrecioUSDT(precioBaseCOP: number, tasaCOP: number): USDTPricing {

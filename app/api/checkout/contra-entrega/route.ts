@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const { productoId } = await req.json();
-
   const producto = await prisma.product.findUnique({ where: { id: productoId } });
   if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 

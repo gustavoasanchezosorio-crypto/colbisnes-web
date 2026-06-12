@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const { productoId, tasaCOP } = await req.json();
-
   const producto = await prisma.product.findUnique({ where: { id: productoId } });
   if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
@@ -24,16 +23,9 @@ export async function POST(req: NextRequest) {
       totalPagado:    Math.round(pricing.totalUSD * tasaCOP),
       comision:       Math.round(pricing.comisionUSD * tasaCOP),
       recibeVendedor: producto.price,
-      codigoSecreto:  null,
       totalUSDT:      pricing.totalUSD,
     },
   });
 
-  return NextResponse.json({
-    ok: true,
-    ordenId:   orden.id,
-    totalUSDT: pricing.totalUSD,
-    wallet:    pricing.wallet,
-    red:       pricing.red,
-  });
+  return NextResponse.json({ ok: true, ordenId: orden.id, totalUSDT: pricing.totalUSD, wallet: pricing.wallet, red: pricing.red });
 }
