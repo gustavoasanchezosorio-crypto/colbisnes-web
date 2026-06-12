@@ -30,3 +30,26 @@ export function calcularPrecioContraEntrega(precioBase: number): PricingBreakdow
   const totalComprador    = precioBase + comisionColbisnes;
   return { precioBase, comisionColbisnes, totalComprador, costoWompi: 0, gmf: 0, gananciaColbisnes: comisionColbisnes, recibeVendedor: precioBase };
 }
+
+export const COLBISNES_PCT_USDT = 0.05; // 5% USDT — sin pasarela bancaria
+
+export interface USDTPricing {
+  precioBaseUSD: number;
+  comisionUSD: number;
+  totalUSD: number;
+  wallet: string;
+  red: string;
+}
+
+export function calcularPrecioUSDT(precioBaseCOP: number, tasaCOP: number): USDTPricing {
+  const precioBaseUSD = parseFloat((precioBaseCOP / tasaCOP).toFixed(2));
+  const comisionUSD   = parseFloat((precioBaseUSD * COLBISNES_PCT_USDT).toFixed(2));
+  const totalUSD      = parseFloat((precioBaseUSD + comisionUSD).toFixed(2));
+  return {
+    precioBaseUSD,
+    comisionUSD,
+    totalUSD,
+    wallet: process.env.NEXT_PUBLIC_USDT_WALLET!,
+    red: "BNB Chain (BEP20)",
+  };
+}
