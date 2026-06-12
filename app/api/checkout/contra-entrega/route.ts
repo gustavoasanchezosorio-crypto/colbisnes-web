@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const producto = await prisma.product.findUnique({ where: { id: productoId } });
   if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-  const pricing       = calcularPrecioContraEntrega(producto.price);
+  const pricing       = calcularPrecioContraEntrega(producto.priceCOP);
   const codigoSecreto = Math.floor(100000 + Math.random() * 900000).toString();
 
   const orden = await prisma.order.create({

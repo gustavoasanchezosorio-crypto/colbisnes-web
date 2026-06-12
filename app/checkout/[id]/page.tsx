@@ -1,20 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT } from "@/lib/pricing";
 
 type MetodoPago = "online" | "contraentrega" | "usdt";
-interface Producto { id: string; nombre: string; precio: number; }
-interface Props { producto: Producto; }
 
-export default function CheckoutPage({ producto }: Props) {
-  const [metodo, setMetodo]   = useState<MetodoPago | null>(null);
-  const [tasa, setTasa]       = useState<number>(4200);
-  const [loading, setLoading] = useState(false);
+interface Producto { id: string; nombre: string; precio: number; }
+
+export default function CheckoutPage() {
+  const params  = useParams();
+  const id      = params.id as string;
+
+  const [producto, setProducto] = useState<Producto | null>(null);
+  const [metodo, setMetodo]     = useState<MetodoPago | null>(null);
+  const [tasa, setTasa]         = useState<number>(4200);
+  const [loading, setLoading]   = useState(false);
 
   useEffect(() => {
+    fetch(`/api/productos/${id}`).then(r => r.json()).then(setProducto);
     fetch("/api/tasa-usdt").then(r => r.json()).then(d => { if (d.tasa) setTasa(d.tasa); });
-  }, []);
+  }, [id]);
+
+  if (!producto) return <div className="p-8 text-center text-gray-400">Cargando...</div>;
 
   const online = calcularPrecioOnline(producto.precio);
   const contra = calcularPrecioContraEntrega(producto.precio);

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const producto = await prisma.product.findUnique({ where: { id: productoId } });
   if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-  const pricing = calcularPrecioUSDT(producto.price, tasaCOP);
+  const pricing = calcularPrecioUSDT(producto.priceCOP, tasaCOP);
 
   const orden = await prisma.order.create({
     data: {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       estado:         "ESPERANDO_PAGO_CRYPTO",
       totalPagado:    Math.round(pricing.totalUSD * tasaCOP),
       comision:       Math.round(pricing.comisionUSD * tasaCOP),
-      recibeVendedor: producto.price,
+      recibeVendedor: producto.priceCOP,
       totalUSDT:      pricing.totalUSD,
     },
   });

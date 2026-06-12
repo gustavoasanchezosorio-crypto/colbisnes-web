@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const producto = await prisma.product.findUnique({ where: { id: productoId } });
   if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-  const pricing = calcularPrecioOnline(producto.price);
+  const pricing = calcularPrecioOnline(producto.priceCOP);
 
   const orden = await prisma.order.create({
     data: {
