@@ -3,7 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function MockKycPage() {
+function MockKycPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const userId = searchParams.get("userId");
@@ -71,5 +71,14 @@ export default function MockKycPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+import { Suspense } from "react";
+export default function MockKycPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <MockKycPageInner />
+    </Suspense>
   );
 }

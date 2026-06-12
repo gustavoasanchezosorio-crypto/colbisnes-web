@@ -145,6 +145,10 @@ export async function PATCH(request: Request) {
       console.error('Error enviando email de oferta aceptada:', emailError);
     }
 
+    try {
+      const { io } = require("@/server.js");
+      io.to(`product-${offer.productId}`).emit("product-status-changed", { productId: offer.productId, status: "PAYMENT_PENDING" });
+    } catch(e) {}
     return NextResponse.json({ success: true, status: "ACCEPTED", product: result.updatedProduct });
   } catch (error) {
     console.error("PATCH /api/offers error:", error);

@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,10 +7,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { z } from "zod";
-
 import { useProducts, FilterState } from "@/hooks/useProducts";
 import { useToast } from "@/components/Toast";
-import { productSchema, ProductFormData } from "@/utils/validations";
+import { productSchema } from "@/utils/validations";
 import { THEME, PRODUCT_STATUS, CITIES } from "@/lib/theme";
 import { Button, OutlineButton, Input, Select, TextArea } from "@/components/FormComponents";
 import { ProductCard } from "@/components/ProductCard";
@@ -20,607 +18,314 @@ import { ReviewModal } from "@/components/ReviewModal";
 import { SkeletonGrid } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
 
-const extendedProductSchema = productSchema.extend({
-  condition: z.enum(["NUEVO", "USADO"]),
-});
-type ExtendedProductFormData = z.infer<typeof extendedProductSchema>;
-
-const STORAGE_KEYS = {
-  FILTERS: "colbisnes_filters",
-} as const;
-
+const extendedSchema = productSchema.extend({ condition: z.enum(["NUEVO", "USADO"]) });
+type FormData = z.infer<typeof extendedSchema>;
 const PAYMENT_METHODS = ["PSE", "Nequi", "Daviplata", "Visa", "Mastercard"] as const;
+const FILTERS_KEY = "colbisnes_filters";
 
-export default function Page() {
+interface ImagePickerProps {
+  files: File[];
+  previews: string[];
+  onChange: (files: File[], previews: string[]) => void;
+  disabled?: boolean;
+}
+
+function ImagePicker({ files, previews, onChange, disabled }: ImagePickerProps) {
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const handleFileChange = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const nf = [...files]; const np = [...previews];
+    nf[idx] = file; np[idx] = URL.createObjectURL(file);
+    onChange(nf, np); e.target.value = "";
+  };
+  const handleRemove = (idx: number) => {
+    onChange(files.filter((_, i) => i !== idx), previews.filter((_, i) => i !== idx));
+  };
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {[0,1,2,3,4].map(idx => (
+          <div key={idx}>
+            <input ref={el => { inputRefs.current[idx] = el; }} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFileChange(idx, e)} disabled={disabled} />
+            <div onClick={() => { if (!previews[idx] && !disabled) inputRefs.current[idx]?.click(); }}
+              style={{ position: "relative", width: 86, height: 86, borderRadius: 12, border: `2px dashed ${previews[idx] ? THEME.primary : THEME.border}`, background: previews[idx] ? "transparent" : "#FAFBFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: previews[idx] ? "default" : "pointer", overflow: "hidden" }}>
+              {previews[idx] ? (
+                <>
+                  <img src={previews[idx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button type="button" onClick={e => { e.stopPropagation(); handleRemove(idx); }} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(239,68,68,0.92)", border: "none", color: "white", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>×</button>
+                  <button type="button" onClick={e => { e.stopPropagation(); inputRefs.current[idx]?.click(); }} style={{ position: "absolute", bottom: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,89,159,0.85)", border: "none", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✎</button>
+                </>
+              ) : (
+                <span style={{ fontSize: 24, color: THEME.muted }}>+</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, color: THEME.muted, margin: "6px 0 0" }}>Toca + para agregar · × para eliminar · ✎ para cambiar</p>
+    </div>
+  );
+}
+
+function PageInner() {
   const { data: session, status: sessionStatus } = useSession();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [filters, setFilters] = useState<FilterState & { condition?: string }>(() => {
-    const urlFilters = {
-      searchQuery: searchParams.get("q") || "",
-      city: searchParams.get("city") || "",
-      minPrice: searchParams.get("minPrice") || "",
-      maxPrice: searchParams.get("maxPrice") || "",
-      status: searchParams.get("status") || "",
-      condition: searchParams.get("condition") || "",
-    };
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEYS.FILTERS);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          return {
-            searchQuery: urlFilters.searchQuery || parsed.searchQuery || "",
-            city: urlFilters.city || parsed.city || "",
-            minPrice: urlFilters.minPrice || parsed.minPrice || "",
-            maxPrice: urlFilters.maxPrice || parsed.maxPrice || "",
-            status: urlFilters.status || parsed.status || "",
-            condition: urlFilters.condition || parsed.condition || "",
-          };
-        } catch {}
-      }
-    }
-    return urlFilters;
+    const url = { searchQuery: searchParams.get("q") || "", city: searchParams.get("city") || "", minPrice: searchParams.get("minPrice") || "", maxPrice: searchParams.get("maxPrice") || "", status: searchParams.get("status") || "", condition: searchParams.get("condition") || "" };
+    if (typeof window !== "undefined") { try { const s = JSON.parse(localStorage.getItem(FILTERS_KEY) || "{}"); return Object.fromEntries(Object.entries(url).map(([k,v]) => [k, v || (s as any)[k] || ""])) as typeof url; } catch {} }
+    return url;
   });
-
   const { products, loading, error, hasMore, fetchMore, refetch } = useProducts(filters);
-
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [reviewingProduct, setReviewingProduct] = useState<any | null>(null);
   const [offers, setOffers] = useState<any[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(false);
   const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const [paymentModalProduct, setPaymentModalProduct] = useState<any | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-
-  // Estados para imágenes
+  const [showPublishForm, setShowPublishForm] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting, isValid },
-    watch,
-  } = useForm<ExtendedProductFormData>({
-    resolver: zodResolver(extendedProductSchema),
+  const abortRef = useRef<AbortController | null>(null);
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(extendedSchema),
     defaultValues: { city: "Bogotá", condition: "NUEVO" },
     mode: "onChange",
   });
-
-  const titleValue = watch("title");
-
   useEffect(() => {
     const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
-    });
+    Object.entries(filters).forEach(([k,v]) => { if (v) params.append(k, v); });
     router.replace(`/?${params.toString()}`);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEYS.FILTERS, JSON.stringify(filters));
-    }
+    if (typeof window !== "undefined") localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
   }, [filters, router]);
-
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-    };
-  }, []);
-
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
   const fetchOffers = useCallback(async (productId: string) => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
+    abortRef.current?.abort(); abortRef.current = new AbortController();
     setLoadingOffers(true);
     try {
-      const res = await fetch(`/api/offers?productId=${encodeURIComponent(productId)}`, {
-        signal: abortControllerRef.current.signal,
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || `Error ${res.status}`);
-      }
+      const res = await fetch(`/api/offers?productId=${encodeURIComponent(productId)}`, { signal: abortRef.current.signal, cache: "no-store" });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setOffers(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        showToast(err.message || "Error cargando ofertas", "error");
-      }
-    } finally {
-      setLoadingOffers(false);
-      abortControllerRef.current = null;
-    }
+    } catch (err: any) { if (err.name !== "AbortError") showToast(err.message || "Error cargando ofertas", "error"); }
+    finally { setLoadingOffers(false); abortRef.current = null; }
   }, [showToast]);
-
-  useEffect(() => {
-    if (selectedProductId) fetchOffers(selectedProductId);
-    else setOffers([]);
-  }, [selectedProductId, fetchOffers]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 5) {
-      showToast("Máximo 5 imágenes por producto", "warning");
-      return;
-    }
-    setImageFiles(files);
-    setImagePreviews(files.map(f => URL.createObjectURL(f)));
-  };
-
-  const onPublish = useCallback(async (data: ExtendedProductFormData) => {
-    if (sessionStatus !== "authenticated") {
-      showToast("Debes iniciar sesión para publicar", "warning");
-      return;
-    }
+  useEffect(() => { if (selectedProductId) fetchOffers(selectedProductId); else setOffers([]); }, [selectedProductId, fetchOffers]);
+  const onPublish = useCallback(async (data: FormData) => {
+    if (sessionStatus !== "authenticated") { showToast("Debes iniciar sesion para publicar", "warning"); return; }
     setUploadingImages(true);
     try {
-      // 1. Subir imágenes a Cloudinary
       let imageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        const formDataImages = new FormData();
-        imageFiles.forEach((file) => formDataImages.append("images", file));
-        const uploadRes = await fetch("/api/upload-images", {
-          method: "POST",
-          credentials: "include",
-          body: formDataImages,
-        });
-        const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error || "Error al subir imágenes");
-        imageUrls = uploadData.urls;
+        const fd = new FormData();
+        imageFiles.forEach(f => fd.append("images", f));
+        const upRes = await fetch("/api/upload-images", { method: "POST", credentials: "include", body: fd });
+        const upData = await upRes.json();
+        if (!upRes.ok) throw new Error(upData.error || "Error al subir imagenes");
+        imageUrls = upData.urls;
       }
-
-      // 2. Crear producto con las URLs
-      const res = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ ...data, images: imageUrls }),
-      });
-      const response = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
-      reset();
-      setImageFiles([]);
-      setImagePreviews([]);
-      await refetch();
-      showToast("Producto publicado exitosamente", "success");
-    } catch (err: any) {
-      showToast(err.message || "Error al publicar", "error");
-    } finally {
-      setUploadingImages(false);
-    }
+      const res = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ ...data, images: imageUrls }) });
+      const resp = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(resp.message || `Error ${res.status}`);
+      reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false);
+      await refetch(); showToast("Producto publicado exitosamente!", "success");
+    } catch (err: any) { showToast(err.message || "Error al publicar", "error"); }
+    finally { setUploadingImages(false); }
   }, [sessionStatus, reset, refetch, showToast, imageFiles]);
-
   const handleMakeOffer = useCallback(async (productId: string, amount: number, message: string) => {
-    if (sessionStatus !== "authenticated") {
-      showToast("Inicia sesión para hacer una oferta", "warning");
-      return;
-    }
+    if (sessionStatus !== "authenticated") { showToast("Inicia sesion para hacer una oferta", "warning"); return; }
     setIsSubmittingOffer(true);
     try {
-      const res = await fetch("/api/offers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ productId, amountCOP: amount, message: message?.trim() || null }),
-      });
-      const response = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
+      const res = await fetch("/api/offers", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ productId, amountCOP: amount, message: message?.trim() || null }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || `Error ${res.status}`);
       showToast("Oferta enviada exitosamente", "success");
       await Promise.all([fetchOffers(productId), refetch()]);
-    } catch (err: any) {
-      showToast(err.message || "Error al crear la oferta", "error");
-    } finally {
-      setIsSubmittingOffer(false);
-    }
+    } catch (err: any) { showToast(err.message || "Error al crear la oferta", "error"); }
+    finally { setIsSubmittingOffer(false); }
   }, [sessionStatus, showToast, fetchOffers, refetch]);
-
   const handleUpdateOffer = useCallback(async (offerId: string, status: string) => {
     try {
-      const res = await fetch("/api/offers", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ offerId, status }),
-      });
-      const response = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
-      if (selectedProductId) {
-        await Promise.all([fetchOffers(selectedProductId), refetch()]);
-      }
+      const res = await fetch("/api/offers", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ offerId, status }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message);
+      if (selectedProductId) await Promise.all([fetchOffers(selectedProductId), refetch()]);
       showToast(`Oferta ${status === "ACCEPTED" ? "aceptada" : "rechazada"}`, "success");
-    } catch (err: any) {
-      showToast(err.message || "Error al actualizar la oferta", "error");
-    }
+    } catch (err: any) { showToast(err.message || "Error al actualizar la oferta", "error"); }
   }, [selectedProductId, fetchOffers, refetch, showToast]);
-
-  const handleMockPayment = useCallback(async (productId: string) => {
-    try {
-      const res = await fetch("/api/payments/mock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ productId }),
-      });
-      const response = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
-      await Promise.all([refetch(), selectedProductId === productId && fetchOffers(productId)]);
-      showToast("Pago procesado exitosamente", "success");
-    } catch (err: any) {
-      showToast(err.message || "Error al procesar el pago", "error");
-    }
-  }, [refetch, selectedProductId, fetchOffers, showToast]);
-
   const handlePaymentRequest = useCallback(async (productId: string) => {
     const product = products.find(p => p.id === productId);
-    if (!product || !product.seller) {
-      showToast("No se pudo obtener la información del vendedor", "error");
-      return;
-    }
-    try {
-      const res = await fetch(`/api/users/${product.seller.id}`);
-      if (!res.ok) throw new Error("Error al obtener datos de pago");
-      const sellerData = await res.json();
-      product.seller.nequiNumber = sellerData.nequiNumber;
-      product.seller.brebId = sellerData.brebId;
-    } catch (err) {
-      console.error(err);
-    }
+    if (!product?.seller) { showToast("No se pudo obtener la informacion del vendedor", "error"); return; }
+    try { const res = await fetch(`/api/users/${product.seller.id}`); if (res.ok) { const d = await res.json(); (product.seller as any).nequiNumber = d.nequiNumber; (product.seller as any).brebId = d.brebId; } } catch {}
     setPaymentModalProduct(product);
-    setIsPaymentModalOpen(true);
   }, [products, showToast]);
-
   const handleConfirmDelivery = useCallback(async (productId: string) => {
     try {
-      const res = await fetch("/api/payments/confirm-delivery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ productId }),
-      });
-      const response = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(response.message || `Error ${res.status}`);
+      const res = await fetch("/api/payments/confirm-delivery", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ productId }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message);
       await Promise.all([refetch(), selectedProductId === productId && fetchOffers(productId)]);
       showToast("Entrega confirmada exitosamente", "success");
-    } catch (err: any) {
-      showToast(err.message || "Error al confirmar la entrega", "error");
-    }
+    } catch (err: any) { showToast(err.message || "Error al confirmar la entrega", "error"); }
   }, [refetch, selectedProductId, fetchOffers, showToast]);
-
   const handleSubmitReview = useCallback(async (productId: string, rating: number, comment: string) => {
-    if (rating < 1 || rating > 5) {
-      showToast("La calificación debe ser entre 1 y 5 estrellas", "error");
-      return;
-    }
     try {
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ productId, rating, comment: comment?.trim() || undefined }),
-      });
-      const response = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(response.error || `Error ${res.status}`);
-      showToast("Calificación enviada correctamente", "success");
-      await refetch();
-      setReviewingProduct(null);
-    } catch (err: any) {
-      showToast(err.message || "Error al enviar calificación", "error");
-    }
+      const res = await fetch("/api/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ productId, rating, comment: comment?.trim() || undefined }) });
+      const resp = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(resp.error || `Error ${res.status}`);
+      showToast("Calificacion enviada correctamente", "success");
+      await refetch(); setReviewingProduct(null);
+    } catch (err: any) { showToast(err.message || "Error al enviar calificacion", "error"); }
   }, [refetch, showToast]);
-
   const clearFilters = useCallback(() => {
-    setFilters({
-      searchQuery: "",
-      city: "",
-      minPrice: "",
-      maxPrice: "",
-      status: "",
-      condition: "",
-    });
-    if (typeof window !== "undefined") localStorage.removeItem(STORAGE_KEYS.FILTERS);
+    setFilters({ searchQuery: "", city: "", minPrice: "", maxPrice: "", status: "", condition: "" });
+    if (typeof window !== "undefined") localStorage.removeItem(FILTERS_KEY);
   }, []);
-
-  const handleSearch = (e: React.FormEvent) => e.preventDefault();
-
-  const productsCount = useMemo(() => products.length, [products]);
-  const isAuthenticated = useMemo(() => sessionStatus === "authenticated", [sessionStatus]);
-
-  const Header = useMemo(() => (
-    <header style={{ background: THEME.primary, padding: "18px 28px", boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
-      <div style={{ maxWidth: 1200, margin: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
-          <h1 style={{ fontWeight: 800, fontSize: "1.6rem", color: "white", margin: 0 }}>COLBISNES</h1>
-        </Link>
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          {isAuthenticated && session?.user ? (
-            <>
-              <Link
-                href={`/user/${session.user.id}`}
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 16px",
-                  borderRadius: 30,
-                  background: "rgba(255,255,255,0.1)",
-                  transition: "background 0.2s",
-                }}
-              >
-                <span>👤 {session.user?.name || session.user?.email}</span>
-              </Link>
-              <Button onClick={() => signOut()}>Cerrar sesión</Button>
-            </>
-          ) : (
-            <>
-              <Link href="/auth/login" style={{ textDecoration: "none" }}>
-                <Button>Iniciar sesión</Button>
-              </Link>
-              <Link href="/auth/register" style={{ textDecoration: "none" }}>
-                <Button>Registrarse</Button>
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  ), [isAuthenticated, session]);
-
-  const ProductFormSection = useMemo(() => {
-    if (!isAuthenticated) return null;
-    return (
-      <section style={{ background: THEME.surface, borderRadius: 20, padding: 24, border: `1px solid ${THEME.border}`, marginBottom: 40 }}>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: 16, color: THEME.primary }}>Publicar producto</h2>
-        <form onSubmit={handleSubmit(onPublish)}>
-          <Input placeholder="Título *" {...register('title')} error={errors.title?.message} />
-          {titleValue && titleValue.length < 3 && (
-            <p style={{ color: THEME.muted, fontSize: "0.8rem", marginTop: 4 }}>Mínimo 3 caracteres</p>
-          )}
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-            <Input placeholder="Precio COP *" type="number" {...register('priceCOP', { valueAsNumber: true })} error={errors.priceCOP?.message} step="1000" />
-            <Select {...register('city')}>
-              {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
-            </Select>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <Select {...register('condition')}>
-              <option value="NUEVO">Nuevo</option>
-              <option value="USADO">Usado</option>
-            </Select>
-          </div>
-          <TextArea placeholder="Descripción *" rows={4} {...register('description')} error={errors.description?.message} style={{ marginTop: 10 }} />
-
-          {/* Imágenes */}
-          <div style={{ marginTop: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Imágenes (máx 5)</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageChange}
-              disabled={uploadingImages}
-              style={{
-                padding: "8px",
-                borderRadius: 8,
-                border: `1px solid ${THEME.border}`,
-                background: "white",
-                width: "100%",
-              }}
-            />
-            {imagePreviews.length > 0 && (
-              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                {imagePreviews.map((src, idx) => (
-                  <img key={idx} src={src} alt={`preview-${idx}`} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8 }} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
-            <Button type="submit" disabled={isSubmitting || !isValid || uploadingImages}>
-              {uploadingImages ? "Subiendo imágenes..." : isSubmitting ? "Publicando..." : "Publicar"}
-            </Button>
-            <OutlineButton onClick={() => refetch()} disabled={loading}>Recargar</OutlineButton>
-          </div>
-        </form>
-      </section>
-    );
-  }, [isAuthenticated, handleSubmit, onPublish, register, errors, isSubmitting, isValid, refetch, loading, titleValue, imagePreviews, uploadingImages]);
-
-  const FilterSection = useMemo(() => (
-    <section style={{ background: THEME.surface, borderRadius: 20, padding: 24, border: `1px solid ${THEME.border}`, marginBottom: 40 }}>
-      <h2 style={{ fontSize: "1.5rem", marginBottom: 16, color: THEME.primary }}>Buscar productos</h2>
-      <form onSubmit={handleSearch}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-          <Input
-            placeholder="Buscar por título o descripción..."
-            value={filters.searchQuery}
-            onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-            style={{ flex: 2, minWidth: 250 }}
-          />
-          <Select value={filters.city} onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ flex: 1, minWidth: 150 }}>
-            <option value="">Todas las ciudades</option>
-            {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
-          </Select>
-        </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <Input type="number" placeholder="Mín" value={filters.minPrice} onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value }))} style={{ width: 100 }} min="0" step="1000" />
-          <span>a</span>
-          <Input type="number" placeholder="Máx" value={filters.maxPrice} onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value }))} style={{ width: 100 }} min="0" step="1000" />
-          <Select value={filters.condition} onChange={(e) => setFilters(prev => ({ ...prev, condition: e.target.value }))} style={{ width: 120 }}>
-            <option value="">Condición</option>
-            <option value="NUEVO">Nuevo</option>
-            <option value="USADO">Usado</option>
-          </Select>
-          <Select value={filters.status} onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: 140 }}>
-            <option value="">Todos</option>
-            <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
-            <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
-            <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
-            <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
-          </Select>
-          <Button type="submit">Buscar</Button>
-          <OutlineButton onClick={clearFilters}>Limpiar</OutlineButton>
-        </div>
-      </form>
-    </section>
-  ), [filters, clearFilters]);
-
-  const Footer = useMemo(() => (
-    <footer style={{ marginTop: 80, padding: 40, textAlign: "center", borderTop: `1px solid ${THEME.border}`, background: THEME.surface }}>
-      <h3 style={{ fontSize: "1.2rem", marginBottom: 16, color: THEME.primary }}>Medios de pago aceptados</h3>
-      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
-        {PAYMENT_METHODS.map(method => (
-          <span key={method} style={{ background: THEME.secondary, color: THEME.text, padding: "8px 20px", borderRadius: 30, fontWeight: 600 }}>
-            {method}
-          </span>
-        ))}
-      </div>
-      <p style={{ marginTop: 24, color: THEME.muted }}>© {new Date().getFullYear()} COLBISNES - Todos los derechos reservados</p>
-    </footer>
-  ), []);
+  const isAuthenticated = sessionStatus === "authenticated";
+  const productsCount = products.length;
+  const hasActiveFilters = Object.values(filters).some(Boolean);
 
   return (
     <div style={{ minHeight: "100vh", background: THEME.background, color: THEME.text }}>
-      {Header}
-      <main style={{ maxWidth: 1200, margin: "auto", padding: "40px 20px" }}>
-        {ProductFormSection}
-        {FilterSection}
-
-        <section>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h2 style={{ fontSize: "1.5rem", color: THEME.primary }}>Productos</h2>
-            <span style={{ background: THEME.border, padding: "6px 14px", borderRadius: 30, fontSize: "0.9rem" }}>
-              {productsCount} encontrado{productsCount !== 1 ? 's' : ''}
-            </span>
+      <header style={{ background: `linear-gradient(135deg,#003f7a,${THEME.primary},#4c8cff)`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,89,159,0.3)" }}>
+        <Link href="/" style={{ textDecoration: "none" }}>
+          <span style={{ fontWeight: 900, fontSize: 20, color: "white", letterSpacing: "0.05em" }}>COLBISNES</span>
+        </Link>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {isAuthenticated && session?.user ? (
+            <>
+              <button onClick={() => setShowPublishForm(!showPublishForm)} style={{ padding: "7px 16px", borderRadius: 20, background: showPublishForm ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.4)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                {showPublishForm ? "✕ Cerrar" : "+ Publicar"}
+              </button>
+              <Link href={`/user/${session.user.id}`} style={{ color: "rgba(255,255,255,0.9)", textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, background: "rgba(255,255,255,0.12)", fontSize: 13, fontWeight: 600 }}>
+                <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, border: "1.5px solid rgba(255,255,255,0.4)" }}>
+                  {(session.user?.name || session.user?.email || "U")[0].toUpperCase()}
+                </span>
+              </Link>
+              <button onClick={() => signOut()} style={{ padding: "7px 14px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.35)", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Salir</button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth/login" style={{ color: "rgba(255,255,255,0.9)", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Entrar</Link>
+              <Link href="/auth/register" style={{ padding: "7px 16px", borderRadius: 20, background: "rgba(255,255,255,0.2)", color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, border: "1.5px solid rgba(255,255,255,0.4)" }}>Registrarse</Link>
+            </>
+          )}
+        </div>
+      </header>
+      <main style={{ maxWidth: 1160, margin: "auto", padding: "28px 16px 60px" }}>
+        {isAuthenticated && showPublishForm && (
+          <div style={{ background: THEME.surface, borderRadius: 20, padding: "24px 20px", border: `1px solid ${THEME.border}`, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,89,159,0.08)" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: THEME.primary, margin: "0 0 18px" }}>Publicar producto</h2>
+            <form onSubmit={handleSubmit(onPublish)}>
+              <div style={{ display: "grid", gap: 12 }}>
+                <Input placeholder="Titulo del producto *" {...register("title")} />
+                {errors.title && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.title.message}</p>}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  <Input placeholder="Precio COP *" inputMode="numeric" {...register("priceCOP", { setValueAs: (v) => parseInt(String(v).replace(/\D/g, "")) || 0 })} />
+                  <Select {...register("city")}>{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</Select>
+                  <Select {...register("condition")}><option value="NUEVO">Nuevo</option><option value="USADO">Usado</option></Select>
+                </div>
+                {errors.priceCOP && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.priceCOP.message}</p>}
+                <TextArea placeholder="Descripcion detallada *" rows={3} {...register("description")} />
+                {errors.description && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.description.message}</p>}
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 8px" }}>Fotos del producto (max 5)</p>
+                  <ImagePicker files={imageFiles} previews={imagePreviews} onChange={(f,p) => { setImageFiles(f); setImagePreviews(p); }} disabled={uploadingImages} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                <Button type="submit" disabled={isSubmitting || uploadingImages}>{uploadingImages ? "Subiendo..." : isSubmitting ? "Publicando..." : "Publicar"}</Button>
+                <OutlineButton type="button" onClick={() => { reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); }}>Cancelar</OutlineButton>
+              </div>
+            </form>
           </div>
-
-          {error && (
-            <div style={{ textAlign: "center", padding: 40, color: "red", background: "rgba(255,0,0,0.1)", borderRadius: 12, marginBottom: 20 }}>
-              ⚠️ {error}
-            </div>
-          )}
-
-          <InfiniteScroll
-            dataLength={productsCount}
-            next={fetchMore}
-            hasMore={hasMore}
-            loader={<SkeletonGrid count={4} />}
-            endMessage={
-              productsCount > 0 ? (
-                <p style={{ textAlign: "center", padding: 20, color: THEME.muted }}>🎉 No hay más productos para mostrar</p>
-              ) : null
-            }
-          >
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
-              {products.map((product) => {
-                const isOwner = session?.user?.id === product.seller?.id;
-                const pendingOffersCount = product._count?.offers || 0;
-                return (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onSelect={setSelectedProductId}
-                    onPaymentRequest={handlePaymentRequest}
-                    onConfirmDelivery={handleConfirmDelivery}
-                    onReviewClick={setReviewingProduct}
-                    isSelected={selectedProductId === product.id}
-                    isOwner={isOwner}
-                    pendingOffersCount={pendingOffersCount}
-                  />
-                );
-              })}
-            </div>
-          </InfiniteScroll>
-
-          {!loading && productsCount === 0 && !error && (
-            <div style={{ textAlign: "center", padding: 60, background: THEME.surface, borderRadius: 20, border: `1px solid ${THEME.border}` }}>
-              <p style={{ fontSize: "1.2rem", color: THEME.muted }}>🔍 No se encontraron productos con los filtros actuales</p>
-              <OutlineButton onClick={clearFilters} style={{ marginTop: 20 }}>Limpiar filtros</OutlineButton>
-            </div>
-          )}
-        </section>
-
-        {selectedProductId && (
-          <OfferModal
-            productId={selectedProductId}
-            products={products}
-            offers={offers}
-            loading={loadingOffers || isSubmittingOffer}
-            session={session}
-            onClose={() => setSelectedProductId(null)}
-            onCreateOffer={handleMakeOffer}
-            onUpdateOffer={handleUpdateOffer}
-          />
         )}
-
-        {reviewingProduct && (
-          <ReviewModal
-            product={reviewingProduct}
-            session={session}
-            onClose={() => setReviewingProduct(null)}
-            onSubmitReview={handleSubmitReview}
-          />
-        )}
-
-        {isPaymentModalOpen && paymentModalProduct && (
-          <div style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 2000,
-            padding: 20,
-          }}>
-            <div style={{
-              background: THEME.surface,
-              borderRadius: 20,
-              padding: "2rem",
-              maxWidth: 500,
-              width: "100%",
-              maxHeight: "80vh",
-              overflowY: "auto",
-            }}>
-              <h3 style={{ marginBottom: "1rem", color: THEME.primary }}>Pagar con Nequi / Bre-B</h3>
-              <p><strong>Producto:</strong> {paymentModalProduct.title}</p>
-              <p><strong>Monto:</strong> {formatMoney(paymentModalProduct.priceCOP)}</p>
-              <p><strong>Vendedor:</strong> {paymentModalProduct.seller?.name || "Anónimo"}</p>
-              <div style={{ marginTop: "1.5rem", padding: "1rem", background: THEME.border, borderRadius: 12 }}>
-                <p><strong>Instrucciones de pago:</strong></p>
-                <p>📱 <strong>Nequi:</strong> {paymentModalProduct.seller?.nequiNumber || "No registrado"}</p>
-                <p>🏦 <strong>Bre-B ID:</strong> {paymentModalProduct.seller?.brebId || "No registrado"}</p>
-                <p style={{ marginTop: "1rem", fontSize: "0.9rem", color: THEME.muted }}>
-                  Realiza el pago a través de Nequi o Bre-B y luego confirma la transacción.
-                </p>
-              </div>
-              <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
-                <Button onClick={() => {
-                  handleMockPayment(paymentModalProduct.id);
-                  setIsPaymentModalOpen(false);
-                  setPaymentModalProduct(null);
-                }}>
-                  Ya pagué (confirmar)
-                </Button>
-                <OutlineButton onClick={() => {
-                  setIsPaymentModalOpen(false);
-                  setPaymentModalProduct(null);
-                }}>
-                  Cancelar
-                </OutlineButton>
-              </div>
-            </div>
+        <div style={{ background: THEME.surface, borderRadius: 16, padding: "14px 16px", border: `1px solid ${THEME.border}`, marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <Input placeholder="Buscar productos..." value={filters.searchQuery} onChange={e => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))} style={{ flex: 1, minWidth: 180 }} />
+            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: 140 }}>
+              <option value="">Todas las ciudades</option>
+              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </Select>
+            <Select value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: 140 }}>
+              <option value="">Todos</option>
+              <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
+              <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
+              <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
+              <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
+            </Select>
+            {hasActiveFilters && <OutlineButton onClick={clearFilters}>Limpiar</OutlineButton>}
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: THEME.primary, margin: 0 }}>Productos</h2>
+          <span style={{ background: THEME.border, padding: "5px 14px", borderRadius: 20, fontSize: 13 }}>{productsCount} encontrado{productsCount !== 1 ? "s" : ""}</span>
+        </div>
+        {error && <div style={{ padding: 20, background: "#FEE2E2", borderRadius: 12, color: "#EF4444", marginBottom: 16 }}>⚠️ {error}</div>}
+        <InfiniteScroll dataLength={productsCount} next={fetchMore} hasMore={hasMore} loader={<SkeletonGrid count={4} />} endMessage={productsCount > 0 ? <p style={{ textAlign: "center", padding: 20, color: THEME.muted }}>No hay mas productos</p> : null}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+            {products.map(product => (
+              <ProductCard key={product.id} product={product} onSelect={setSelectedProductId} onPaymentRequest={handlePaymentRequest} onConfirmDelivery={handleConfirmDelivery} onReviewClick={setReviewingProduct} isSelected={selectedProductId === product.id} isOwner={session?.user?.id === product.seller?.id} pendingOffersCount={product._count?.offers || 0} />
+            ))}
+          </div>
+        </InfiniteScroll>
+        {!loading && productsCount === 0 && !error && (
+          <div style={{ textAlign: "center", padding: 60, background: THEME.surface, borderRadius: 20, border: `2px dashed ${THEME.border}` }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>🔍</div>
+            <p style={{ fontSize: 16, color: THEME.muted, margin: "0 0 16px" }}>No se encontraron productos</p>
+            {hasActiveFilters && <OutlineButton onClick={clearFilters}>Limpiar filtros</OutlineButton>}
           </div>
         )}
       </main>
-      {Footer}
+      <footer style={{ borderTop: `1px solid ${THEME.border}`, background: THEME.surface, padding: "32px 24px" }}>
+        <div style={{ maxWidth: 1160, margin: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: THEME.primary }}>COLBISNES</div>
+            <p style={{ fontSize: 12, color: THEME.muted, margin: "3px 0 0" }}>© {new Date().getFullYear()} Colbisnes — La mejor tienda de segunda mano de Colombia</p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {PAYMENT_METHODS.map(m => <span key={m} style={{ padding: "5px 14px", borderRadius: 20, background: THEME.secondary, color: THEME.text, fontSize: 12, fontWeight: 700 }}>{m}</span>)}
+          </div>
+        </div>
+      </footer>
+      {selectedProductId && <OfferModal productId={selectedProductId} products={products} offers={offers} loading={loadingOffers || isSubmittingOffer} session={session} onClose={() => setSelectedProductId(null)} onCreateOffer={handleMakeOffer} onUpdateOffer={handleUpdateOffer} />}
+      {reviewingProduct && <ReviewModal product={reviewingProduct} session={session} onClose={() => setReviewingProduct(null)} onSubmitReview={handleSubmitReview} />}
+      {paymentModalProduct && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000, padding: 20, backdropFilter: "blur(4px)" }} onClick={e => e.target === e.currentTarget && setPaymentModalProduct(null)}>
+          <div style={{ background: THEME.surface, borderRadius: 24, padding: "28px 24px", maxWidth: 460, width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,0.2)" }}>
+            <h3 style={{ margin: "0 0 16px", color: THEME.primary, fontSize: 18, fontWeight: 800 }}>Pagar con Nequi / Bre-B</h3>
+            <div style={{ padding: "14px 16px", background: "#F0F6FF", borderRadius: 12, marginBottom: 16 }}>
+              <p style={{ margin: "0 0 4px", fontWeight: 700 }}>{paymentModalProduct.title}</p>
+              <p style={{ margin: 0, fontSize: 20, fontWeight: 900, color: THEME.primary }}>{formatMoney(paymentModalProduct.priceCOP)}</p>
+            </div>
+            <div style={{ padding: "14px 16px", background: THEME.border, borderRadius: 12, marginBottom: 20 }}>
+              <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 14 }}>Datos del vendedor:</p>
+              <p style={{ margin: "0 0 4px", fontSize: 14 }}>📱 <strong>Nequi:</strong> {paymentModalProduct.seller?.nequiNumber || "No registrado"}</p>
+              <p style={{ margin: "0 0 8px", fontSize: 14 }}>🏦 <strong>Bre-B:</strong> {paymentModalProduct.seller?.brebId || "No registrado"}</p>
+              <p style={{ fontSize: 12, color: THEME.muted, margin: 0 }}>Realiza el pago y luego confirma.</p>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Button onClick={async () => {
+                try {
+                  const res = await fetch("/api/payments/mock", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ productId: paymentModalProduct.id }) });
+                  if (!res.ok) throw new Error("Error al procesar pago");
+                  showToast("Pago confirmado exitosamente", "success");
+                  await refetch(); setPaymentModalProduct(null);
+                } catch (err: any) { showToast(err.message, "error"); }
+              }}>Ya pague</Button>
+              <OutlineButton onClick={() => setPaymentModalProduct(null)}>Cancelar</OutlineButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Cargando...</div>}>
+      <PageInner />
+    </Suspense>
   );
 }

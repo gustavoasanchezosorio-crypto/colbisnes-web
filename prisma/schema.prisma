@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -19,19 +20,20 @@ model User {
   role          String    @default("USER")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  faceDescriptor String?
 
-  products      Product[]
-  offers        Offer[]
-  sessions      Session[]
-  accounts      Account[]
-  sentReviews   Review[]  @relation("sender")
-  receivedReviews Review[] @relation("receiver")
-  sentMessages  Message[] @relation("sentMessages")
-  receivedMessages Message[] @relation("receivedMessages")
-  auditLogs     AuditLog[]
+  products         Product[]
+  offers           Offer[]
+  sessions         Session[]
+  accounts         Account[]
+  sentReviews      Review[]   @relation("sender")
+  receivedReviews  Review[]   @relation("receiver")
+  sentMessages     Message[]  @relation("sentMessages")
+  receivedMessages Message[]  @relation("receivedMessages")
+  auditLogs        AuditLog[]
 
-  kycLevel       Int      @default(0)
-  kycStatus      String   @default("pending")
+  kycLevel       Int       @default(0)
+  kycStatus      String    @default("pending")
   kycDocumentId  String?
   kycRequestedAt DateTime?
   kycApprovedAt  DateTime?
@@ -67,26 +69,35 @@ model Session {
 }
 
 model Product {
-  id                String   @id @default(cuid())
-  title             String
-  description       String
-  priceCOP          Int
-  city              String
-  condition         String   @default("NUEVO")
-  status            String   @default("AVAILABLE")
-  acceptedOfferId   String?
-  paymentExpiresAt  DateTime?
-  paidAt            DateTime?
-  soldAt            DateTime?
-  createdAt         DateTime @default(now())
+  id               String    @id @default(cuid())
+  title            String
+  description      String
+  priceCOP         Int
+  city             String
+  condition        String    @default("NUEVO")
+  status           String    @default("AVAILABLE")
+  acceptedOfferId  String?
+  paymentExpiresAt DateTime?
+  paidAt               DateTime?
+  wompiTransactionId   String?
+  wompiReference       String?
+  soldAt           DateTime?
+  createdAt        DateTime  @default(now())
 
-  sellerId          String
-  seller            User     @relation(fields: [sellerId], references: [id])
+  sellerId String
+  seller   User   @relation(fields: [sellerId], references: [id])
 
-  offers            Offer[]
-  reviews           Review[]
-  messages          Message[]
-  images            ProductImage[]
+  images   ProductImage[]
+  offers   Offer[]
+  reviews  Review[]
+  messages Message[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Offer {
@@ -97,50 +108,42 @@ model Offer {
   createdAt DateTime @default(now())
 
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }
 
 model Review {
-  id          String   @id @default(cuid())
-  rating      Int
-  comment     String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
 
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-  fromUserId  String
-  fromUser    User     @relation("sender", fields: [fromUserId], references: [id])
+  fromUserId String
+  fromUser   User   @relation("sender", fields: [fromUserId], references: [id])
 
-  toUserId    String
-  toUser      User     @relation("receiver", fields: [toUserId], references: [id])
+  toUserId String
+  toUser   User   @relation("receiver", fields: [toUserId], references: [id])
 
   @@unique([productId, fromUserId])
 }
 
 model Message {
   id         String   @id @default(cuid())
-  content    String
+  content    String // No usar @db.Text
   fromUserId String
   toUserId   String
   productId  String?
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  fromUser   User     @relation("sentMessages", fields: [fromUserId], references: [id])
-  toUser     User     @relation("receivedMessages", fields: [toUserId], references: [id])
-  product    Product? @relation(fields: [productId], references: [id])
-}
-
-model ProductImage {
-  id        String   @id @default(cuid())
-  url       String
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  fromUser User     @relation("sentMessages", fields: [fromUserId], references: [id])
+  toUser   User     @relation("receivedMessages", fields: [toUserId], references: [id])
+  product  Product? @relation(fields: [productId], references: [id])
 }
 
 model AuditLog {
@@ -154,4 +157,18 @@ model AuditLog {
   userAgent String?
   metadata  Json?
   createdAt DateTime @default(now())
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  productId      String
+  buyerEmail     String
+  metodoPago     String   // "ONLINE" | "CONTRA_ENTREGA"
+  estado         String   // "PENDIENTE" | "ESPERANDO_ENVIO" | "EN_CAMINO" | "ENTREGADO" | "CANCELADO"
+  totalPagado    Int
+  comision       Int
+  recibeVendedor Int
+  codigoSecreto  String?  // solo para contra entrega
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

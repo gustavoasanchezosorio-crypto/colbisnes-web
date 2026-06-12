@@ -1,0 +1,257 @@
+// app/admin/page.tsx — Panel de Administración Colbisnes
+"use client";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+type Seccion = "resumen" | "usuarios" | "productos" | "auditoria";
+
+export default function AdminPanel() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [seccion, setSeccion] = useState<Seccion>("resumen");
+  const [datos, setDatos] = useState<any>(null);
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState("");
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+    if (status === "authenticated") {
+      cargarDatos(seccion);
+    }
+  }, [status, seccion]);
+
+  const cargarDatos = async (sec: Seccion) => {
+    setCargando(true);
+    try {
+      const res = await fetch(`/api/admin?seccion=${sec}`);
+      if (res.status === 403) {
+        router.push("/");
+        return;
+      }
+      const data = await res.json();
+      setDatos(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const accionAdmin = async (accion: string, id: string) => {
+    if (!confirm("¿Estás seguro de esta acción?")) return;
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion, id }),
+      });
+      const data = await res.json();
+      setMensaje(data.mensaje || "Acción ejecutada");
+      setTimeout(() => setMensaje(""), 3000);
+      cargarDatos(seccion);
+    } catch (e) {
+      setMensaje("Error al ejecutar acción");
+    }
+  };
+
+  const s = {
+    container: { minHeight: "100vh", backgroundColor: "#0a0a1a", color: "white", fontFamily: "sans-serif" },
+    header: { backgroundColor: "#00589F", padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    titulo: { fontSize: "1.5rem", fontWeight: "bold", color: "#D4AF37" },
+    nav: { display: "flex", gap: "0.5rem", padding: "1rem 2rem", backgroundColor: "#111", borderBottom: "1px solid #222" },
+    navBtn: (activo: boolean) => ({
+      padding: "0.5rem 1.2rem", borderRadius: "6px", border: "none", cursor: "pointer",
+      backgroundColor: activo ? "#00589F" : "#222", color: activo ? "white" : "#aaa", fontWeight: activo ? "bold" : "normal",
+    }),
+    contenido: { padding: "2rem" },
+    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" },
+    card: { backgroundColor: "#111", border: "1px solid #222", borderRadius: "10px", padding: "1.5rem", textAlign: "center" as const },
+    cardNum: { fontSize: "2.5rem", fontWeight: "bold", color: "#D4AF37" },
+    cardLabel: { color: "#aaa", fontSize: "0.9rem", marginTop: "0.3rem" },
+    tabla: { width: "100%", borderCollapse: "collapse" as const, backgroundColor: "#111", borderRadius: "8px", overflow: "hidden" },
+    th: { backgroundColor: "#00589F", padding: "0.8rem", textAlign: "left" as const, fontSize: "0.85rem" },
+    td: { padding: "0.8rem", borderBottom: "1px solid #222", fontSize: "0.85rem" },
+    badge: (color: string) => ({ backgroundColor: color, padding: "0.2rem 0.6rem", borderRadius: "4px", fontSize: "0.75rem", color: "white" }),
+    btnDanger: { backgroundColor: "#ff4444", color: "white", border: "none", padding: "0.3rem 0.8rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" },
+    mensaje: { backgroundColor: "#00589F", color: "white", padding: "0.8rem 1.5rem", borderRadius: "6px", marginBottom: "1rem" },
+  };
+
+  const colorEstado: any = {
+    AVAILABLE: "#00aa44", PAYMENT_PENDING: "#ff9900", IN_ESCROW: "#8B4FDB", SOLD: "#555",
+  };
+
+  if (status === "loading") return <div style={{ ...s.container, display: "flex", alignItems: "center", justifyContent: "center" }}><p>Cargando...</p></div>;
+
+  return (
+    <div style={s.container}>
+      {/* Header */}
+      <div style={s.header}>
+        <span style={s.titulo}>⚙️ Panel Admin — Colbisnes</span>
+        <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{session?.user?.email}</span>
+      </div>
+
+      {/* Navegación */}
+      <div style={s.nav}>
+        {(["resumen", "usuarios", "productos", "auditoria"] as Seccion[]).map((sec) => (
+          <button key={sec} style={s.navBtn(seccion === sec)} onClick={() => setSeccion(sec)}>
+            {sec === "resumen" && "📊 Resumen"}
+            {sec === "usuarios" && "👥 Usuarios"}
+            {sec === "productos" && "📦 Productos"}
+            {sec === "auditoria" && "📋 Auditoría"}
+          </button>
+        ))}
+      </div>
+
+      {/* Contenido */}
+      <div style={s.contenido}>
+        {mensaje && <div style={s.mensaje}>✅ {mensaje}</div>}
+
+        {cargando ? (
+          <p style={{ color: "#aaa", textAlign: "center", padding: "3rem" }}>⏳ Cargando datos...</p>
+        ) : (
+          <>
+            {/* RESUMEN */}
+            {seccion === "resumen" && datos && (
+              <>
+                <h2 style={{ color: "#D4AF37", marginBottom: "1.5rem" }}>📊 Resumen General</h2>
+                <div style={s.grid}>
+                  <div style={s.card}><div style={s.cardNum}>{datos.totalUsuarios}</div><div style={s.cardLabel}>Total Usuarios</div></div>
+                  <div style={s.card}><div style={{ ...s.cardNum, color: "#00aa44" }}>{datos.usuariosNuevos}</div><div style={s.cardLabel}>Nuevos (7 días)</div></div>
+                  <div style={s.card}><div style={s.cardNum}>{datos.totalProductos}</div><div style={s.cardLabel}>Total Productos</div></div>
+                  <div style={s.card}><div style={{ ...s.cardNum, color: "#00aa44" }}>{datos.productosActivos}</div><div style={s.cardLabel}>Activos</div></div>
+                  <div style={s.card}><div style={{ ...s.cardNum, color: "#8B4FDB" }}>{datos.productosVendidos}</div><div style={s.cardLabel}>Vendidos</div></div>
+                  <div style={s.card}><div style={s.cardNum}>{datos.totalOfertas}</div><div style={s.cardLabel}>Total Ofertas</div></div>
+                  <div style={s.card}><div style={{ ...s.cardNum, color: "#00aa44" }}>{datos.ofertasAceptadas}</div><div style={s.cardLabel}>Ofertas Aceptadas</div></div>
+                  <div style={s.card}><div style={{ ...s.cardNum, color: "#D4AF37" }}>{datos.tasaConversion}%</div><div style={s.cardLabel}>Tasa de Conversión</div></div>
+                  <div style={s.card}><div style={s.cardNum}>{datos.totalReviews}</div><div style={s.cardLabel}>Reseñas</div></div>
+                </div>
+                <div style={{ backgroundColor: "#111", border: "1px solid #222", borderRadius: "10px", padding: "1.5rem" }}>
+                  <h3 style={{ color: "#D4AF37", marginBottom: "1rem" }}>📈 Actividad últimos 7 días</h3>
+                  <p style={{ color: "#ccc" }}>👤 <strong style={{ color: "white" }}>{datos.usuariosNuevos}</strong> usuarios nuevos</p>
+                  <p style={{ color: "#ccc", marginTop: "0.5rem" }}>📦 <strong style={{ color: "white" }}>{datos.productosNuevos}</strong> productos nuevos</p>
+                </div>
+              </>
+            )}
+
+            {/* USUARIOS */}
+            {seccion === "usuarios" && datos?.usuarios && (
+              <>
+                <h2 style={{ color: "#D4AF37", marginBottom: "1.5rem" }}>👥 Usuarios ({datos.usuarios.length})</h2>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={s.tabla}>
+                    <thead>
+                      <tr>
+                        <th style={s.th}>Nombre</th>
+                        <th style={s.th}>Email</th>
+                        <th style={s.th}>Ciudad</th>
+                        <th style={s.th}>Verificado</th>
+                        <th style={s.th}>Productos</th>
+                        <th style={s.th}>Reseñas</th>
+                        <th style={s.th}>Registro</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {datos.usuarios.map((u: any) => (
+                        <tr key={u.id}>
+                          <td style={s.td}>{u.name || "—"}</td>
+                          <td style={s.td}>{u.email}</td>
+                          <td style={s.td}>{u.city || "—"}</td>
+                          <td style={s.td}>
+                            {u.isVerified
+                              ? <span style={s.badge("#00aa44")}>✓ Verificado</span>
+                              : <span style={s.badge("#555")}>Sin verificar</span>}
+                          </td>
+                          <td style={{ ...s.td, textAlign: "center" }}>{u._count.products}</td>
+                          <td style={{ ...s.td, textAlign: "center" }}>{u._count.reviewsReceived}</td>
+                          <td style={s.td}>{new Date(u.createdAt).toLocaleDateString("es-CO")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* PRODUCTOS */}
+            {seccion === "productos" && datos?.productos && (
+              <>
+                <h2 style={{ color: "#D4AF37", marginBottom: "1.5rem" }}>📦 Productos ({datos.productos.length})</h2>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={s.tabla}>
+                    <thead>
+                      <tr>
+                        <th style={s.th}>Título</th>
+                        <th style={s.th}>Vendedor</th>
+                        <th style={s.th}>Precio</th>
+                        <th style={s.th}>Estado</th>
+                        <th style={s.th}>Ciudad</th>
+                        <th style={s.th}>Fecha</th>
+                        <th style={s.th}>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {datos.productos.map((p: any) => (
+                        <tr key={p.id}>
+                          <td style={s.td}>{p.title}</td>
+                          <td style={s.td}>{p.user?.name || p.user?.email || "—"}</td>
+                          <td style={s.td}>${Number(p.price).toLocaleString("es-CO")}</td>
+                          <td style={s.td}>
+                            <span style={s.badge(colorEstado[p.status] || "#555")}>{p.status}</span>
+                          </td>
+                          <td style={s.td}>{p.city || "—"}</td>
+                          <td style={s.td}>{new Date(p.createdAt).toLocaleDateString("es-CO")}</td>
+                          <td style={s.td}>
+                            {p.status !== "SOLD" && (
+                              <button style={s.btnDanger} onClick={() => accionAdmin("eliminar_producto", p.id)}>
+                                Desactivar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* AUDITORÍA */}
+            {seccion === "auditoria" && datos?.logs && (
+              <>
+                <h2 style={{ color: "#D4AF37", marginBottom: "1.5rem" }}>📋 Log de Auditoría ({datos.logs.length})</h2>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={s.tabla}>
+                    <thead>
+                      <tr>
+                        <th style={s.th}>Fecha</th>
+                        <th style={s.th}>Usuario</th>
+                        <th style={s.th}>Acción</th>
+                        <th style={s.th}>Detalles</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {datos.logs.map((log: any) => (
+                        <tr key={log.id}>
+                          <td style={s.td}>{new Date(log.createdAt).toLocaleString("es-CO")}</td>
+                          <td style={s.td}>{log.user?.name || log.user?.email || "Sistema"}</td>
+                          <td style={s.td}><span style={s.badge("#00589F")}>{log.action}</span></td>
+                          <td style={{ ...s.td, maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis" }}>{log.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

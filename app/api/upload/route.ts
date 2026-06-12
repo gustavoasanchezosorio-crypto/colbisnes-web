@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(request: Request) {
   try {
@@ -14,34 +19,30 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
     if (!file) {
-      return NextResponse.json({ error: "No se recibió imagen" }, { status: 400 });
+      return NextResponse.json({ error: "No se recibio imagen" }, { status: 400 });
     }
 
-    // Validar tipo y tamaño
     if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Solo se permiten imágenes" }, { status: 400 });
+      return NextResponse.json({ error: "Solo se permiten imagenes" }, { status: 400 });
     }
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: "La imagen no debe superar 5MB" }, { status: 400 });
     }
 
-    // Crear carpeta si no existe
-    const uploadDir = path.join(process.cwd(), "public/uploads");
-    await mkdir(uploadDir, { recursive: true });
-
-    // Generar nombre único
-    const ext = path.extname(file.name);
-    const filename = `${Date.now()}-${Math.random().toString(36).substring(2)}${ext}`;
-    const filepath = path.join(uploadDir, filename);
-
-    // Guardar el archivo
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
 
-    const imageUrl = `/uploads/${filename}`;
+    const result = await new Promise<any>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        { folder: "colbisnes/profiles", resource_type: "image" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(buffer);
+    });
 
-    return NextResponse.json({ url: imageUrl });
+    return NextResponse.json({ url: result.secure_url });
   } catch (error) {
     console.error("Error uploading file:", error);
     return NextResponse.json({ error: "Error al subir imagen" }, { status: 500 });

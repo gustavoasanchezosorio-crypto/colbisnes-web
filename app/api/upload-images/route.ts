@@ -3,6 +3,12 @@ import { v2 as cloudinary } from "cloudinary";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,12 +21,6 @@ export async function POST(request: Request) {
     if (!files.length) {
       return NextResponse.json({ error: "No se enviaron imágenes" }, { status: 400 });
     }
-
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
 
     const uploadedUrls = [];
     for (const file of files) {

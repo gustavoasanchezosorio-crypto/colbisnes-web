@@ -1,0 +1,1 @@
+test # no es imagen real, pero para ver si el endpoint responde

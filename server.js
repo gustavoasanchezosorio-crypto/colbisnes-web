@@ -22,6 +22,10 @@ io.on('connection', (socket) => {
     io.to(`product-${data.productId}`).emit('new-message', data);
   });
 
+  socket.on('product-updated', (data) => {
+    io.to(`product-${data.productId}`).emit('product-status-changed', data);
+  });
+
   socket.on('disconnect', () => {
     console.log('🔴 Cliente desconectado:', socket.id);
   });
@@ -30,3 +34,5 @@ io.on('connection', (socket) => {
 httpServer.listen(3001, () => {
   console.log('✅ Servidor WebSocket corriendo en http://localhost:3001');
 });
+
+module.exports = { io };

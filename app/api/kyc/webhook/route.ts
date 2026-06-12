@@ -1,52 +1,63 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
-export async function POST(request: Request) {
+const VERIFF_SHARED_SECRET = process.env.VERIFF_SHARED_SECRET!;
+
+function verifySignature(payload: string, signature: string): boolean {
+  const expected = crypto
+    .createHmac("sha256", VERIFF_SHARED_SECRET)
+    .update(payload)
+    .digest("hex");
+  return expected === signature;
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const payload = await request.json();
-    console.log("Webhook KYC recibido:", payload);
+    const body = await req.text();
+    const signature = req.headers.get("x-hmac-signature") || "";
 
-    if (payload.status === 'decision' && payload.data) {
-      const { userId, verification } = payload.data;
-      if (!userId) {
-        console.error("No se recibió userId en el webhook");
-        return NextResponse.json({ error: "userId requerido" }, { status: 400 });
-      }
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        console.error(`Usuario no encontrado: ${userId}`);
-        return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
-      }
-
-      if (verification.status === 'approved') {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            kycStatus: "approved",
-            kycLevel: 2,
-            kycApprovedAt: new Date(),
-          },
-        });
-        console.log(`Usuario ${userId} verificado correctamente`);
-      } else {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            kycStatus: "rejected",
-            kycRejectedAt: new Date(),
-          },
-        });
-        console.log(`Usuario ${userId} rechazado`);
-      }
+    if (!verifySignature(body, signature)) {
+      console.error("Veriff webhook: firma inválida");
+      return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
     }
 
-    return NextResponse.json({ success: true });
+    const data = JSON.parse(body);
+    console.log("Veriff webhook recibido:", JSON.stringify(data, null, 2));
+
+    const verification = data.verification || data;
+    const vendorData = verification.vendorData; // userId
+    const status = verification.status;
+    const code = verification.code;
+
+    if (!vendorData) {
+      return NextResponse.json({ received: true });
+    }
+
+    // Mapear estados de Veriff
+    // code 9001 = approved, 9102 = declined, 9103 = resubmission_requested
+    let kycStatus = "pending";
+    if (code === 9001 || status === "approved") {
+      kycStatus = "approved";
+    } else if (code === 9102 || status === "declined") {
+      kycStatus = "rejected";
+    } else if (code === 9103) {
+      kycStatus = "resubmit";
+    }
+
+    await prisma.user.update({
+      where: { id: vendorData },
+      data: {
+        kycStatus,
+        kycLevel: kycStatus === "approved" ? 2 : 0,
+        ...(kycStatus === "approved" && { kycApprovedAt: new Date() }),
+        ...(kycStatus === "rejected" && { kycRejectedAt: new Date() }),
+      },
+    });
+
+    return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Error en webhook KYC:", error);
+    console.error("Error en webhook Veriff:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

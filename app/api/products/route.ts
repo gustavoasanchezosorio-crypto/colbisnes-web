@@ -34,7 +34,6 @@ async function releaseExpiredProducts() {
 export async function GET(request: Request) {
   try {
     await releaseExpiredProducts();
-
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q") || "";
     const city = searchParams.get("city") || "";
@@ -44,7 +43,6 @@ export async function GET(request: Request) {
     const condition = searchParams.get("condition") || "";
 
     const where: any = {};
-
     if (query) {
       where.OR = [
         { title: { contains: query } },
@@ -55,14 +53,8 @@ export async function GET(request: Request) {
     if (condition) where.condition = condition;
     if (minPrice || maxPrice) {
       where.priceCOP = {};
-      if (minPrice) {
-        const min = parseInt(minPrice);
-        if (!isNaN(min)) where.priceCOP.gte = min;
-      }
-      if (maxPrice) {
-        const max = parseInt(maxPrice);
-        if (!isNaN(max)) where.priceCOP.lte = max;
-      }
+      if (minPrice) where.priceCOP.gte = parseInt(minPrice);
+      if (maxPrice) where.priceCOP.lte = parseInt(maxPrice);
     }
     if (status && ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW", "SOLD"].includes(status)) {
       where.status = status;
@@ -80,10 +72,7 @@ export async function GET(request: Request) {
             receivedReviews: { select: { rating: true } },
           },
         },
-        images: {
-          select: { url: true },
-          take: 1,
-        },
+        images: { select: { url: true }, take: 1 },
         _count: { select: { offers: true } },
       },
     });
@@ -101,14 +90,12 @@ export async function GET(request: Request) {
         firstImage: product.images[0]?.url || null,
       };
     });
-
     return NextResponse.json(productsWithRating, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });
   } catch (error) {
-    console.error("❌ ERROR en GET /api/products:", error);
-    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-    return NextResponse.json({ error: "Error interno", details: errorMessage }, { status: 500 });
+    console.error("Error en GET /api/products:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
@@ -121,23 +108,23 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { title, description, priceCOP, city, condition, images } = body;
-    if (!title || !description || !priceCOP || !city || !condition) {
-      return NextResponse.json({ error: "Faltan campos" }, { status: 400 });
+
+    const finalCondition = condition || "USADO";
+    if (!title || !description || !priceCOP || !city) {
+      return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
     }
     if (typeof priceCOP !== "number" || priceCOP <= 0) {
-      return NextResponse.json({ error: "Precio inválido" }, { status: 400 });
-    }
-    if (!["NUEVO", "USADO"].includes(condition)) {
-      return NextResponse.json({ error: "Condición inválida" }, { status: 400 });
+      return NextResponse.json({ error: "Precio invalido" }, { status: 400 });
     }
 
+    console.log("Creating product with images:", JSON.stringify(images));
     const product = await prisma.product.create({
       data: {
         title,
         description,
         priceCOP,
         city,
-        condition,
+        condition: finalCondition,
         status: "AVAILABLE",
         sellerId: session.user.id,
         images: images?.length ? {
@@ -149,8 +136,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
-    console.error("POST /api/products error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Error interno";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error("Error en POST /api/products:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

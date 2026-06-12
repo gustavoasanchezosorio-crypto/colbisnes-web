@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface FilterState {
   searchQuery: string;
@@ -36,41 +36,55 @@ export const useProducts = (filters: FilterState) => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const pageRef = useRef(1);
 
   const fetchProducts = useCallback(async (loadMore = false) => {
     setLoading(true);
     setError(null);
     try {
+      const currentPage = loadMore ? pageRef.current + 1 : 1;
       const params = new URLSearchParams();
-      if (loadMore) params.append('page', String(page + 1));
-      else params.append('page', '1');
+      params.append('page', String(currentPage));
       params.append('limit', '10');
-      
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
 
       const res = await fetch(`/api/products?${params.toString()}`);
       if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data = await res.json();
-      
-      setProducts(prev => loadMore ? [...prev, ...data] : data);
+      const data: Product[] = await res.json();
+
+      setProducts(prev => {
+        if (!loadMore) return data;
+        const existingIds = new Set(prev.map(p => p.id));
+        const newOnly = data.filter(p => !existingIds.has(p.id));
+        return [...prev, ...newOnly];
+      });
+
       setHasMore(data.length === 10);
-      if (loadMore) setPage(p => p + 1);
-      else setPage(1);
+      pageRef.current = currentPage;
+      setPage(currentPage);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error desconocido');
     } finally {
       setLoading(false);
     }
-  }, [filters, page]);
+  }, [filters]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       fetchProducts(false);
     }, 300);
     return () => clearTimeout(debounceTimer);
-  }, [fetchProducts]);
+  }, [filters]);
+
+  // Polling cada 5 segundos para actualizar estados en tiempo real
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      fetchProducts(false);
+    }, 5000);
+    return () => clearInterval(intervalo);
+  }, [filters]);
 
   return { products, loading, error, hasMore, fetchMore: () => fetchProducts(true), refetch: () => fetchProducts(false) };
 };
