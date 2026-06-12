@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   const firma    = crypto.createHash("sha256").update(`${ref}${amount}${currency}${secret}`).digest("hex");
 
   const params = new URLSearchParams({
-    "public-key":      process.env.WOMPI_PUBLIC_KEY!,
+    "public-key":      process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY!,
     currency,
     "amount-in-cents": String(amount),
     reference:         ref,
