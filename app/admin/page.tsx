@@ -59,7 +59,7 @@ export default function AdminPanel() {
   };
 
   const handleApproveKyc = async (userId: string, nombre: string) => {
-    if (!confirm(`Aprobar KYC para ${nombre}?`)) return;
+    if (!confirm(`Aprobar verificación facial para ${nombre}?`)) return;
     try {
       const res = await fetch("/api/kyc/approve", {
         method: "PATCH",
@@ -73,7 +73,7 @@ export default function AdminPanel() {
         setTimeout(() => setMensaje(""), 4000);
         cargarDatos("usuarios");
       } else {
-        alert(data.error || "Error al aprobar KYC");
+        alert(data.error || "Error al aprobar verificación facial");
       }
     } catch (error) {
       alert("Error de red");
@@ -198,7 +198,7 @@ export default function AdminPanel() {
           <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)", padding: "3px 10px", borderRadius: 20 }}>ADMIN</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <a href="/admin/kyc" style={{ color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "7px 14px", borderRadius: 20 }}>🪪 KYC</a>
+          <a href="/admin/kyc" style={{ color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "7px 14px", borderRadius: 20 }}>🪪 Verificación facial</a>
           <a href="/admin/disputas" style={{ color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "7px 14px", borderRadius: 20 }}>⚖️ Disputas</a>
           <a href="/" style={{ color: "white", textDecoration: "none", fontSize: 14 }}>← Volver al sitio</a>
         </div>
@@ -257,7 +257,7 @@ export default function AdminPanel() {
                   <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
                     <thead>
                       <tr style={{ background: T.card }}>
-                        {["Usuario", "Email", "Ciudad", "Estado KYC", "Productos", "Registro", "Acciones"].map(h => (
+                        {["Usuario", "Email", "Ciudad", "Estado verificación facial", "Productos", "Registro", "Acciones"].map(h => (
                           <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 700, color: T.muted, textTransform: "uppercase" as const, letterSpacing: "0.05em", borderBottom: `1px solid ${T.border}` }}>{h}</th>
                         ))}
                       </tr>
@@ -280,7 +280,7 @@ export default function AdminPanel() {
                               {u.kycStatus !== "approved" && (
                                 <button onClick={() => handleApproveKyc(u.id, u.name || u.email)}
                                   style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                                  ✓ Aprobar KYC
+                                  ✓ Aprobar verificación facial
                                 </button>
                               )}
                               <a href={`/user/${u.id}`} target="_blank"

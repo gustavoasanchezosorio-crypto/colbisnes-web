@@ -176,7 +176,7 @@ function PageInner() {
   const [bluSugerencia, setBluSugerencia] = useState<{ tituloSugerido: string; tipoArticulo: string; marca: string | null; modelo: string | null; color: string | null } | null>(null);
   const bluAnalizadoRef = useRef<string | null>(null);
 
-  // Analiza automaticamente la primera foto del producto para sugerir un titulo (asistente Siames)
+  // Analiza automaticamente la primera foto del producto para sugerir un titulo (asistente Chucho Bot)
   useEffect(() => {
     const file = imageFiles[0];
     if (!file) {
@@ -205,7 +205,7 @@ function PageInner() {
         if (bluAnalizadoRef.current !== firma) return; // el usuario ya cambio de foto
         if (res.ok && data.sugerencia) setBluSugerencia(data.sugerencia);
       } catch {
-        // La sugerencia de Siames es opcional: si falla, no bloquea publicar
+        // La sugerencia de Chucho Bot es opcional: si falla, no bloquea publicar
       } finally {
         if (bluAnalizadoRef.current === firma) setBluAnalizando(false);
       }
@@ -536,15 +536,15 @@ function PageInner() {
                   <ImagePicker files={imageFiles} previews={imagePreviews} onChange={(f,p) => { setImageFiles(f); setImagePreviews(p); }} disabled={uploadingImages} />
                   {bluAnalizando && (
                     <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-                      <img src="/siames-avatar.png" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
-                      Siames está mirando la foto…
+                      <img src="/chucho-avatar.png" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
+                      Chucho Bot está mirando la foto…
                     </p>
                   )}
                   {bluSugerencia && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, padding: "8px 12px", borderRadius: 12, background: THEME.surfaceAlt, border: `1.5px solid ${THEME.border}` }}>
-                      <img src="/siames-avatar.png" alt="Siames" style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
+                      <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
                       <span style={{ fontSize: 12.5, color: THEME.text, flex: 1, minWidth: 120 }}>
-                        Siames cree que es: <strong>{bluSugerencia.tituloSugerido}</strong>
+                        Chucho Bot cree que es: <strong>{bluSugerencia.tituloSugerido}</strong>
                       </span>
                       <button
                         type="button"
@@ -556,7 +556,7 @@ function PageInner() {
                       <button
                         type="button"
                         onClick={() => setBluSugerencia(null)}
-                        aria-label="Descartar sugerencia de Siames"
+                        aria-label="Descartar sugerencia de Chucho Bot"
                         style={{ border: "none", background: "transparent", color: THEME.muted, fontSize: 15, cursor: "pointer", fontWeight: 900, padding: "0 4px" }}
                       >
                         ×

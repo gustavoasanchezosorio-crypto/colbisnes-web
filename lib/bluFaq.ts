@@ -1,4 +1,4 @@
-// Base de conocimiento de "Siames", el asistente de servicio al cliente de Colbisnes.
+// Base de conocimiento de "Chucho Bot", el asistente de servicio al cliente de Colbisnes.
 // Los datos aqui reflejan la logica REAL ya implementada en la app (lib/pricing.ts,
 // lib/businessHours.ts, lib/accountBlock.ts, etc.) — no se inventan politicas ni cifras.
 // Si agregas una respuesta nueva, verifica el numero/regla contra el codigo real primero.
@@ -9,23 +9,23 @@ export interface BluIntent {
   quickReply?: string;
   /** Palabras o frases (en minusculas, sin tildes) que activan esta intencion */
   keywords: string[];
-  /** Respuesta de Siames. Puede incluir \n para saltos de linea. */
+  /** Respuesta de Chucho Bot. Puede incluir \n para saltos de linea. */
   respuesta: string;
   /** Si es true, ademas de responder, se ofrece/crea una escalada a soporte humano */
   escalar?: boolean;
 }
 
 export const BLU_SALUDO_INICIAL =
-  "¡Miau! 🐾 Soy *Siames*, el asistente de Colbisnes. Puedo explicarte como funciona la compra contra entrega, la comision de reserva, el KYC, los envios, o conectarte con soporte humano si lo necesitas. ¿En que te ayudo?";
+  "🐾 Soy *Chucho Bot*, el asistente de Colbisnes. Puedo explicarte como funciona la compra contra entrega, la comision de reserva, la verificacion facial, los envios, o conectarte con soporte humano si lo necesitas. ¿En que te ayudo?";
 
 export const BLU_FALLBACK =
-  "Ronroneo... 🐾 no estoy segura de haber entendido bien eso. Puedo ayudarte con: contra entrega, comision Nequi, KYC, envios, disputas, cuentas bloqueadas o metodos de pago. Si prefieres, te conecto con una persona del equipo — solo escribe \"hablar con soporte\".";
+  "Ronroneo... 🐾 no estoy segura de haber entendido bien eso. Puedo ayudarte con: contra entrega, comision Nequi, verificacion facial, envios, disputas, cuentas bloqueadas o metodos de pago. Si prefieres, te conecto con una persona del equipo — solo escribe \"hablar con soporte\".";
 
 /** Set de respuestas rapidas mostrado por defecto en el widget (cliente y servidor comparten esta lista) */
 export const BLU_QUICK_REPLIES_DEFAULT = [
   "¿Cómo funciona contra entrega?",
   "¿Qué es la comisión Nequi?",
-  "¿Qué es la verificación KYC?",
+  "¿Qué es la verificación facial?",
   "Tengo un problema con mi pedido",
   "Hablar con soporte humano",
 ];
@@ -47,17 +47,17 @@ export const BLU_INTENTS: BluIntent[] = [
   },
   {
     id: "kyc",
-    quickReply: "¿Qué es la verificación KYC?",
+    quickReply: "¿Qué es la verificación facial?",
     keywords: ["kyc", "verificacion", "verificar identidad", "verificarme", "cedula", "por que debo verificarme", "liveness"],
     respuesta:
-      "El KYC es una verificacion de identidad con reconocimiento facial (con prueba de vida) que debes completar antes de poder *comprar o publicar* en Colbisnes — es para la seguridad de todos en la plataforma. Normalmente es rapida. Puedes hacerla desde la seccion de verificacion (te aparece un aviso arriba si aun no la has hecho, con el boton \"Verificarme ahora\").",
+      "La verificacion facial es un chequeo de identidad con prueba de vida que debes completar antes de poder *comprar o publicar* en Colbisnes — es para la seguridad de todos en la plataforma. Normalmente es rapida. Puedes hacerla desde la seccion de verificacion (te aparece un aviso arriba si aun no la has hecho, con el boton \"Verificarme ahora\").",
   },
   {
     id: "publicar_producto",
     quickReply: "¿Cómo publico un producto?",
     keywords: ["publicar", "vender", "subir producto", "como vendo", "publicar producto", "crear anuncio"],
     respuesta:
-      "Toca el boton *\"+ Publicar\"* arriba en la pagina principal, completa titulo, precio, ciudad, categoria, condicion y una descripcion, agrega hasta 5 fotos, y dale a Publicar. Necesitas tener el KYC aprobado primero.\n\n¿Sabías que si subes una foto puedo ayudarte a detectar los colores del producto automaticamente? 🎨",
+      "Toca el boton *\"+ Publicar\"* arriba en la pagina principal, completa titulo, precio, ciudad, categoria, condicion y una descripcion, agrega hasta 5 fotos, y dale a Publicar. Necesitas tener la verificacion facial aprobada primero.\n\n¿Sabías que si subes una foto puedo ayudarte a detectar los colores del producto automaticamente? 🎨",
   },
   {
     id: "envios_tiempos",

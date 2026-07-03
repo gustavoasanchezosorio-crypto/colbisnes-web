@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const usuarioActual = await prisma.user.findUnique({ where: { id: session.user.id }, select: { kycStatus: true, premiumStatus: true } });
     if (!usuarioActual || usuarioActual.kycStatus !== "approved") {
-      return NextResponse.json({ error: "Debes tener tu identidad verificada (KYC) antes de solicitar el badge premium" }, { status: 403 });
+      return NextResponse.json({ error: "Debes completar tu verificación facial antes de solicitar el badge premium" }, { status: 403 });
     }
     if (usuarioActual.premiumStatus === "pending") {
       return NextResponse.json({ error: "Ya tienes una solicitud en revisión" }, { status: 409 });

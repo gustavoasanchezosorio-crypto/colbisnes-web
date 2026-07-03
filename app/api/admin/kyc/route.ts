@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       console.error("Error enviando email de rechazo KYC:", e);
     }
 
-    return NextResponse.json({ ok: true, mensaje: "KYC rechazado y usuario notificado" });
+    return NextResponse.json({ ok: true, mensaje: "Verificación facial rechazada y usuario notificado" });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -23,7 +23,7 @@ export default function BluWidget() {
   const finRef = useRef<HTMLDivElement>(null);
   const cargoHistorial = useRef(false);
 
-  // Si la ruta actual es /product/<id>, la usamos como contexto para Siames (escalamientos con producto)
+  // Si la ruta actual es /product/<id>, la usamos como contexto para Chucho Bot (escalamientos con producto)
   const productId = pathname?.startsWith("/product/") ? pathname.split("/")[2] : null;
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function BluWidget() {
       {!abierto && (
         <button
           onClick={() => setAbierto(true)}
-          aria-label="Abrir chat con Siames"
+          aria-label="Abrir chat con Chucho Bot"
           style={{
             position: "fixed", right: 18, bottom: 18, zIndex: 1900,
             width: 62, height: 62, borderRadius: "50%", border: "none", cursor: "pointer",
@@ -89,7 +89,7 @@ export default function BluWidget() {
             padding: 4, display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <img src="/siames-avatar.png" alt="Siames" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+          <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           <span style={{ position: "absolute", right: 2, bottom: 2, width: 14, height: 14, borderRadius: "50%", background: THEME.success, border: "2.5px solid #fff" }} />
         </button>
       )}
@@ -106,9 +106,9 @@ export default function BluWidget() {
             background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
             padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
           }}>
-            <img src="/siames-avatar.png" alt="Siames" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
+            <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, color: "#fff", fontWeight: 800, fontSize: 14.5 }}>Siames 🐾</p>
+              <p style={{ margin: 0, color: "#fff", fontWeight: 800, fontSize: 14.5 }}>Chucho Bot 🐾</p>
               <p style={{ margin: 0, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600 }}>Asistente de Colbisnes</p>
             </div>
             <button onClick={() => setAbierto(false)} aria-label="Cerrar chat" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 15, cursor: "pointer", flexShrink: 0 }}>×</button>
@@ -132,7 +132,7 @@ export default function BluWidget() {
             {enviando && (
               <div style={{ display: "flex", justifyContent: "flex-start" }}>
                 <div style={{ padding: "9px 13px", borderRadius: "4px 14px 14px 14px", background: THEME.surfaceAlt, color: THEME.muted, fontSize: 13 }}>
-                  Siames está escribiendo…
+                  Chucho Bot está escribiendo…
                 </div>
               </div>
             )}
@@ -166,7 +166,7 @@ export default function BluWidget() {
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Escríbele a Siames…"
+              placeholder="Escríbele a Chucho Bot…"
               disabled={enviando}
               style={{ flex: 1, padding: "10px 14px", borderRadius: 14, border: `1.5px solid ${THEME.border}`, background: THEME.surfaceAlt, color: THEME.text, fontSize: 13, minWidth: 0 }}
             />

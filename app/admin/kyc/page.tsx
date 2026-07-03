@@ -68,7 +68,7 @@ export default function AdminKycPage() {
     const d = await r.json();
     setActionLoading(null);
     if (r.ok) {
-      setMsg("❌ KYC rechazado y usuario notificado");
+      setMsg("❌ Verificación facial rechazada y usuario notificado");
       setUsuarios((prev) => prev.filter((u) => u.id !== userId));
     } else {
       setMsg("❌ " + d.error);
@@ -83,13 +83,13 @@ export default function AdminKycPage() {
       <header style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/logo-white.svg?v=2" alt="Colbisnes" style={{ height: 38, width: "auto" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "3px 10px", borderRadius: 20 }}>KYC</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "3px 10px", borderRadius: 20 }}>Verificación facial</span>
         </div>
         <button onClick={() => router.push("/")} style={{ padding: "7px 16px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>← Inicio</button>
       </header>
 
       <main style={{ maxWidth: 900, margin: "32px auto", padding: "0 20px 80px" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: THEME.text, marginBottom: 20, textAlign: "center" }}>Verificaciones KYC</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 900, color: THEME.text, marginBottom: 20, textAlign: "center" }}>Solicitudes de verificación facial</h1>
 
         {/* Filtro tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
@@ -187,7 +187,7 @@ export default function AdminKycPage() {
           onClick={() => setLightbox(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}
         >
-          <img src={lightbox} alt="Documento KYC" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 16, objectFit: "contain" }} />
+          <img src={lightbox} alt="Documento de verificación facial" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 16, objectFit: "contain" }} />
         </div>
       )}
     </div>

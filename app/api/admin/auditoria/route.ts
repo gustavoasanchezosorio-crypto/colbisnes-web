@@ -66,7 +66,7 @@ export async function GET() {
       })),
       ...recentUsers.map(u => ({
         id: `user-${u.id}`,
-        action: `Registro nuevo usuario${u.kycStatus === "approved" ? " (KYC aprobado)" : ""}`,
+        action: `Registro nuevo usuario${u.kycStatus === "approved" ? " (verificación facial aprobada)" : ""}`,
         createdAt: u.createdAt,
         user: { name: u.name, email: u.email },
       })),

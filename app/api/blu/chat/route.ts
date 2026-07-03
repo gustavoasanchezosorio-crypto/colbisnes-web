@@ -22,22 +22,22 @@ async function notificarEscalada(params: { conversationId: string; contacto: str
     const adminEmail = process.env.ADMIN_EMAIL;
     if (adminEmail) {
       const html = colbisnesEmailTemplate({
-        preheader: "Nueva conversacion escalada por Siames",
-        titulo: "🐾 Siames escaló una conversación a soporte",
+        preheader: "Nueva conversacion escalada por Chucho Bot",
+        titulo: "🐾 Chucho Bot escaló una conversación a soporte",
         cuerpo: `Contacto: <strong>${contacto}</strong><br/>Motivo: <strong>${motivo}</strong>${productoTitulo ? `<br/>Producto: <strong>${productoTitulo}</strong>` : ""}<br/><br/>Último mensaje del usuario:<br/><em>"${ultimoMensaje}"</em><br/><br/>ID de conversación: ${conversationId}`,
         ctaTexto: "Ir al panel admin",
         ctaUrl: "https://colbisnes-web.vercel.app/admin",
       });
-      await sendEmail({ to: adminEmail, subject: "🐾 Siames: nueva conversación escalada", html });
+      await sendEmail({ to: adminEmail, subject: "🐾 Chucho Bot: nueva conversación escalada", html });
     }
     if (process.env.ADMIN_WHATSAPP) {
       await sendWhatsapp({
         to: process.env.ADMIN_WHATSAPP,
-        body: `🐾 *Siames* escaló una conversación\n\nContacto: ${contacto}\nMotivo: ${motivo}${productoTitulo ? `\nProducto: ${productoTitulo}` : ""}\n\n"${ultimoMensaje}"`,
+        body: `🐾 *Chucho Bot* escaló una conversación\n\nContacto: ${contacto}\nMotivo: ${motivo}${productoTitulo ? `\nProducto: ${productoTitulo}` : ""}\n\n"${ultimoMensaje}"`,
       });
     }
   } catch (e) {
-    console.error("Error notificando escalada de Siames:", e);
+    console.error("Error notificando escalada de Chucho Bot:", e);
   }
 }
 
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
     return json({ conversationId: conversation.id, respuesta: intent.respuesta, quickReplies: QUICK_REPLIES_DEFAULT, escalado: false });
   } catch (error) {
     console.error("Error en /api/blu/chat:", error);
-    return json({ error: "Siames tuvo un problema para responder. Intenta de nuevo en un momento." }, 500);
+    return json({ error: "Chucho Bot tuvo un problema para responder. Intenta de nuevo en un momento." }, 500);
   }
 }
 

@@ -22,7 +22,7 @@ const AnalisisSchema = z.object({
 });
 
 const SYSTEM_PROMPT =
-  'Eres "Siames", el asistente de Colbisnes, un marketplace colombiano de compra/venta. Un vendedor esta subiendo la foto de un producto para publicarlo y tu tarea es identificarlo con la mayor precision posible: tipo de articulo, marca, modelo especifico (ej. distinguir "iPhone 11" de "iPhone 17", o "PlayStation 4" de "PlayStation 5" por sus detalles visuales) y color principal. Si no estas segura del modelo exacto, da tu mejor estimacion razonada en vez de dejarlo vacio, pero baja el nivel de "confianza". Si la foto no muestra claramente un producto vendible (borrosa, una persona, un paisaje, una pantalla en blanco, etc.), responde con esProducto=false. El "tituloSugerido" debe ser un titulo corto y natural en español, como lo escribiria un vendedor colombiano (ej. "iPhone 11 blanco 64GB", "Tenis Nike Air Force 1 negros"), sin precio ni estado de uso.';
+  'Eres "Chucho Bot", el asistente de Colbisnes, un marketplace colombiano de compra/venta. Un vendedor esta subiendo la foto de un producto para publicarlo y tu tarea es identificarlo con la mayor precision posible: tipo de articulo, marca, modelo especifico (ej. distinguir "iPhone 11" de "iPhone 17", o "PlayStation 4" de "PlayStation 5" por sus detalles visuales) y color principal. Si no estas segura del modelo exacto, da tu mejor estimacion razonada en vez de dejarlo vacio, pero baja el nivel de "confianza". Si la foto no muestra claramente un producto vendible (borrosa, una persona, un paisaje, una pantalla en blanco, etc.), responde con esProducto=false. El "tituloSugerido" debe ser un titulo corto y natural en español, como lo escribiria un vendedor colombiano (ej. "iPhone 11 blanco 64GB", "Tenis Nike Air Force 1 negros"), sin precio ni estado de uso.';
 
 function json(data: any, status = 200) {
   return NextResponse.json(data, { status });
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const identifier = session.user.id || getIP(request);
     const rl = rateLimit(`blu-foto:${identifier}`, { limit: 15, windowSeconds: 600 });
     if (!rl.allowed) {
-      return json({ error: "Siames ya analizó varias fotos seguidas. Espera un momento e intenta de nuevo." }, 429);
+      return json({ error: "Chucho Bot ya analizó varias fotos seguidas. Espera un momento e intenta de nuevo." }, 429);
     }
 
     const body = await request.json().catch(() => ({}));
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error("ANTHROPIC_API_KEY no está configurada");
-      return json({ error: "Siames no puede analizar fotos en este momento" }, 503);
+      return json({ error: "Chucho Bot no puede analizar fotos en este momento" }, 503);
     }
 
     const message = await anthropic.beta.messages.parse({
@@ -93,6 +93,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error en /api/blu/analizar-foto:", error);
-    return json({ error: "Siames no pudo analizar la foto. Intenta de nuevo en un momento." }, 500);
+    return json({ error: "Chucho Bot no pudo analizar la foto. Intenta de nuevo en un momento." }, 500);
   }
 }

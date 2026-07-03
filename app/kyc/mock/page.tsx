@@ -52,7 +52,7 @@ function MockKycPageInner() {
 
   return (
     <div style={{ minHeight: "100vh", background: THEME.background, color: THEME.text, textAlign: "center", padding: "2rem", fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif" }}>
-      <h1 style={{ color: THEME.text }}>Simulación de verificación KYC</h1>
+      <h1 style={{ color: THEME.text }}>Simulación de verificación facial</h1>
       <p style={{ color: THEME.muted }}>Haz clic en una opción para simular el resultado de la verificación.</p>
       <p style={{ color: THEME.muted }}><strong style={{ color: THEME.text }}>Usuario:</strong> {userId}</p>
       <div style={{ marginTop: "2rem" }}>
