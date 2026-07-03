@@ -58,7 +58,7 @@ export default function Chat({ productId, sellerId }: ChatProps) {
 
   return (
     <div style={{ marginTop: '2rem', borderTop: `1px solid ${THEME.border}`, paddingTop: '1.5rem' }}>
-      <h3 style={{ color: THEME.primary, marginBottom: '1rem' }}>
+      <h3 style={{ color: THEME.text, marginBottom: '1rem', textAlign: 'center' }}>
         Chat con el vendedor {isConnected ? '🟢' : '🔴'}
       </h3>
       <div style={{
@@ -83,7 +83,7 @@ export default function Chat({ productId, sellerId }: ChatProps) {
             >
               <div
                 style={{
-                  background: msg.fromUserId === session.user.id ? THEME.primary : THEME.border,
+                  background: msg.fromUserId === session.user.id ? THEME.primary : THEME.surfaceAlt,
                   color: msg.fromUserId === session.user.id ? 'white' : THEME.text,
                   padding: '0.5rem 1rem',
                   borderRadius: '20px',
@@ -111,6 +111,8 @@ export default function Chat({ productId, sellerId }: ChatProps) {
             padding: '0.75rem',
             borderRadius: '30px',
             border: `1px solid ${THEME.border}`,
+            background: '#ffffff',
+            color: THEME.text,
             fontSize: '0.9rem',
           }}
         />

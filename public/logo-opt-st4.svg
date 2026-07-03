@@ -1,0 +1,14 @@
+<!-- ST4: bloque 3x3 + tagline horizontal debajo. Versión completa para header. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 420" fill="none">
+  <g font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+     font-weight="200" font-size="96" fill="#1F6BFF" text-anchor="start">
+    <text x="65" y="140" textLength="230" lengthAdjust="spacing">COL</text>
+    <text x="65" y="232" textLength="230" lengthAdjust="spacing">BIS</text>
+    <text x="65" y="324" textLength="230" lengthAdjust="spacing">NES</text>
+  </g>
+  <!-- punto amarillo de acento, esquina inferior derecha del bloque -->
+  <circle cx="305" cy="318" r="9" fill="#FFCD00"/>
+  <text x="180" y="388" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="14" letter-spacing="6" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

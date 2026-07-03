@@ -1,0 +1,10 @@
+<!-- V2: "col" en azul + "bisnes" en azul más profundo. Bicolor sutil, jerarquía. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" fill="none">
+  <text x="10" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="62" letter-spacing="-3"><tspan fill="#1F6BFF">col</tspan><tspan fill="#1448A3">bisnes</tspan></text>
+  <circle cx="498" cy="58" r="9" fill="#FFCD00"/>
+  <text x="12" y="90"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="3.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

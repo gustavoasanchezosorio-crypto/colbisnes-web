@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes · Logo con tu firma</title>
+<style>
+  :root { --blue:#1F6BFF; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+    background:#F1F5F9; color:#0A1633; padding:48px 24px 80px; }
+  .head { max-width:1000px; margin:0 auto 30px; text-align:center; }
+  .head h1 { font-size:30px; letter-spacing:-1px; color:var(--blue); }
+  .head p { color:#64748B; margin-top:10px; font-size:15px; }
+  .ref { max-width:680px; margin:0 auto 36px; background:#fff; border:2px dashed #CBD5E1;
+    border-radius:18px; padding:22px; text-align:center; }
+  .ref span { display:inline-block; background:#0A1633; color:#fff; font-size:12px; font-weight:700;
+    padding:4px 12px; border-radius:20px; margin-bottom:14px; }
+  .ref img { width:100%; max-width:360px; }
+  .grid { max-width:1000px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(440px,1fr)); gap:24px; }
+  .card { background:#fff; border-radius:18px; overflow:hidden;
+    box-shadow:0 6px 22px rgba(15,23,42,.08); border:1px solid #E2E8F0; }
+  .tag { display:flex; align-items:center; gap:12px; padding:15px 20px; border-bottom:1px solid #EEF2F7; }
+  .tag .letter { background:var(--blue); color:#fff; font-weight:800; font-size:13px;
+    padding:5px 11px; border-radius:8px; }
+  .tag .name { font-weight:700; font-size:15px; }
+  .stage { padding:26px 24px; display:grid; place-items:center; }
+  .stage img { width:100%; max-width:400px; height:auto; }
+  .foot { padding:13px 20px; font-size:12.5px; color:#64748B; border-top:1px solid #EEF2F7; line-height:1.5; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Tu firma, integrada</h1>
+    <p>Tracé tu firma a vectores (azul de marca) y la combiné con el nombre de 4 formas.</p>
+  </div>
+
+  <div class="ref">
+    <span>TU FIRMA · vectorizada</span><br>
+    <img src="firma.svg" alt="firma">
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="tag"><span class="letter">F1</span><span class="name">Firma detrás (sutil)</span></div>
+      <div class="stage"><img src="logo-opt-f1.svg" alt="F1"></div>
+      <div class="foot">Tu firma como <b>marca de agua tenue detrás</b> del nombre. Justo lo que pediste: en la parte trasera, discreta.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">F2</span><span class="name">Firma como acento</span></div>
+      <div class="stage"><img src="logo-opt-f2.svg" alt="F2"></div>
+      <div class="foot">La firma se vuelve un <b>flourish amarillo bajo el nombre</b>. Personal y con energía.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">F3</span><span class="name">Firma protagonista</span></div>
+      <div class="stage"><img src="logo-opt-f3.svg" alt="F3"></div>
+      <div class="foot">Tu firma <b>ES la marca</b> (grande, azul) y “COLBISNES” va pequeño debajo. Estilo autor/founder.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">F4</span><span class="name">Firma de fondo amplia</span></div>
+      <div class="stage"><img src="logo-opt-f4.svg" alt="F4"></div>
+      <div class="foot">Firma grande y tenue cruzando <b>detrás de todo el nombre</b> centrado. Marca de autor.</div>
+    </div>
+  </div>
+
+  <div class="head" style="margin-top:46px; margin-bottom:0;">
+    <p>¿Cuál te gusta? Si el trazo de la firma no quedó 100% fiel, dime y lo ajusto. Sigo <b>sin tocar la web</b>.</p>
+  </div>
+</body>
+</html>

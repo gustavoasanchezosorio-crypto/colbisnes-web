@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mockup — popup "cerrando un bisnes"</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #eaf1ff, #dbe8ff 60%, #cfe0ff);
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
+    padding: 40px 20px 80px;
+  }
+  h2.section-title {
+    width: 100%;
+    text-align: center;
+    color: #1a2a4a;
+    font-size: 15px;
+    margin: 0 0 -8px;
+  }
+  .phone {
+    width: 340px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="340" height="200"><rect width="340" height="200" fill="%23f0ead6"/></svg>');
+    background-size: cover;
+    border-radius: 28px;
+    box-shadow: 0 20px 60px rgba(10,30,70,0.25);
+    padding: 40px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card {
+    position: relative;
+    background: rgba(240,246,255,0.90);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border-radius: 20px;
+    padding: 30px 24px 26px;
+    border: 1px solid rgba(31,107,255,0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    box-shadow: 0 10px 34px rgba(10,30,70,0.18);
+  }
+  .badge {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(31,107,255,0.18), rgba(31,107,255,0.06));
+    border: 1px solid rgba(31,107,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(0,63,122,0.18);
+    margin-bottom: 4px;
+  }
+  .titulo {
+    margin: 0;
+    line-height: 1.15;
+  }
+  .titulo .linea1 {
+    display: block;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #1a2a4a;
+  }
+  .titulo .linea2 {
+    display: block;
+    font-weight: 800;
+    font-size: 1.65rem;
+    letter-spacing: -1.2px;
+    color: #1F6BFF;
+    margin-top: 2px;
+  }
+  .sub {
+    font-size: 1.02rem;
+    color: #52658c;
+    margin: 4px 0 0;
+    line-height: 1.5;
+    max-width: 270px;
+    font-weight: 600;
+  }
+  .sub b { font-weight: 900; color: #C79A2E; font-size: 1.12rem; }
+  .label {
+    margin-top: 18px;
+    font-size: 12px;
+    color: #52658c;
+    text-align: center;
+    max-width: 340px;
+  }
+</style>
+</head>
+<body>
+
+  <h2 class="section-title">Opción — taza con colores de la bandera + "bisnes" en su propio renglón, estilo logo</h2>
+
+  <div class="phone">
+    <div class="card">
+      <div class="badge">
+        <!-- Taza de café con la superficie del café tintada con los colores de la bandera de Colombia, translúcidos -->
+        <svg width="42" height="42" viewBox="0 0 100 100">
+          <defs>
+            <clipPath id="tazaClip">
+              <ellipse cx="47" cy="35" rx="27" ry="9"/>
+            </clipPath>
+          </defs>
+          <!-- asa -->
+          <path d="M78 40 C96 40 96 66 78 66" fill="none" stroke="#1F6BFF" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+          <!-- cuerpo de la taza -->
+          <path d="M18 35 L24 78 C25 84 30 88 37 88 L57 88 C64 88 69 84 70 78 L76 35 Z"
+                fill="rgba(31,107,255,0.12)" stroke="#1F6BFF" stroke-width="3.5" stroke-linejoin="round" opacity="0.9"/>
+          <!-- base café oscuro -->
+          <ellipse cx="47" cy="35" rx="27" ry="9" fill="#5B3A29" opacity="0.55"/>
+          <!-- franjas bandera de Colombia, translúcidas, recortadas a la superficie del café -->
+          <g clip-path="url(#tazaClip)" opacity="0.72">
+            <rect x="18" y="26" width="60" height="9" fill="#FCD116"/>
+            <rect x="18" y="35" width="60" height="4.5" fill="#003893"/>
+            <rect x="18" y="39.5" width="60" height="4.5" fill="#CE1126"/>
+          </g>
+          <ellipse cx="47" cy="35" rx="27" ry="9" fill="none" stroke="#1F6BFF" stroke-width="2.2" opacity="0.5"/>
+          <!-- platillo -->
+          <ellipse cx="47" cy="90" rx="34" ry="5" fill="none" stroke="#1F6BFF" stroke-width="3" opacity="0.4"/>
+        </svg>
+      </div>
+      <p class="titulo">
+        <span class="linea1">Aqui se esta cerrando un</span>
+        <span class="linea2">bisnes</span>
+      </p>
+      <p class="sub">Tomate un tintico en <b>02:38</b> si no se realiza el pago el producto estara disponible de nuevo</p>
+    </div>
+  </div>
+
+  <div style="width:100%"></div>
+  <h2 class="section-title">Detalle ampliado del ícono (para revisar el tinte de la taza)</h2>
+  <div style="background:#fff; border-radius:20px; padding:28px; box-shadow:0 10px 30px rgba(10,30,70,0.12);">
+    <svg width="180" height="180" viewBox="0 0 100 100">
+      <defs>
+        <clipPath id="tazaClip2">
+          <ellipse cx="47" cy="35" rx="27" ry="9"/>
+        </clipPath>
+      </defs>
+      <path d="M78 40 C96 40 96 66 78 66" fill="none" stroke="#1F6BFF" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+      <path d="M18 35 L24 78 C25 84 30 88 37 88 L57 88 C64 88 69 84 70 78 L76 35 Z"
+            fill="rgba(31,107,255,0.12)" stroke="#1F6BFF" stroke-width="3.5" stroke-linejoin="round" opacity="0.9"/>
+      <ellipse cx="47" cy="35" rx="27" ry="9" fill="#5B3A29" opacity="0.55"/>
+      <g clip-path="url(#tazaClip2)" opacity="0.72">
+        <rect x="18" y="26" width="60" height="9" fill="#FCD116"/>
+        <rect x="18" y="35" width="60" height="4.5" fill="#003893"/>
+        <rect x="18" y="39.5" width="60" height="4.5" fill="#CE1126"/>
+      </g>
+      <ellipse cx="47" cy="35" rx="27" ry="9" fill="none" stroke="#1F6BFF" stroke-width="2.2" opacity="0.5"/>
+      <ellipse cx="47" cy="90" rx="34" ry="5" fill="none" stroke="#1F6BFF" stroke-width="3" opacity="0.4"/>
+    </svg>
+  </div>
+
+  <p class="label">
+    Este archivo es solo un mockup de vista previa (no está enlazado desde ninguna parte de la app).
+    Si te gusta, lo aplico a los dos lugares donde aparece este popup: la tarjeta de producto en el listado y la página de detalle del producto.
+    Si quieres ajustar el tono de la taza, el tamaño de "bisnes", o el color (azul de marca vs. dorado), dímelo y lo cambio antes de tocar el código real.
+  </p>
+
+</body>
+</html>

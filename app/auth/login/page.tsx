@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { THEME } from "@/lib/theme";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
+  const [error, setError]           = useState("");
+  const [loading, setLoading]       = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -30,16 +31,15 @@ export default function LoginPage() {
     await signIn("google", { callbackUrl: "/" });
   };
 
-  const inp = { width: "100%", padding: "11px 15px", borderRadius: 14, border: "1.5px solid #E2E8F5", background: "#FAFBFF", fontSize: 14, color: "#0F172A", outline: "none", boxSizing: "border-box" as const };
-  const lbl = { display: "block", fontSize: 12, fontWeight: 700, color: "#64748B", letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 7 };
+  const inp = { width: "100%", padding: "11px 15px", borderRadius: 14, border: `1.5px solid ${THEME.border}`, background: "#ffffff", fontSize: 14, color: THEME.text, outline: "none", boxSizing: "border-box" as const };
+  const lbl = { display: "block", fontSize: 12, fontWeight: 700, color: THEME.textSoft, letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 7 };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F0F4FF", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: "#fff", borderRadius: 24, padding: "36px 32px", width: "100%", maxWidth: 420, boxShadow: "0 8px 40px rgba(31,107,255,0.1)", border: "1px solid #E2E8F5" }}>
+    <div style={{ minHeight: "100vh", background: THEME.background, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: THEME.surfaceGradient, borderRadius: 24, padding: "36px 32px", width: "100%", maxWidth: 420, boxShadow: THEME.cardShadow, border: "1.5px solid transparent" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: "linear-gradient(135deg,#1448A3,#1F6BFF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 900, color: "#fff", margin: "0 auto 12px" }}>C</div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: "#0F172A", margin: 0 }}>COLBISNES</h1>
-          <p style={{ fontSize: 14, color: "#64748B", margin: "6px 0 0" }}>Inicia sesion en tu cuenta</p>
+          <img src="/logo.svg?v=2" alt="Colbisnes" style={{ height: 56, width: "auto", margin: "0 auto 4px", display: "block" }} />
+          <p style={{ fontSize: 14, color: THEME.muted, margin: "6px 0 0" }}>Inicia sesion en tu cuenta</p>
         </div>
 
         <button onClick={handleGoogleLogin} disabled={googleLoading} style={{ width: "100%", padding: "13px", borderRadius: 14, border: "1.5px solid #E2E8F5", background: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 20, color: "#0F172A", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -53,32 +53,39 @@ export default function LoginPage() {
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1, height: 1, background: "#E2E8F5" }} />
-          <span style={{ fontSize: 12, color: "#64748B", fontWeight: 600 }}>O con email</span>
-          <div style={{ flex: 1, height: 1, background: "#E2E8F5" }} />
+          <div style={{ flex: 1, height: 1, background: THEME.border }} />
+          <span style={{ fontSize: 12, color: THEME.muted, fontWeight: 600 }}>O con email</span>
+          <div style={{ flex: 1, height: 1, background: THEME.border }} />
         </div>
 
         <form onSubmit={handlePasswordLogin}>
           <div style={{ marginBottom: 16 }}>
             <label style={lbl}>Email *</label>
             <input type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)} required style={inp}
-              onFocus={e => { e.currentTarget.style.borderColor = "#1F6BFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(31,107,255,0.12)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "#E2E8F5"; e.currentTarget.style.boxShadow = "none"; }} />
+              onFocus={e => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14,86,192,0.15)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = "none"; }} />
           </div>
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 8 }}>
             <label style={lbl}>Contrasena *</label>
             <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required style={inp}
-              onFocus={e => { e.currentTarget.style.borderColor = "#1F6BFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(31,107,255,0.12)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "#E2E8F5"; e.currentTarget.style.boxShadow = "none"; }} />
+              onFocus={e => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14,86,192,0.15)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = "none"; }} />
           </div>
-          {error && <div style={{ padding: "10px 14px", borderRadius: 10, background: "#FEE2E2", color: "#EF4444", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>⚠️ {error}</div>}
-          <button type="submit" disabled={loading} style={{ width: "100%", padding: "13px", background: "linear-gradient(135deg,#1448A3,#1F6BFF)", color: "#fff", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(31,107,255,0.4)" }}>
+
+          <div style={{ textAlign: "right", marginBottom: 20 }}>
+            <a href="/auth/forgot-password" style={{ fontSize: 13, color: THEME.primary, fontWeight: 600, textDecoration: "none" }}>
+              Olvide mi contrasena?
+            </a>
+          </div>
+
+          {error && <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)", color: "#b91c1c", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>⚠️ {error}</div>}
+          <button type="submit" disabled={loading} style={{ width: "100%", padding: "13px", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 14px ${THEME.primary}44` }}>
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
 
-        <p style={{ marginTop: 24, textAlign: "center", fontSize: 14, color: "#64748B" }}>
-          No tienes cuenta? <a href="/auth/register" style={{ color: "#1F6BFF", fontWeight: 700, textDecoration: "none" }}>Registrate</a>
+        <p style={{ marginTop: 24, textAlign: "center", fontSize: 14, color: THEME.muted }}>
+          No tienes cuenta? <a href="/auth/register" style={{ color: THEME.primary, fontWeight: 700, textDecoration: "none" }}>Registrate</a>
         </p>
       </div>
     </div>

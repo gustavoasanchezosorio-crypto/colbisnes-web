@@ -1,47 +1,77 @@
-import { NextResponse } from "next/server";
+import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getIP } from "@/lib/rateLimit";
+import { Resend } from "resend";
 import bcrypt from "bcryptjs";
 
-export async function POST(request: Request) {
+const resend = new Resend(process.env.RESEND_API_KEY);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+export async function POST(request: NextRequest) {
   try {
+    const ip = getIP(request);
+    const rl = rateLimit(`register:${ip}`, { limit: 5, windowSeconds: 600 });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Demasiados registros desde esta IP. Intenta en 10 minutos." }, { status: 429 });
+    }
+
     const { email, password, name } = await request.json();
-    if (!email || !password) return NextResponse.json({ error: "Email y contrasena requeridos" }, { status: 400 });
-    const existing = await prisma.user.findUnique({ where: { email } });
+
+    if (!email || typeof email !== "string") {
+      return NextResponse.json({ error: "Email requerido" }, { status: 400 });
+    }
+    const emailLower = email.toLowerCase().trim();
+    if (!EMAIL_REGEX.test(emailLower) || emailLower.length > 254) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    }
+    if (!password || typeof password !== "string") {
+      return NextResponse.json({ error: "Contraseña requerida" }, { status: 400 });
+    }
+    if (!PASSWORD_REGEX.test(password)) {
+      return NextResponse.json(
+        { error: "La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número." },
+        { status: 400 }
+      );
+    }
+    if (name && (typeof name !== "string" || name.length > 100)) {
+      return NextResponse.json({ error: "Nombre inválido" }, { status: 400 });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: emailLower } });
     if (existing) return NextResponse.json({ error: "Email ya registrado" }, { status: 400 });
-    const hashed = await bcrypt.hash(password, 10);
+
+    // Evita que alguien con una deuda pendiente por incumplimiento de envío evada el bloqueo
+    // simplemente registrando una cuenta nueva con otro correo.
+    const enListaNegra = await prisma.blacklist.findFirst({
+      where: { email: emailLower, activo: true, deudaPendienteCOP: { gt: 0 } },
+    });
+    if (enListaNegra) {
+      return NextResponse.json(
+        { error: "No es posible crear una cuenta con este correo por una deuda pendiente con Colbisnes. Contacta a soporte para regularizar tu situación." },
+        { status: 403 }
+      );
+    }
+
+    const hashed = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { email, password: hashed, name: name || null }
+      data: { email: emailLower, password: hashed, name: name?.trim() || null },
     });
 
-    // Email de bienvenida
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "Colbisnes <hola@colbisnes.com>",
-        to: email,
-        subject: "Heeyyy que chimba!!!",
-        html: `<div style="font-family:sans-serif;max-width:480px;margin:auto;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #E2E8F5">
-          <div style="height:4px;background:linear-gradient(90deg,#0050CC,#00AAFF,#0050CC)"></div>
-          <div style="padding:44px 32px;text-align:center">
-            <div style="margin:0 0 28px">
-              <h1 style="font-size:32px;font-weight:700;letter-spacing:0.18em;margin:0;background:linear-gradient(135deg,#0040CC,#0090FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent">COLBISNES</h1>
-            </div>
-            <div style="background:#F0F6FF;border:1px solid #C0D8FF;border-radius:16px;padding:20px;margin-bottom:20px">
-              <h2 style="color:#0060E0;font-size:22px;font-weight:700;margin:0 0 6px">Que chimba, ya eres parte!</h2>
-              <p style="color:#4A7AB8;font-size:13px;margin:0">De la mejor tienda de segunda mano de Colombia.</p>
-            </div>
-            <p style="font-size:14px;color:#64748B;margin:0 0 28px;line-height:1.8">Confirma tu correo electronico y empieza a hacer tu primer Bisnes &reg;</p>
-            <a href="https://colbisnes-web.vercel.app/auth/login" style="display:inline-block;background:linear-gradient(135deg,#004DCC 0%,#0070FF 60%,#00AAFF 100%);color:#fff;padding:15px 44px;border-radius:30px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.04em;box-shadow:0 4px 20px rgba(0,100,255,0.25)">Confirmar mi correo</a>
-            <div style="margin:28px auto 0;width:40px;height:1px;background:#E2E8F5"></div>
-            <p style="color:#CBD5E1;font-size:10px;margin:12px 0 0;letter-spacing:0.04em">&copy; 2026 COLBISNES &mdash; Todos los derechos reservados</p>
-          </div>
-        </div>`,
+    // Welcome email (non-blocking)
+    resend.emails.send({
+      from: "Colbisnes <hola@colbisnes.com>",
+      to: emailLower,
+      subject: "Bienvenido a Colbisnes",
+      html: colbisnesEmailTemplate({
+        preheader: "Bienvenido a Colbisnes",
+        titulo: "Que bien, ya eres parte de Colbisnes! 🎉",
+        cuerpo: `Bienvenido a la comunidad de compra y venta de segunda mano más activa de Colombia.<br/><br/>Confirma tu correo y empieza a cerrar tu primer bisnes.`,
+        ctaTexto: "Confirmar mi correo",
+        ctaUrl: "https://colbisnes-web.vercel.app/auth/login",
       }),
-    });
+    }).catch((err) => console.error("Error enviando email de bienvenida:", err));
 
     return NextResponse.json({ success: true, user: { id: user.id, email: user.email } });
   } catch (error) {

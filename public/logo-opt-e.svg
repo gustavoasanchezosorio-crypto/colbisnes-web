@@ -1,0 +1,27 @@
+<!-- E: "El Hexágono" — comunidad, colmena, amarillo colombiano -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <filter id="se"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#F5C400" flood-opacity="0.4"/></filter>
+  </defs>
+  <!-- Hexágono punta arriba, centro (62,62), radio 54 -->
+  <polygon points="62,8 108,35 108,89 62,116 16,89 16,35"
+    fill="#FCD116" filter="url(#se)"/>
+  <!-- Sombra interior sutil -->
+  <polygon points="62,8 108,35 108,89 62,116 16,89 16,35"
+    fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
+  <!-- CB en azul profundo -->
+  <text x="62" y="79" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Arial Black',sans-serif"
+    font-weight="900" font-size="44" letter-spacing="-2" fill="#003893">CB</text>
+  <!-- Wordmark -->
+  <text x="136" y="62"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#0B1628">COL</text>
+  <text x="240" y="62"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#003893">BISNES</text>
+  <!-- Tagline -->
+  <text x="137" y="85"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

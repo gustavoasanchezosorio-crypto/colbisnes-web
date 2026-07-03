@@ -1,0 +1,28 @@
+<!-- K: "La Flecha" — movimiento, rapidez, ir hacia adelante -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="gk" gradientUnits="userSpaceOnUse" x1="4" y1="0" x2="120" y2="0">
+      <stop offset="0%" stop-color="#0B2D8C"/>
+      <stop offset="100%" stop-color="#1F6BFF"/>
+    </linearGradient>
+    <filter id="fk"><feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#1F6BFF" flood-opacity="0.3"/></filter>
+  </defs>
+  <!-- Flecha apuntando derecha (chevron grueso) -->
+  <!-- Forma: rectángulo con punta derecha tipo arrow -->
+  <path d="M 4 24 L 76 24 L 116 62 L 76 100 L 4 100 L 44 62 Z"
+    fill="url(#gk)" filter="url(#fk)"/>
+  <!-- CB en blanco dentro -->
+  <text x="52" y="74" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Arial Black',sans-serif"
+    font-weight="900" font-size="38" letter-spacing="-2" fill="white">CB</text>
+  <!-- Wordmark -->
+  <text x="140" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="50" letter-spacing="-2.5" fill="#0B1628">COL</text>
+  <text x="252" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="50" letter-spacing="-2.5" fill="#1F6BFF">BISNES</text>
+  <text x="141" y="88"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

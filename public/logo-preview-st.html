@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes · estilo apilado (tipo LAVI)</title>
+<style>
+  :root { --blue:#1F6BFF; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+    background:#F1F5F9; color:#0A1633; padding:48px 24px 80px; }
+  .head { max-width:1000px; margin:0 auto 30px; text-align:center; }
+  .head h1 { font-size:30px; letter-spacing:-1px; color:var(--blue); }
+  .head p { color:#64748B; margin-top:10px; font-size:15px; }
+  .grid { max-width:1000px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; }
+  .card { background:#fff; border-radius:18px; overflow:hidden;
+    box-shadow:0 6px 22px rgba(15,23,42,.08); border:1px solid #E2E8F0; }
+  .tag { display:flex; align-items:center; gap:12px; padding:15px 20px; border-bottom:1px solid #EEF2F7; }
+  .tag .letter { background:var(--blue); color:#fff; font-weight:800; font-size:13px;
+    padding:5px 11px; border-radius:8px; }
+  .tag .name { font-weight:700; font-size:14px; }
+  .stage { padding:30px 24px; display:grid; place-items:center; min-height:240px; }
+  .stage img { width:100%; max-width:220px; height:auto; }
+  .stage.dark { background:#000; }
+  .foot { padding:13px 20px; font-size:12.5px; color:#64748B; border-top:1px solid #EEF2F7; line-height:1.5; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Estilo apilado · tipo “LAVI”</h1>
+    <p>“COLBISNES” tiene 9 letras = rejilla perfecta <b>3×3</b>: COL / BIS / NES. Fino, elegante, en azul de marca.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="tag"><span class="letter">ST1</span><span class="name">Bloque 3×3 azul</span></div>
+      <div class="stage"><img src="logo-opt-st1.svg" alt="ST1"></div>
+      <div class="foot">COL/BIS/NES justificado en cuadro. Fino y sofisticado. El más fiel a tu referencia.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">ST2</span><span class="name">Tile azul, letras blancas</span></div>
+      <div class="stage"><img src="logo-opt-st2.svg" alt="ST2"></div>
+      <div class="foot">Mismo bloque dentro de un tile azul → sirve directo como app icon/avatar.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">ST3</span><span class="name">Monograma C/B</span></div>
+      <div class="stage"><img src="logo-opt-st3.svg" alt="ST3"></div>
+      <div class="foot">Versión literal del LAVI: solo C arriba / B abajo. Marca compacta para favicon.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">ST4</span><span class="name">Bloque + tagline</span></div>
+      <div class="stage"><img src="logo-opt-st4.svg" alt="ST4"></div>
+      <div class="foot">Bloque 3×3 con punto amarillo y tagline. Versión completa para header.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">ST1</span><span class="name">En negro (ref.)</span></div>
+      <div class="stage dark"><img src="logo-opt-st1.svg" alt="ST1 dark"></div>
+      <div class="foot">Mismo bloque sobre negro, como tu imagen de referencia.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">ST3</span><span class="name">En negro (ref.)</span></div>
+      <div class="stage dark"><img src="logo-opt-st3.svg" alt="ST3 dark"></div>
+      <div class="foot">Monograma C/B sobre negro.</div>
+    </div>
+  </div>
+
+  <div class="head" style="margin-top:46px; margin-bottom:0;">
+    <p>¿Te late esta dirección? Dime cuál (ST1/ST2/ST3/ST4) y lo afino: peso, espaciado, tamaño. Sigo <b>sin tocar la web</b>.</p>
+  </div>
+</body>
+</html>

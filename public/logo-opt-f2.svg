@@ -1,0 +1,17 @@
+<!-- F2: la firma como TRAZO de acento bajo el nombre (subrayado personal). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 150" fill="none">
+  <text x="22" y="78"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="60" letter-spacing="-3" fill="#1F6BFF">colbisnes</text>
+  <!-- Firma como flourish/subrayado debajo -->
+  <g transform="translate(20 78) scale(0.36)">
+    <g stroke="#FFCD00" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M 35 292 C 300 250 850 150 1210 78"/>
+      <path d="M 675 256 C 800 220 980 195 1070 178 C 1110 170 1180 138 1290 122"/>
+      <circle cx="1388" cy="113" r="13" fill="#FFCD00" stroke="none"/>
+    </g>
+  </g>
+  <text x="24" y="138"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="11" letter-spacing="3.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

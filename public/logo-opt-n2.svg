@@ -1,0 +1,12 @@
+<!-- N2: El amarillo ES el punto de la "i" (su tilde natural). Rol claro: es la i. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 92" fill="none">
+  <!-- "colb" + i sin punto + "snes". El punto de la i se pinta amarillo -->
+  <text x="10" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="62" letter-spacing="-3" fill="#1F6BFF">colbısnes</text>
+  <!-- tilde amarilla de la i -->
+  <circle cx="222" cy="20" r="7.5" fill="#FFCD00"/>
+  <text x="12" y="86"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="3.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

@@ -3,7 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { AppProvider } from '@/context/AppContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { ToastProvider } from '@/components/Toast';
+import BluWidget from '@/components/BluWidget';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +25,10 @@ export default function RootLayout({
         <Providers>
           <AppProvider>
             <ToastProvider>
-              {children}
+              <NotificationProvider>
+                {children}
+                <BluWidget />
+              </NotificationProvider>
             </ToastProvider>
           </AppProvider>
         </Providers>

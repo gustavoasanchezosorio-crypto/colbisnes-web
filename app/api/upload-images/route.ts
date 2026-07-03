@@ -22,13 +22,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No se enviaron imágenes" }, { status: 400 });
     }
 
+    if (files.length > 10) {
+      return NextResponse.json({ error: "Máximo 10 imágenes" }, { status: 400 });
+    }
+
     const uploadedUrls = [];
     for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        return NextResponse.json({ error: "Solo se permiten imagenes" }, { status: 400 });
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: "Cada imagen no debe superar 5MB" }, { status: 400 });
+      }
+
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: "colbisnes" },
+          { folder: "colbisnes", resource_type: "image" },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);

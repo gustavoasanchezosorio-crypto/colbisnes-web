@@ -26,7 +26,8 @@ export const OfferModal: React.FC<OfferModalProps> = ({
   onCreateOffer,
   onUpdateOffer,
 }) => {
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState('');         // valor numérico puro (ej: "20000")
+  const [amountDisplay, setAmountDisplay] = useState(''); // formateado (ej: "20.000")
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -36,7 +37,7 @@ export const OfferModal: React.FC<OfferModalProps> = ({
 
   const handleSubmit = useCallback(async () => {
     setValidationError('');
-    const numAmount = Number(amount);
+    const numAmount = Number(amount.replace(/\./g, ""));
     if (!Number.isFinite(numAmount) || numAmount <= 0) {
       setValidationError('Monto inválido');
       return;
@@ -48,7 +49,7 @@ export const OfferModal: React.FC<OfferModalProps> = ({
     setIsSubmitting(true);
     try {
       await onCreateOffer(productId, numAmount, message);
-      setAmount('');
+      setAmount(''); onClose();
       setMessage('');
     } finally {
       setIsSubmitting(false);
@@ -67,23 +68,30 @@ export const OfferModal: React.FC<OfferModalProps> = ({
       padding: 20,
     }}>
       <div style={{
-        background: "white",
+        background: THEME.surfaceGradient,
         padding: 30,
         borderRadius: 20,
         width: 500,
         maxHeight: "80vh",
         overflowY: "auto",
+        border: `1px solid ${THEME.border}`,
+        boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
       }}>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: 20, color: THEME.primary }}>Ofertas</h2>
+        <h2 style={{ fontSize: "1.5rem", marginBottom: 20, color: THEME.text, textAlign: "center" }}>Ofertas</h2>
 
         {session && !isOwner && (
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: "1rem", marginBottom: 10 }}>Nueva oferta</h3>
+            <h3 style={{ fontSize: "1rem", marginBottom: 10, textAlign: "center" }}>Nueva oferta</h3>
             <Input
-              placeholder="Monto COP"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              placeholder={product ? `Máximo $${product.priceCOP.toLocaleString("es-CO")}` : "Monto COP"}
+              type="text"
+              inputMode="numeric"
+              value={amountDisplay}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\./g, "").replace(/[^0-9]/g, "");
+                setAmount(raw);
+                setAmountDisplay(raw ? Number(raw).toLocaleString("es-CO") : "");
+              }}
               disabled={isSubmitting}
             />
             {validationError && <p style={{ color: THEME.error, fontSize: "0.8rem", marginTop: 4 }}>{validationError}</p>}
@@ -116,24 +124,24 @@ export const OfferModal: React.FC<OfferModalProps> = ({
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontWeight: 700, color: THEME.primary }}>{formatMoney(offer.amountCOP)}</span>
+                  <span style={{ fontWeight: 800, color: THEME.gold }}>{formatMoney(offer.amountCOP)}</span>
                   <span style={{
                     padding: "4px 12px",
                     borderRadius: 20,
                     fontSize: "0.8rem",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     background: getOfferStatusColor(offer.status),
-                    color: offer.status === 'PENDING' ? THEME.text : 'white',
+                    color: offer.status === 'PENDING' ? '#1a1200' : 'white',
                   }}>
                     {getOfferStatusLabel(offer.status)}
                   </span>
                 </div>
                 {offer.message && <p style={{ fontSize: "0.9rem", marginBottom: 8, color: THEME.muted }}>{offer.message}</p>}
-                {offer.user && <p style={{ fontSize: "0.8rem", color: THEME.primary }}>Ofertante: {offer.user.name || 'Anónimo'}</p>}
+                {offer.user && <p style={{ fontSize: "0.8rem", color: THEME.gold }}>Ofertante: {offer.user.name || 'Anónimo'}</p>}
                 {isOwner && offer.status === 'PENDING' && (
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    <Button onClick={() => onUpdateOffer(offer.id, 'ACCEPTED')}>Aceptar</Button>
-                    <OutlineButton onClick={() => onUpdateOffer(offer.id, 'REJECTED')}>Rechazar</OutlineButton>
+                    <Button onClick={() => { onUpdateOffer(offer.id, 'ACCEPTED'); onClose(); }}>Aceptar</Button>
+                    <OutlineButton onClick={() => { onUpdateOffer(offer.id, 'REJECTED'); onClose(); }}>Rechazar</OutlineButton>
                   </div>
                 )}
               </div>

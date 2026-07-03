@@ -1,10 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { rateLimit, getIP } from "@/lib/rateLimit";
+import { requireKyc } from "@/lib/requireKyc";
 import { sendEmail } from '@/lib/email';
+import { sendWhatsapp } from '@/lib/whatsapp';
+import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
+import { bloqueoResponse } from "@/lib/accountBlock";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
@@ -22,17 +27,30 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const { session, response: kycError } = await requireKyc();
+    if (kycError) return kycError;
+
+    const bloqueo = await bloqueoResponse(session.user.id);
+    if (bloqueo) return bloqueo;
+
+    const ip = getIP(request);
+    const rl = rateLimit(`offers:${session.user.id}:${ip}`, { limit: 10, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Demasiadas ofertas. Intenta en 1 minuto." }, { status: 429 });
     }
 
     const body = await request.json();
     const { productId, amountCOP, message } = body;
     if (!productId || !amountCOP) {
       return NextResponse.json({ error: "productId y amountCOP requeridos" }, { status: 400 });
+    }
+    if (typeof amountCOP !== "number" || amountCOP < 1000) {
+      return NextResponse.json({ error: "Oferta mínima: $1.000 COP" }, { status: 400 });
+    }
+    if (message && (typeof message !== "string" || message.length > 500)) {
+      return NextResponse.json({ error: "Mensaje demasiado largo (máx 500 caracteres)" }, { status: 400 });
     }
 
     const product = await prisma.product.findUnique({
@@ -62,11 +80,21 @@ export async function POST(request: Request) {
 
     // Notificar al vendedor con HTML plano
     try {
-      const html = `<p>Hola ${product.seller.name || 'Vendedor'}, tienes una nueva oferta de ${session.user.name || 'Comprador'} por tu producto <strong>${product.title}</strong> por $${amountCOP}.</p>`;
+      const html = colbisnesEmailTemplate({
+        preheader: "Nueva oferta recibida",
+        titulo: "Tienes una nueva oferta 🤝",
+        cuerpo: `Hola ${product.seller.name || 'Vendedor'}, <strong>${session.user.name || 'un comprador'}</strong> ofreció <strong style="color:#1F6BFF;">$${Number(amountCOP).toLocaleString('es-CO')} COP</strong> por tu producto <strong>${product.title}</strong>.<br/><br/>Ingresa a Colbisnes para aceptar o rechazar la oferta.`,
+        ctaTexto: "Ver oferta",
+        ctaUrl: "https://colbisnes-web.vercel.app",
+      });
       await sendEmail({
         to: product.seller.email,
         subject: 'Nueva oferta en Colbisnes',
         html,
+      });
+      await sendWhatsapp({
+        to: (product.seller as any).phoneWhatsapp,
+        body: "🤝 *Colbisnes* - Nueva oferta\n\nHola " + (product.seller.name || 'Vendedor') + ", tienes una oferta de $" + Number(amountCOP).toLocaleString('es-CO') + " COP por *" + product.title + "*.\n\nIngresa a Colbisnes para aceptarla o rechazarla.",
       });
     } catch (emailError) {
       console.error('Error enviando email de nueva oferta:', emailError);
@@ -81,10 +109,8 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { session, response: kycError } = await requireKyc();
+    if (kycError) return kycError;
 
     const body = await request.json();
     const { offerId, status } = body;
@@ -135,11 +161,21 @@ export async function PATCH(request: Request) {
 
     // Notificar al comprador con HTML plano
     try {
-      const html = `<p>Hola ${offer.user.name || 'Comprador'}, tu oferta por <strong>${offer.product.title}</strong> por $${offer.amountCOP} ha sido aceptada. Ahora tienes 10 minutos para pagar.</p>`;
+      const html = colbisnesEmailTemplate({
+        preheader: "Tu oferta fue aceptada",
+        titulo: "¡Tu oferta fue aceptada! 🎉",
+        cuerpo: `Hola ${offer.user.name || 'Comprador'}, el vendedor acepto tu oferta de <strong style="color:#1F6BFF;">$${Number(offer.amountCOP).toLocaleString('es-CO')} COP</strong> por <strong>${offer.product.title}</strong>.<br/><br/>Tienes <strong>10 minutos</strong> para realizar el pago, despues el producto quedara disponible de nuevo para otros compradores.`,
+        ctaTexto: "Pagar ahora",
+        ctaUrl: "https://colbisnes-web.vercel.app",
+      });
       await sendEmail({
         to: offer.user.email,
         subject: '¡Tu oferta fue aceptada!',
         html,
+      });
+      await sendWhatsapp({
+        to: (offer.user as any).phoneWhatsapp,
+        body: `🎉 *Colbisnes* - ¡Oferta aceptada!\n\nHola ${offer.user.name || 'Comprador'}, tu oferta de $${Number(offer.amountCOP).toLocaleString('es-CO')} COP por *${offer.product.title}* fue aceptada.\n\nTienes 10 minutos para pagar antes de perder el producto.`,
       });
     } catch (emailError) {
       console.error('Error enviando email de oferta aceptada:', emailError);

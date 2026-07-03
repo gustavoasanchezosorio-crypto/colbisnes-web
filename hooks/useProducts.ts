@@ -30,61 +30,109 @@ export interface Product {
   _count?: { offers: number };
 }
 
+const LIMIT = 10;
+const MAX_LOADED = 200;
+
 export const useProducts = (filters: FilterState) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const pageRef = useRef(1);
+  const [hasMore, setHasMore] = useState(false);
 
-  const fetchProducts = useCallback(async (loadMore = false) => {
+  const pageRef = useRef(1);
+  const inFlight = useRef(false);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
+  const buildQuery = useCallback((page: number, limit: number) => {
+    const f = filtersRef.current;
+    const params = new URLSearchParams();
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+    if (f.searchQuery) params.append('q', f.searchQuery);
+    if (f.city) params.append('city', f.city);
+    if (f.minPrice) params.append('minPrice', f.minPrice);
+    if (f.maxPrice) params.append('maxPrice', f.maxPrice);
+    if (f.status) params.append('status', f.status);
+    return params.toString();
+  }, []);
+
+  // Carga inicial / recarga por cambio de filtros (muestra skeleton)
+  const loadFirst = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const currentPage = loadMore ? pageRef.current + 1 : 1;
-      const params = new URLSearchParams();
-      params.append('page', String(currentPage));
-      params.append('limit', '10');
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
-      });
-
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await fetch(`/api/products?${buildQuery(1, LIMIT)}`);
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data: Product[] = await res.json();
-
-      setProducts(prev => {
-        if (!loadMore) return data;
-        const existingIds = new Set(prev.map(p => p.id));
-        const newOnly = data.filter(p => !existingIds.has(p.id));
-        return [...prev, ...newOnly];
-      });
-
-      setHasMore(data.length === 10);
-      pageRef.current = currentPage;
-      setPage(currentPage);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error desconocido');
+      setProducts(data);
+      setHasMore(data.length === LIMIT);
+      pageRef.current = 1;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error desconocido');
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [buildQuery]);
 
+  // Cargar la siguiente pagina (scroll infinito): agrega al final
+  const fetchMore = useCallback(async () => {
+    if (inFlight.current || !hasMore) return;
+    inFlight.current = true;
+    setLoadingMore(true);
+    try {
+      const next = pageRef.current + 1;
+      if (next * LIMIT > MAX_LOADED) { setHasMore(false); return; }
+      const res = await fetch(`/api/products?${buildQuery(next, LIMIT)}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data: Product[] = await res.json();
+      let added = 0;
+      setProducts(prev => {
+        const ids = new Set(prev.map(p => p.id));
+        const newOnly = data.filter(p => !ids.has(p.id));
+        added = newOnly.length;
+        return added ? [...prev, ...newOnly] : prev;
+      });
+      pageRef.current = next;
+      // Solo seguimos si vino una pagina completa Y hubo elementos nuevos
+      setHasMore(data.length === LIMIT && added > 0);
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+      inFlight.current = false;
+    }
+  }, [buildQuery, hasMore]);
+
+  // Refresco silencioso de la ventana ya cargada: sin skeleton, sin resetear paginacion.
+  // Mantiene estados en tiempo real (vendido, en custodia, etc.) sin romper el scroll infinito.
+  const refreshInPlace = useCallback(async () => {
+    if (inFlight.current) return;
+    try {
+      const count = Math.min(MAX_LOADED, Math.max(pageRef.current * LIMIT, LIMIT));
+      const res = await fetch(`/api/products?${buildQuery(1, count)}`);
+      if (!res.ok) return;
+      const data: Product[] = await res.json();
+      setProducts(data);
+      setHasMore(data.length === count && count < MAX_LOADED);
+    } catch {
+      /* silencioso: no rompemos la vista por un fallo de red puntual */
+    }
+  }, [buildQuery]);
+
+  // Recargar al cambiar filtros (con debounce)
   useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      fetchProducts(false);
-    }, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [filters]);
+    const t = setTimeout(() => { pageRef.current = 1; loadFirst(); }, 300);
+    return () => clearTimeout(t);
+  }, [filters, loadFirst]);
 
-  // Polling cada 5 segundos para actualizar estados en tiempo real
+  // Polling cada 5s para reflejar cambios de estado en tiempo real (silencioso)
   useEffect(() => {
-    const intervalo = setInterval(() => {
-      fetchProducts(false);
-    }, 5000);
-    return () => clearInterval(intervalo);
-  }, [filters]);
+    const id = setInterval(() => { refreshInPlace(); }, 5000);
+    return () => clearInterval(id);
+  }, [refreshInPlace]);
 
-  return { products, loading, error, hasMore, fetchMore: () => fetchProducts(true), refetch: () => fetchProducts(false) };
+  return { products, loading, loadingMore, error, hasMore, fetchMore, refetch: refreshInPlace };
 };

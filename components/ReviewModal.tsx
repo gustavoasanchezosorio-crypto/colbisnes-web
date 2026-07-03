@@ -51,15 +51,17 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       padding: 20,
     }}>
       <div style={{
-        background: "white",
+        background: THEME.surfaceGradient,
         padding: 30,
         borderRadius: 20,
         width: 400,
+        border: `1px solid ${THEME.border}`,
+        boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
       }}>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: 20, color: THEME.primary }}>Calificar transacción</h2>
-        <p style={{ marginBottom: 16 }}>Producto: <strong>{product.title}</strong></p>
+        <h2 style={{ fontSize: "1.5rem", marginBottom: 20, color: THEME.text, textAlign: "center" }}>Calificar transacción</h2>
+        <p style={{ marginBottom: 16, color: THEME.textSoft }}>Producto: <strong style={{ color: THEME.text }}>{product.title}</strong></p>
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontSize: "0.9rem", fontWeight: 500 }}>Puntuación (1-5)</label>
+          <label style={{ display: "block", marginBottom: 8, fontSize: "0.9rem", fontWeight: 500, color: THEME.textSoft }}>Puntuación (1-5)</label>
           <select
             value={rating}
             onChange={(e) => setRating(Number(e.target.value))}
@@ -68,6 +70,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               padding: 12,
               borderRadius: 12,
               border: `1px solid ${THEME.border}`,
+              background: THEME.surface,
+              color: THEME.text,
               fontSize: "0.95rem",
             }}
             disabled={isSubmitting}
@@ -76,7 +80,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           </select>
         </div>
         <div style={{ marginBottom: 24 }}>
-          <label style={{ display: "block", marginBottom: 8, fontSize: "0.9rem", fontWeight: 500 }}>Comentario (opcional)</label>
+          <label style={{ display: "block", marginBottom: 8, fontSize: "0.9rem", fontWeight: 500, color: THEME.textSoft }}>Comentario (opcional)</label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
@@ -86,6 +90,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               padding: 12,
               borderRadius: 12,
               border: `1px solid ${THEME.border}`,
+              background: THEME.surfaceAlt,
+              color: THEME.text,
               fontSize: "0.95rem",
               resize: "vertical",
             }}

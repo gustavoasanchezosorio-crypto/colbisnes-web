@@ -1,0 +1,16 @@
+<!-- ST2: bloque apilado 3x3 en tile azul, letras blancas finas. (estilo LAVI invertido) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" fill="none">
+  <defs>
+    <linearGradient id="gst2" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="360" y2="360">
+      <stop offset="0%" stop-color="#1F6BFF"/>
+      <stop offset="100%" stop-color="#1448A3"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="360" height="360" rx="44" fill="url(#gst2)"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+     font-weight="200" font-size="92" fill="#FFFFFF" text-anchor="start">
+    <text x="70" y="142" textLength="220" lengthAdjust="spacing">COL</text>
+    <text x="70" y="230" textLength="220" lengthAdjust="spacing">BIS</text>
+    <text x="70" y="318" textLength="220" lengthAdjust="spacing">NES</text>
+  </g>
+</svg>

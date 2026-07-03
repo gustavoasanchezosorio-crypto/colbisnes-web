@@ -1,0 +1,26 @@
+<!-- L: "Premium Dark" — fondo oscuro en el propio logo, lujo y confianza -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" fill="none">
+  <defs>
+    <linearGradient id="gl" gradientUnits="userSpaceOnUse" x1="198" y1="0" x2="480" y2="0">
+      <stop offset="0%" stop-color="#F5C400"/>
+      <stop offset="60%" stop-color="#1F6BFF"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo oscuro que forma parte del logo -->
+  <rect x="0" y="0" width="520" height="100" rx="18" fill="#0B1628"/>
+  <!-- Línea dorada izquierda -->
+  <rect x="0" y="0" width="5" height="100" rx="2" fill="#FCD116"/>
+  <!-- COL blanco -->
+  <text x="30" y="72"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="56" letter-spacing="-3" fill="white">COL</text>
+  <!-- BISNES con gradiente dorado-azul -->
+  <text x="196" y="72"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="56" letter-spacing="-3" fill="url(#gl)">BISNES</text>
+  <!-- Tagline derecha -->
+  <text x="488" y="30"
+    text-anchor="end"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="400" font-size="10" letter-spacing="3" fill="rgba(255,255,255,0.35)">COMPRA · VENDE · COLOMBIA</text>
+</svg>

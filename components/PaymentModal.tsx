@@ -43,19 +43,21 @@ export function PaymentModal({ seller, productTitle, amount, onClose, onConfirmP
       padding: 20,
     }}>
       <div style={{
-        background: THEME.surface,
+        background: THEME.surfaceGradient,
         borderRadius: 20,
         padding: "2rem",
         maxWidth: 500,
         width: "100%",
         textAlign: "center",
+        border: `1px solid ${THEME.border}`,
+        boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
       }}>
-        <h2 style={{ color: THEME.primary, marginBottom: "1rem" }}>Pagar con Nequi o Bre-B</h2>
+        <h2 style={{ color: THEME.text, marginBottom: "1rem" }}>Pagar con Nequi o Bre-B</h2>
         <p><strong>Producto:</strong> {productTitle}</p>
         <p><strong>Monto:</strong> ${amount.toLocaleString('es-CO')}</p>
         <p><strong>Vendedor:</strong> {seller.name || "Anónimo"}</p>
         <hr style={{ margin: "1rem 0", borderColor: THEME.border }} />
-        <h3 style={{ color: THEME.primary }}>Datos para el pago</h3>
+        <h3 style={{ color: THEME.gold }}>Datos para el pago</h3>
         {seller.nequiPhone && (
           <p><strong>Nequi:</strong> {seller.nequiPhone}</p>
         )}

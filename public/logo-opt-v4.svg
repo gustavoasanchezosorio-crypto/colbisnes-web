@@ -1,0 +1,16 @@
+<!-- V4: la "o" convertida en punto/burbuja amarilla. Marca oculta dentro del wordmark. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" fill="none">
+  <!-- "c" + hueco para la o + "lbisnes" -->
+  <text x="10" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="62" letter-spacing="-3" fill="#1F6BFF">c</text>
+  <!-- la "o" reemplazada por un círculo: anillo azul con corazón amarillo -->
+  <circle cx="62" cy="49" r="17" fill="none" stroke="#1F6BFF" stroke-width="10"/>
+  <circle cx="62" cy="49" r="6" fill="#FFCD00"/>
+  <text x="80" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="62" letter-spacing="-3" fill="#1F6BFF">lbisnes</text>
+  <text x="12" y="90"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="3.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

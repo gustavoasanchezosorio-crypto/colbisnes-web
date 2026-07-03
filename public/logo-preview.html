@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes — Opciones de Logo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F8FAFC; color: #0F172A; }
+
+  header {
+    background: #0F172A;
+    color: white;
+    padding: 24px 40px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header span { color: #64748B; font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 14px; }
+
+  .grid {
+    display: grid;
+    gap: 0;
+    padding: 0;
+  }
+
+  .option {
+    border-bottom: 1px solid #E2E8F0;
+    padding: 40px;
+  }
+
+  .option-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    margin-bottom: 6px;
+  }
+  .option-name {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 4px;
+  }
+  .option-desc {
+    font-size: 14px;
+    color: #64748B;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  .preview-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .preview-box {
+    border-radius: 16px;
+    padding: 32px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 300px;
+    flex: 1;
+  }
+  .preview-box.white { background: #FFFFFF; border: 1.5px solid #E2E8F0; }
+  .preview-box.light { background: #F0F4FF; border: 1.5px solid #DBEAFE; }
+  .preview-box.dark  { background: #0F172A; border: none; }
+  .preview-box.blue  { background: linear-gradient(135deg,#0B2D8C,#1F6BFF); border: none; }
+
+  .preview-box img { max-height: 70px; width: auto; display: block; }
+
+  .bg-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #CBD5E1;
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .bg-label-dark { color: #475569; }
+
+  .preview-col { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 280px; }
+
+  .badge-new {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #DBEAFE;
+    color: #1D4ED8;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  Colbisnes — Opciones de Logo
+  <span>Elige el que más te guste y dile a Claude cuál es</span>
+</header>
+
+<div class="grid">
+
+  <!-- OPCIÓN A -->
+  <div class="option">
+    <div class="option-label">Opción A</div>
+    <div class="option-name">La Tricolor <span class="badge-new">Colombia</span></div>
+    <div class="option-desc">Bandera colombiana integrada en el ícono. Patriótico, inmediatamente reconocible como colombiano.</div>
+    <div class="preview-row">
+      <div class="preview-col">
+        <div class="preview-box white">
+          <img src="logo-opt-a.svg" alt="Logo A fondo blanco">
+        </div>
+        <div class="bg-label-dark bg-label">Fondo blanco</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box dark">
+          <img src="logo-opt-a.svg" alt="Logo A fondo oscuro">
+        </div>
+        <div class="bg-label">Fondo oscuro</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box blue">
+          <img src="logo-opt-a.svg" alt="Logo A fondo azul">
+        </div>
+        <div class="bg-label">Fondo azul</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCIÓN B -->
+  <div class="option">
+    <div class="option-label">Opción B</div>
+    <div class="option-name">El Intercambio <span class="badge-new">Tech</span></div>
+    <div class="option-desc">Dos flechas formando un ciclo — comprador y vendedor girando juntos. Moderno, dinámico, estilo startup tech.</div>
+    <div class="preview-row">
+      <div class="preview-col">
+        <div class="preview-box white">
+          <img src="logo-opt-b.svg" alt="Logo B fondo blanco">
+        </div>
+        <div class="bg-label-dark bg-label">Fondo blanco</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box dark">
+          <img src="logo-opt-b.svg" alt="Logo B fondo oscuro">
+        </div>
+        <div class="bg-label">Fondo oscuro</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box blue">
+          <img src="logo-opt-b.svg" alt="Logo B fondo azul">
+        </div>
+        <div class="bg-label">Fondo azul</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCIÓN C -->
+  <div class="option">
+    <div class="option-label">Opción C</div>
+    <div class="option-name">Pure Wordmark <span class="badge-new">Bold</span></div>
+    <div class="option-desc">Solo tipografía, sin ícono. Máximo impacto. La barra tricolor en la parte superior lo ancla a Colombia sin ser obvio.</div>
+    <div class="preview-row">
+      <div class="preview-col">
+        <div class="preview-box white">
+          <img src="logo-opt-c.svg" alt="Logo C fondo blanco">
+        </div>
+        <div class="bg-label-dark bg-label">Fondo blanco</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box light">
+          <img src="logo-opt-c.svg" alt="Logo C fondo claro">
+        </div>
+        <div class="bg-label-dark bg-label">Fondo azul claro</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCIÓN D -->
+  <div class="option" style="border-bottom:none;">
+    <div class="option-label">Opción D</div>
+    <div class="option-name">La Moneda <span class="badge-new">Premium</span></div>
+    <div class="option-desc">Ícono circular dorado — como una moneda. Transmite valor, confianza y marketplace premium. COL oscuro + BISNES azul + línea dorada.</div>
+    <div class="preview-row">
+      <div class="preview-col">
+        <div class="preview-box white">
+          <img src="logo-opt-d.svg" alt="Logo D fondo blanco">
+        </div>
+        <div class="bg-label-dark bg-label">Fondo blanco</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box dark">
+          <img src="logo-opt-d.svg" alt="Logo D fondo oscuro">
+        </div>
+        <div class="bg-label">Fondo oscuro</div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-box blue">
+          <img src="logo-opt-d.svg" alt="Logo D fondo azul">
+        </div>
+        <div class="bg-label">Fondo azul</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

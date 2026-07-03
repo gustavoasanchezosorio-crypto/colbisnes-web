@@ -5,20 +5,21 @@ import { THEME } from '@/lib/theme';
 
 export const ProductCardSkeleton: React.FC = () => (
   <div style={{
-    background: THEME.surface,
+    background: THEME.surfaceGradient,
     borderRadius: 20,
     padding: 20,
-    border: `1px solid ${THEME.border}`,
+    border: "1.5px solid transparent",
+    boxShadow: THEME.cardShadow,
     animation: "pulse 1.5s infinite",
   }}>
     <div style={{ display: "flex", justifyContent: "space-between" }}>
       <div style={{ flex: 1 }}>
-        <div style={{ height: 24, background: "#e0e0e0", borderRadius: 4, width: "75%", marginBottom: 8 }} />
-        <div style={{ height: 16, background: "#e0e0e0", borderRadius: 4, width: "50%", marginBottom: 12 }} />
-        <div style={{ height: 64, background: "#e0e0e0", borderRadius: 4, width: "100%", marginBottom: 12 }} />
-        <div style={{ height: 16, background: "#e0e0e0", borderRadius: 4, width: "33%" }} />
+        <div style={{ height: 24, background: "rgba(0,0,0,0.08)", borderRadius: 4, width: "75%", marginBottom: 8 }} />
+        <div style={{ height: 16, background: "rgba(0,0,0,0.08)", borderRadius: 4, width: "50%", marginBottom: 12 }} />
+        <div style={{ height: 64, background: "rgba(0,0,0,0.08)", borderRadius: 4, width: "100%", marginBottom: 12 }} />
+        <div style={{ height: 16, background: "rgba(0,0,0,0.08)", borderRadius: 4, width: "33%" }} />
       </div>
-      <div style={{ height: 32, background: "#e0e0e0", borderRadius: 4, width: 96, marginLeft: 16 }} />
+      <div style={{ height: 32, background: "rgba(0,0,0,0.08)", borderRadius: 4, width: 96, marginLeft: 16 }} />
     </div>
   </div>
 );

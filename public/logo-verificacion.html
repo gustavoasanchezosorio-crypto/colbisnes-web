@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes · verificación N1 implementado</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif; }
+  body { background:#F1F5F9; color:#0A1633; padding:40px 24px 80px; }
+  .head { max-width:900px; margin:0 auto 30px; text-align:center; }
+  .head h1 { font-size:28px; color:#1F6BFF; letter-spacing:-.5px; }
+  .head p { color:#64748B; margin-top:8px; font-size:14px; }
+  .wrap { max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:22px; }
+  .label { font-size:12px; font-weight:700; color:#94A3B8; letter-spacing:1px; margin-bottom:8px; }
+  /* Header oscuro (como home/admin) */
+  .header-dark { background:linear-gradient(120deg,#1F6BFF,#1448A3); border-radius:16px;
+    padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
+  .header-dark img { height:44px; width:auto; display:block; }
+  .header-dark .nav { color:rgba(255,255,255,.85); font-size:14px; font-weight:600; }
+  /* Header claro (como login/checkout) */
+  .header-light { background:#fff; border:1px solid #E2E8F0; border-radius:16px;
+    padding:20px 24px; display:flex; align-items:center; justify-content:center; }
+  .header-light img { height:56px; width:auto; display:block; }
+  /* pastilla favicon */
+  .fav { display:flex; gap:16px; align-items:center; background:#fff; border:1px solid #E2E8F0;
+    border-radius:16px; padding:18px 24px; }
+  .fav img { height:40px; }
+  .fav small { color:#94A3B8; font-size:12px; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>N1 implementado · verificación</h1>
+    <p>Así queda tu logo elegido en los headers reales de Colbisnes. Aún <b>no está publicado</b> en producción.</p>
+  </div>
+
+  <div class="wrap">
+    <div>
+      <div class="label">HEADER OSCURO — home · admin · kyc · perfil (usa logo-white.svg)</div>
+      <div class="header-dark">
+        <img src="logo-white.svg" alt="Colbisnes">
+        <span class="nav">Explorar · Vender · Perfil</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="label">HEADER CLARO — login · checkout (usa logo.svg)</div>
+      <div class="header-light">
+        <img src="logo.svg" alt="Colbisnes">
+      </div>
+    </div>
+
+    <div>
+      <div class="label">TAMAÑO PEQUEÑO (móvil / altura reducida)</div>
+      <div class="fav">
+        <img src="logo.svg" alt="Colbisnes" style="height:28px;">
+        <img src="logo.svg" alt="Colbisnes" style="height:20px;">
+        <small>Legible incluso pequeño.</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="head" style="margin-top:40px;margin-bottom:0;">
+    <p>Si te gusta cómo quedó, dime y lo <b>publico en producción</b>. Si quieres ajustar algo (grosor, tamaño, tagline), lo cambio antes.</p>
+  </div>
+</body>
+</html>

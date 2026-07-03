@@ -1,0 +1,55 @@
+<!-- Q: "El Anillo" — El anillo ES la letra C. Adentro vive la B. CB en un solo símbolo. -->
+<!-- Inspirado en FedEx: el significado está en el espacio negativo. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="gq" gradientUnits="userSpaceOnUse" x1="8" y1="8" x2="116" y2="116">
+      <stop offset="0%" stop-color="#1F6BFF"/>
+      <stop offset="100%" stop-color="#1448A3"/>
+    </linearGradient>
+    <filter id="fq" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1F6BFF" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Fondo circular completo (para dar contexto de forma) -->
+  <circle cx="62" cy="62" r="56" fill="rgba(31,107,255,0.07)"/>
+
+  <!-- EL ANILLO: stroke grueso en círculo, con gap en el lado derecho = letra C -->
+  <!-- Circunferencia a radio 44: 2π×44 = 276.46. 270° = 207.35, 90° gap = 69.12 -->
+  <!-- rotate(45): gap queda a la DERECHA (entre top-right y bottom-right) -->
+  <circle cx="62" cy="62" r="44"
+    stroke="url(#gq)" stroke-width="22"
+    stroke-dasharray="207.35 69.12"
+    stroke-linecap="round"
+    transform="rotate(45 62 62)"
+    fill="none" filter="url(#fq)"/>
+
+  <!-- Punto de cierre superior del arco (toque premium) -->
+  <circle cx="62" cy="62" r="44"
+    stroke="rgba(255,255,255,0.15)" stroke-width="1"
+    fill="none"/>
+
+  <!-- B en el espacio interior del anillo -->
+  <text x="62" y="76" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="38" letter-spacing="-1" fill="#1448A3">B</text>
+
+  <!-- Acento amarillo: pequeño arco en la apertura del C (el "link" entre C y B) -->
+  <circle cx="62" cy="62" r="44"
+    stroke="#FFCD00" stroke-width="5"
+    stroke-dasharray="6 270"
+    stroke-linecap="round"
+    transform="rotate(45 62 62)"
+    fill="none"/>
+
+  <!-- Wordmark -->
+  <text x="136" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#1F6BFF">COL</text>
+  <text x="240" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#1448A3">BISNES</text>
+  <text x="137" y="87"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

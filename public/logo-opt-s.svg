@@ -1,0 +1,33 @@
+<!-- S: "Bicolor Extremo" — Dualidad total: comprador y vendedor. Inversión de color. -->
+<!-- El amarillo y el azul colombiano se dividen la palabra. Máximo contraste. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" fill="none">
+
+  <!-- Bloque izquierdo: COL amarillo sobre fondo oscuro -->
+  <rect x="0" y="0" width="202" height="100" fill="#0B1628"/>
+
+  <!-- Bloque derecho: BISNES oscuro sobre fondo amarillo -->
+  <rect x="202" y="0" width="318" height="100" fill="#FCD116"/>
+
+  <!-- Línea vertical divisoria (sutilísima) -->
+  <rect x="200" y="0" width="2" height="100" fill="rgba(255,255,255,0.1)"/>
+
+  <!-- COL en amarillo puro sobre oscuro -->
+  <text x="18" y="72"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="66" letter-spacing="-3" fill="#FCD116">COL</text>
+
+  <!-- BISNES en azul oscuro sobre amarillo -->
+  <text x="214" y="72"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="66" letter-spacing="-3" fill="#0B1628">BISNES</text>
+
+  <!-- Tags sutiles de cada lado -->
+  <text x="18" y="89"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="600" font-size="8.5" letter-spacing="3.5"
+    fill="rgba(252,209,22,0.5)">COMPRA</text>
+  <text x="214" y="89"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="600" font-size="8.5" letter-spacing="3.5"
+    fill="rgba(11,22,40,0.5)">VENDE</text>
+</svg>

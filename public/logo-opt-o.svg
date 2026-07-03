@@ -1,0 +1,59 @@
+<!-- O: "La Esmeralda" — Colombia lidera la producción mundial de esmeraldas. Un gem-mark único. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="go-a" gradientUnits="userSpaceOnUse" x1="8" y1="8" x2="116" y2="116">
+      <stop offset="0%" stop-color="#00D47E"/>
+      <stop offset="100%" stop-color="#003D28"/>
+    </linearGradient>
+    <linearGradient id="go-b" gradientUnits="userSpaceOnUse" x1="116" y1="8" x2="8" y2="116">
+      <stop offset="0%" stop-color="#006B45"/>
+      <stop offset="100%" stop-color="#001F14"/>
+    </linearGradient>
+    <filter id="fgo" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="10" flood-color="#00C97A" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- Octagon gem body -->
+  <polygon points="62,8 100,24 116,62 100,100 62,116 24,100 8,62 24,24"
+    fill="url(#go-a)" filter="url(#fgo)"/>
+
+  <!-- Darker bottom half for 3D gem depth -->
+  <polygon points="62,62 100,100 62,116 24,100 8,62" fill="url(#go-b)" opacity="0.6"/>
+
+  <!-- Inner table facet (flat-top hexagon) -->
+  <polygon points="79,33 96,62 79,91 45,91 28,62 45,33"
+    fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.28)" stroke-width="0.8"/>
+
+  <!-- Facet lines: outer vertices to inner hexagon vertices -->
+  <line x1="62" y1="8"  x2="45" y2="33" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
+  <line x1="62" y1="8"  x2="79" y2="33" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
+  <line x1="100" y1="24" x2="79" y2="33" stroke="rgba(255,255,255,0.14)" stroke-width="0.8"/>
+  <line x1="116" y1="62" x2="96" y2="62" stroke="rgba(255,255,255,0.1)"  stroke-width="0.8"/>
+  <line x1="100" y1="100" x2="79" y2="91" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+  <line x1="62" y1="116" x2="79" y2="91" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/>
+  <line x1="62" y1="116" x2="45" y2="91" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/>
+  <line x1="24" y1="100" x2="45" y2="91" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+  <line x1="8"  y1="62"  x2="28" y2="62" stroke="rgba(255,255,255,0.1)"  stroke-width="0.8"/>
+  <line x1="24" y1="24"  x2="45" y2="33" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
+
+  <!-- Top highlight (gem reflection) -->
+  <ellipse cx="42" cy="38" rx="19" ry="11" fill="rgba(255,255,255,0.22)"
+    transform="rotate(-25 42 38)"/>
+
+  <!-- CB en dorado colombiano -->
+  <text x="62" y="79" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="44" letter-spacing="-2" fill="#FCD116">CB</text>
+
+  <!-- Wordmark -->
+  <text x="136" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#0B1628">COL</text>
+  <text x="240" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#006B45">BISNES</text>
+  <text x="137" y="87"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

@@ -1,0 +1,37 @@
+<!-- P: "La Órbita" — El C mismo es el ícono. El peso (moneda) orbita el negocio. Concepto FedEx. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <filter id="fp-sun" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#FCD116" flood-opacity="0.7"/>
+    </filter>
+    <filter id="fp-arc" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0B2D8C" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- C arc: de (100,30) a (100,94) counterclockwise → abre a la DERECHA como C -->
+  <!-- Centro (62,62), radio 50. Arco largo (270°), contrareloj -->
+  <path d="M 100,30 A 50 50 0 1 0 100,94"
+    stroke="#0B1628" stroke-width="14" stroke-linecap="round"
+    fill="none" filter="url(#fp-arc)"/>
+
+  <!-- Trazo interior del arco (acento azul brillante) -->
+  <path d="M 100,30 A 50 50 0 1 0 100,94"
+    stroke="#1F6BFF" stroke-width="4" stroke-linecap="round"
+    fill="none" opacity="0.5"/>
+
+  <!-- Punto amarillo: "el peso" orbitando (punta superior del arco) -->
+  <circle cx="100" cy="30" r="12" fill="#FCD116" filter="url(#fp-sun)"/>
+  <circle cx="100" cy="30" r="7"  fill="#E8A000"/>
+
+  <!-- Wordmark -->
+  <text x="136" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="52" letter-spacing="-2.5" fill="#0B1628">COL</text>
+  <text x="256" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="52" letter-spacing="-2.5" fill="#1F6BFF">BISNES</text>
+  <text x="137" y="92"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

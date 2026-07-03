@@ -2,48 +2,79 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-const VERIFF_SHARED_SECRET = process.env.VERIFF_SHARED_SECRET!;
+const DIDIT_WEBHOOK_SECRET = process.env.DIDIT_WEBHOOK_SECRET!;
 
-function verifySignature(payload: string, signature: string): boolean {
-  const expected = crypto
-    .createHmac("sha256", VERIFF_SHARED_SECRET)
-    .update(payload)
-    .digest("hex");
-  return expected === signature;
+// Los floats "enteros" (1.0) se normalizan a enteros (1), igual que hace Didit al firmar.
+function shortenFloats(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(shortenFloats);
+  if (v && typeof v === "object") {
+    return Object.fromEntries(
+      Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, shortenFloats(x)])
+    );
+  }
+  if (typeof v === "number" && !Number.isInteger(v) && v % 1 === 0) return Math.trunc(v);
+  return v;
 }
 
+// Orden lexicográfico recursivo de llaves (los arrays conservan su orden original).
+function sortKeys(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(sortKeys);
+  if (v && typeof v === "object") {
+    return Object.keys(v as object)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, k) => {
+        acc[k] = sortKeys((v as Record<string, unknown>)[k]);
+        return acc;
+      }, {});
+  }
+  return v;
+}
+
+// POST /api/kyc/webhook — recibe eventos firmados de Didit sobre el resultado de la verificación
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.text();
-    const signature = req.headers.get("x-hmac-signature") || "";
+    const raw = await req.text();
+    const sig = req.headers.get("x-signature-v2") || "";
+    const ts = Number(req.headers.get("x-timestamp"));
 
-    if (!verifySignature(body, signature)) {
-      console.error("Veriff webhook: firma inválida");
+    // 1. Frescura — máximo 300s de diferencia (protección contra replay)
+    if (!ts || Math.abs(Date.now() / 1000 - ts) > 300) {
+      return NextResponse.json({ error: "Webhook expirado" }, { status: 401 });
+    }
+
+    const parsed = JSON.parse(raw);
+
+    // 2. Canonicalización (shortenFloats -> sortKeys -> JSON.stringify)
+    const canonical = JSON.stringify(sortKeys(shortenFloats(parsed)));
+
+    // 3. Comparación HMAC-SHA256 en tiempo constante
+    const expected = crypto.createHmac("sha256", DIDIT_WEBHOOK_SECRET).update(canonical, "utf8").digest("hex");
+    const sigBuf = Buffer.from(sig, "hex");
+    const expBuf = Buffer.from(expected, "hex");
+    const firmaValida = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
+
+    if (!firmaValida) {
+      console.error("Didit webhook: firma inválida");
       return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
     }
 
-    const data = JSON.parse(body);
-    console.log("Veriff webhook recibido:", JSON.stringify(data, null, 2));
+    const webhookType = parsed.webhook_type;
+    const status = parsed.status;
+    const vendorData = parsed.vendor_data; // guardamos aquí el userId
 
-    const verification = data.verification || data;
-    const vendorData = verification.vendorData; // userId
-    const status = verification.status;
-    const code = verification.code;
-
+    if (webhookType !== "status.updated") {
+      return NextResponse.json({ ok: true, ignored: true });
+    }
     if (!vendorData) {
-      return NextResponse.json({ received: true });
+      return NextResponse.json({ ok: true });
     }
 
-    // Mapear estados de Veriff
-    // code 9001 = approved, 9102 = declined, 9103 = resubmission_requested
+    // Estados literales de Didit v3 (case-sensitive)
     let kycStatus = "pending";
-    if (code === 9001 || status === "approved") {
-      kycStatus = "approved";
-    } else if (code === 9102 || status === "declined") {
-      kycStatus = "rejected";
-    } else if (code === 9103) {
-      kycStatus = "resubmit";
-    }
+    if (status === "Approved") kycStatus = "approved";
+    else if (status === "Declined") kycStatus = "rejected";
+    else if (status === "In Review" || status === "In Progress" || status === "Awaiting User" || status === "Resubmitted") kycStatus = "pending";
+    else if (status === "Expired" || status === "Abandoned" || status === "Kyc Expired") kycStatus = "rejected";
 
     await prisma.user.update({
       where: { id: vendorData },
@@ -55,9 +86,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ received: true });
+    console.log(`KYC Didit actualizado para usuario ${vendorData}: ${status} -> ${kycStatus}`);
+    return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Error en webhook Veriff:", error);
+    console.error("Error en webhook Didit:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

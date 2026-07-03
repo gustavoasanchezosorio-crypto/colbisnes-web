@@ -1,0 +1,23 @@
+<!-- FN3: la firma vertical REEMPLAZA la "l" de Colbisnes (se integra a la palabra). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" fill="none">
+  <!-- "Co" -->
+  <text x="36" y="92"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="58" letter-spacing="-2.5" fill="#1F6BFF">Co</text>
+  <!-- Firma vertical haciendo de "l" alta -->
+  <g transform="translate(118 -4) scale(0.072)">
+    <g stroke="#1F6BFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 205 125 C 330 480 540 1050 690 1555" stroke-width="34"/>
+      <path d="M 285 628 C 360 670 410 705 448 732" stroke-width="9"/>
+      <path d="M 340 832 C 400 980 455 1120 478 1205 L 470 1255 C 470 1255 500 1185 512 1190 C 545 1340 600 1560 627 1690" stroke-width="14"/>
+      <circle cx="615" cy="1748" r="11" fill="#1F6BFF" stroke="none"/>
+    </g>
+  </g>
+  <!-- "bisnes" -->
+  <text x="178" y="92"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="58" letter-spacing="-2.5" fill="#1F6BFF">bisnes</text>
+  <text x="40" y="122"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="11" letter-spacing="3" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

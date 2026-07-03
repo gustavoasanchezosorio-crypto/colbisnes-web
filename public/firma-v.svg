@@ -1,0 +1,13 @@
+<!-- Firma vertical de Gustavo, trazada a partir de la 2da imagen -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 1880" fill="none">
+  <g stroke="#1F6BFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Trazo largo y grueso, de arriba a abajo-derecha -->
+    <path d="M 205 125 C 330 480 540 1050 690 1555" stroke-width="34"/>
+    <!-- Trazo corto que cruza (parte alta, izquierda) -->
+    <path d="M 285 628 C 360 670 410 705 448 732" stroke-width="9"/>
+    <!-- Swoosh: baja, hace una muesca y sigue hasta abajo -->
+    <path d="M 340 832 C 400 980 455 1120 478 1205 L 470 1255 C 470 1255 500 1185 512 1190 C 545 1340 600 1560 627 1690" stroke-width="14"/>
+    <!-- Punto final -->
+    <circle cx="615" cy="1748" r="11" fill="#1F6BFF" stroke="none"/>
+  </g>
+</svg>

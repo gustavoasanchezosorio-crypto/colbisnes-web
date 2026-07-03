@@ -1,0 +1,19 @@
+<!-- FN1: firma vertical como marca a la izquierda + "Colbisnes" (N6) a la derecha. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" fill="none">
+  <!-- Firma vertical, escalada, como ícono/marca a la izquierda -->
+  <g transform="translate(8 6) scale(0.078)">
+    <g stroke="#1F6BFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 205 125 C 330 480 540 1050 690 1555" stroke-width="34"/>
+      <path d="M 285 628 C 360 670 410 705 448 732" stroke-width="9"/>
+      <path d="M 340 832 C 400 980 455 1120 478 1205 L 470 1255 C 470 1255 500 1185 512 1190 C 545 1340 600 1560 627 1690" stroke-width="14"/>
+      <circle cx="615" cy="1748" r="11" fill="#1F6BFF" stroke="none"/>
+    </g>
+  </g>
+  <!-- Wordmark N6 -->
+  <text x="108" y="92"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="58" letter-spacing="-2.5" fill="#1F6BFF">Colbisnes</text>
+  <text x="110" y="116"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="11" letter-spacing="3" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

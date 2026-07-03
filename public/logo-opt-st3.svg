@@ -1,0 +1,10 @@
+<!-- ST3: monograma apilado CB (estilo LAVI literal: 2 letras grandes, finas, en cuadro). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 360" fill="none">
+  <g font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+     font-weight="200" font-size="180" fill="#1F6BFF" text-anchor="middle">
+    <text x="160" y="178">C</text>
+    <text x="160" y="338">B</text>
+  </g>
+  <!-- línea divisoria fina al centro -->
+  <rect x="70" y="190" width="180" height="2" fill="#1F6BFF" opacity="0.35"/>
+</svg>

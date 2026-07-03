@@ -1,0 +1,19 @@
+<!-- V6: con ícono compacto a la izquierda — "c" en tile azul + wordmark. Versión completa. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 100" fill="none">
+  <defs>
+    <linearGradient id="gv6" gradientUnits="userSpaceOnUse" x1="8" y1="16" x2="76" y2="84">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1448A3"/>
+    </linearGradient>
+  </defs>
+  <!-- Tile redondeado con "c" minúscula -->
+  <rect x="8" y="16" width="68" height="68" rx="20" fill="url(#gv6)"/>
+  <text x="42" y="69" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="50" letter-spacing="-2" fill="white">c</text>
+  <circle cx="63" cy="33" r="6.5" fill="#FFCD00"/>
+  <!-- Wordmark al lado -->
+  <text x="94" y="66"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="54" letter-spacing="-2.5" fill="#1F6BFF">colbisnes</text>
+</svg>

@@ -1,0 +1,17 @@
+<!-- I: "La Diagonal" — editorial moderno, COL resaltado en bloque amarillo -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 100" fill="none">
+  <!-- Bloque amarillo detrás de COL -->
+  <rect x="0" y="8" width="172" height="76" rx="10" fill="#FCD116"/>
+  <!-- COL sobre el bloque amarillo -->
+  <text x="12" y="76"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="70" letter-spacing="-3" fill="#0B1628">COL</text>
+  <!-- BISNES en azul -->
+  <text x="184" y="76"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="70" letter-spacing="-3" fill="#1A56DB">BISNES</text>
+  <!-- Línea azul baja -->
+  <rect x="0" y="88" width="556" height="4" rx="2" fill="#1A56DB" opacity="0.18"/>
+  <!-- Punto de separación -->
+  <circle cx="176" cy="42" r="6" fill="#1A56DB"/>
+</svg>

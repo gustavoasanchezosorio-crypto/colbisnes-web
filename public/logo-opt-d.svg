@@ -1,0 +1,55 @@
+<!-- OPCIÓN D: "La Moneda" — ícono circular dorado, marketplace premium -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" fill="none">
+  <defs>
+    <linearGradient id="gold-d" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#F5C400"/>
+      <stop offset="50%"  stop-color="#E8A000"/>
+      <stop offset="100%" stop-color="#C47A00"/>
+    </linearGradient>
+    <linearGradient id="blue-d" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#0B2D8C"/>
+      <stop offset="100%" stop-color="#1F6BFF"/>
+    </linearGradient>
+    <filter id="sombra-d">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#E8A000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Ícono circular dorado -->
+  <circle cx="60" cy="60" r="54" fill="url(#gold-d)" filter="url(#sombra-d)"/>
+
+  <!-- Anillo interior sutil -->
+  <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+
+  <!-- Highlight -->
+  <ellipse cx="48" cy="32" rx="20" ry="12" fill="rgba(255,255,255,0.18)" transform="rotate(-20 48 32)"/>
+
+  <!-- "CB" en azul profundo dentro del círculo dorado -->
+  <text x="60" y="75"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, 'Arial Black', sans-serif"
+    font-weight="900" font-size="42" letter-spacing="-2"
+    fill="#0B1E5C">CB</text>
+
+  <!-- Wordmark -->
+  <!-- COL oscuro -->
+  <text x="140" y="58"
+    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
+    font-weight="900" font-size="46" letter-spacing="-2"
+    fill="#0B1628">COL</text>
+
+  <!-- BISNES azul -->
+  <text x="248" y="58"
+    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
+    font-weight="900" font-size="46" letter-spacing="-2"
+    fill="url(#blue-d)">BISNES</text>
+
+  <!-- Línea dorada separadora -->
+  <rect x="140" y="66" width="330" height="2.5" rx="1.5" fill="url(#gold-d)" opacity="0.6"/>
+
+  <!-- Tagline -->
+  <text x="141" y="87"
+    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
+    font-weight="600" font-size="12" letter-spacing="2.5"
+    fill="#64748B">COMPRA Y VENDE CON CONFIANZA</text>
+</svg>

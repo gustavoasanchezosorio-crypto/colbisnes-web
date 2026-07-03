@@ -1,0 +1,11 @@
+<!-- V5: subrayado amarillo grueso bajo el wordmark (estilo destacado / marcador). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" fill="none">
+  <!-- Trazo amarillo de resaltador detrás/bajo el texto -->
+  <rect x="10" y="58" width="470" height="14" rx="7" fill="#FFCD00" opacity="0.9"/>
+  <text x="10" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="62" letter-spacing="-3" fill="#1F6BFF">colbisnes</text>
+  <text x="12" y="90"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="3.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

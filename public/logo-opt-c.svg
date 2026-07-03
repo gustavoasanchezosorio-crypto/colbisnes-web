@@ -1,0 +1,38 @@
+<!-- OPCIÓN C: "Pure Wordmark" — solo tipografía, sin ícono. Impacto máximo -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 110" fill="none">
+  <defs>
+    <linearGradient id="stripe-c" x1="0" y1="0" x2="560" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#FCD116"/>
+      <stop offset="33%"  stop-color="#FCD116"/>
+      <stop offset="33%"  stop-color="#003893"/>
+      <stop offset="66%"  stop-color="#003893"/>
+      <stop offset="66%"  stop-color="#CE1126"/>
+      <stop offset="100%" stop-color="#CE1126"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Barra tricolor arriba -->
+  <rect x="0" y="0" width="560" height="7" rx="3.5" fill="url(#stripe-c)"/>
+
+  <!-- COL en oscuro -->
+  <text x="8" y="84"
+    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Arial Black', sans-serif"
+    font-weight="900" font-size="72" letter-spacing="-4"
+    fill="#0B1628">COL</text>
+
+  <!-- Punto separador -->
+  <circle cx="196" cy="50" r="5" fill="#FCD116"/>
+
+  <!-- BISNES en azul -->
+  <text x="206" y="84"
+    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Arial Black', sans-serif"
+    font-weight="900" font-size="72" letter-spacing="-4"
+    fill="#1A56DB">BISNES</text>
+
+  <!-- Tagline -->
+  <text x="547" y="104"
+    text-anchor="end"
+    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
+    font-weight="500" font-size="11" letter-spacing="3"
+    fill="#94A3B8">COMPRA Y VENDE CON SEGURIDAD</text>
+</svg>

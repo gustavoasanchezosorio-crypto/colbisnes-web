@@ -1,0 +1,24 @@
+<!-- G: "Infinito" — negocios sin límite, ciclo continuo -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="gg" gradientUnits="userSpaceOnUse" x1="6" y1="0" x2="118" y2="0">
+      <stop offset="0%" stop-color="#1F6BFF"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo oscuro del ícono -->
+  <rect x="4" y="4" width="116" height="116" rx="26" fill="#0B1628"/>
+  <!-- Símbolo infinito: dos bucles bezier -->
+  <path d="M 62 62 C 50 36 16 36 16 62 C 16 88 50 88 62 62 C 74 36 108 36 108 62 C 108 88 74 88 62 62"
+    stroke="url(#gg)" stroke-width="11" stroke-linecap="round" fill="none"/>
+  <!-- Wordmark -->
+  <text x="138" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="52" letter-spacing="-2.5" fill="#0B1628">COL</text>
+  <text x="256" y="68"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="52" letter-spacing="-2.5" fill="#1F6BFF">BISNES</text>
+  <text x="139" y="92"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

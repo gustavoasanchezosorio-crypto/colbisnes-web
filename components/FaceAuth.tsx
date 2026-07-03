@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { THEME as SITE_THEME } from "@/lib/theme";
 
 interface FaceAuthProps {
   mode: "register" | "verify";
@@ -10,14 +11,14 @@ interface FaceAuthProps {
 }
 
 const THEME = {
-  electricBlue: "#1F6BFF",
+  electricBlue: SITE_THEME.primary,
   success: "#10B981",
   error: "#EF4444",
   warning: "#F59E0B",
-  text: "#0F172A",
-  muted: "#64748B",
-  border: "#E2E8F5",
-  surface: "#FFFFFF",
+  text: SITE_THEME.text,
+  muted: SITE_THEME.muted,
+  border: SITE_THEME.border,
+  surface: SITE_THEME.surface,
 };
 
 export default function FaceAuth({ mode, onSuccess, onError, referenceDescriptor }: FaceAuthProps) {
@@ -315,7 +316,7 @@ export default function FaceAuth({ mode, onSuccess, onError, referenceDescriptor
             padding: "12px 28px",
             borderRadius: 24,
             border: "none",
-            background: `linear-gradient(135deg, #1448A3, #1F6BFF)`,
+            background: `linear-gradient(135deg,${SITE_THEME.primaryLight},${SITE_THEME.primary} 52%,${SITE_THEME.primaryDark})`,
             color: "#fff",
             fontSize: 14,
             fontWeight: 700,

@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getIP } from "@/lib/rateLimit";
 import crypto from "crypto";
 
-// Umbral de similitud facial (0.5 = estricto, 0.6 = moderado)
 const FACE_MATCH_THRESHOLD = 0.5;
 
 function euclideanDistance(a: number[], b: number[]): number {
   return Math.sqrt(a.reduce((sum, val, i) => sum + Math.pow(val - b[i], 2), 0));
 }
 
-// Tokens temporales en memoria (en producción usar Redis)
-const faceTokens = new Map<string, { email: string; expiresAt: number }>();
-
 export async function POST(req: NextRequest) {
   try {
+    const ip = getIP(req);
+    const rl = rateLimit(`face-verify:${ip}`, { limit: 5, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Demasiados intentos. Intenta en 1 minuto." }, { status: 429 });
+    }
+
     const { email, descriptor } = await req.json();
 
-    if (!email || !descriptor || !Array.isArray(descriptor)) {
+    if (!email || typeof email !== "string" || !descriptor || !Array.isArray(descriptor)) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
-    // Buscar usuario con descriptor facial registrado
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
       select: { id: true, email: true, faceDescriptor: true },
     });
 
@@ -37,7 +39,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Comparar descriptores
     const storedDescriptor = JSON.parse(user.faceDescriptor) as number[];
     const distance = euclideanDistance(descriptor, storedDescriptor);
 
@@ -48,11 +49,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generar token temporal (válido 2 minutos)
+    // Store token in DB (survives serverless restarts unlike in-memory Map)
     const token = crypto.randomBytes(32).toString("hex");
-    faceTokens.set(token, {
-      email: user.email,
-      expiresAt: Date.now() + 2 * 60 * 1000,
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+
+    // Clean up expired tokens for this email first
+    await prisma.faceToken.deleteMany({
+      where: { email: user.email, expiresAt: { lt: new Date() } },
+    });
+
+    await prisma.faceToken.create({
+      data: { token, email: user.email, expiresAt },
     });
 
     return NextResponse.json({ token, success: true });
@@ -62,17 +69,21 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Validar token facial (usado por NextAuth)
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  if (!token) return NextResponse.json({ error: "Token requerido" }, { status: 400 });
+  if (!token || token.length > 100) {
+    return NextResponse.json({ error: "Token requerido" }, { status: 400 });
+  }
 
-  const entry = faceTokens.get(token);
-  if (!entry || entry.expiresAt < Date.now()) {
-    faceTokens.delete(token);
+  const entry = await prisma.faceToken.findUnique({ where: { token } });
+
+  if (!entry || entry.expiresAt < new Date()) {
+    if (entry) await prisma.faceToken.delete({ where: { token } });
     return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401 });
   }
 
-  faceTokens.delete(token); // Usar una sola vez
+  // Single-use: delete after validation
+  await prisma.faceToken.delete({ where: { token } });
+
   return NextResponse.json({ email: entry.email, valid: true });
 }

@@ -21,7 +21,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(user || { kycLevel: 0, kycStatus: "pending" });
+    return NextResponse.json(user || { kycLevel: 0, kycStatus: "none" });
   } catch (error) {
     console.error("Error en GET /api/kyc/status:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

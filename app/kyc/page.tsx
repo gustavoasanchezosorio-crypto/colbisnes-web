@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { THEME } from "@/lib/theme";
 
 export default function KycPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [kycStatus, setKycStatus] = useState("none");
+
+  const [kycStatus, setKycStatus] = useState<string>("none");
   const [loading, setLoading] = useState(true);
-  const [starting, setStarting] = useState(false);
-  const [message, setMessage] = useState("");
+  const [iniciando, setIniciando] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/login");
@@ -19,151 +21,140 @@ export default function KycPage() {
   useEffect(() => {
     if (session) {
       fetch("/api/kyc/status", { credentials: "include" })
-        .then(res => res.json())
-        .then(data => { setKycStatus(data.kycStatus || "none"); setLoading(false); })
+        .then((r) => r.json())
+        .then((d) => { setKycStatus(d.kycStatus || "none"); setLoading(false); })
         .catch(() => setLoading(false));
     }
   }, [session]);
 
-  const handleStartVerification = async () => {
-    setStarting(true);
-    setMessage("");
+  async function iniciarVerificacion() {
+    setIniciando(true);
+    setError("");
     try {
-      const res = await fetch("/api/kyc/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al iniciar verificación");
-      if (data.status === "approved") {
+      const r = await fetch("/api/kyc/start", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Error al iniciar la verificación");
+      if (d.verificationUrl) {
+        window.location.href = d.verificationUrl;
+      } else if (d.status === "approved") {
         setKycStatus("approved");
-        return;
-      }
-      if (data.verificationUrl) {
-        window.location.href = data.verificationUrl;
+        setIniciando(false);
       } else {
-        throw new Error("No se recibió URL de verificación");
+        throw new Error("No se pudo generar el enlace de verificación");
       }
     } catch (err: any) {
-      setMessage("❌ " + (err.message || "Error al iniciar verificación"));
-    } finally {
-      setStarting(false);
+      setError(err.message);
+      setIniciando(false);
     }
-  };
+  }
 
   if (loading || !session) return (
-    <div style={{ minHeight: "100vh", background: "#F0F4FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+    <div style={{ minHeight: "100vh", background: THEME.background, display: "flex", alignItems: "center", justifyContent: "center", color: THEME.muted }}>
       Cargando...
     </div>
   );
 
+  // ────────────── Ya verificado ──────────────
+  if (kycStatus === "approved") return (
+    <Wrapper router={router}>
+      <div style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 20, padding: "36px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: THEME.text, margin: "0 0 8px" }}>Identidad verificada</h2>
+        <p style={{ color: "#15803d", fontSize: 14, margin: "0 0 20px", lineHeight: 1.6 }}>Tu cuenta está verificada. Ya puedes publicar productos y hacer negocios en Colbisnes.</p>
+        <button onClick={() => router.push("/")} style={{ padding: "12px 28px", borderRadius: 16, border: "none", background: "#10B981", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+          Ir a Colbisnes →
+        </button>
+      </div>
+    </Wrapper>
+  );
+
+  // ────────────── Pendiente de revisión (esperando webhook de Didit) ──────────────
+  if (kycStatus === "pending") return (
+    <Wrapper router={router}>
+      <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 20, padding: "36px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 56, marginBottom: 12 }}>⏳</div>
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: "#b45309", margin: "0 0 8px" }}>Verificando tu identidad</h2>
+        <p style={{ color: THEME.textSoft, fontSize: 14, margin: "0 0 20px", lineHeight: 1.6 }}>
+          Estamos procesando tu verificación biométrica. Normalmente toma menos de 2 minutos. Si ya completaste el proceso, toca el botón para revisar el estado.
+        </p>
+        <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 16, border: "none", background: "#F59E0B", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+          Revisar estado
+        </button>
+      </div>
+    </Wrapper>
+  );
+
+  // ────────────── Intro / iniciar verificación con Didit ──────────────
   return (
-    <div style={{ minHeight: "100vh", background: "#F0F4FF" }}>
-      {/* Header */}
-      <header style={{ background: "linear-gradient(135deg,#1448A3,#1F6BFF)", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: "0.05em" }}>COLBISNES</span>
-        <button onClick={() => router.back()} style={{ padding: "7px 16px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>← Volver</button>
-      </header>
-
-      <main style={{ maxWidth: 520, margin: "36px auto", padding: "0 20px 60px" }}>
-        {/* Title */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 52, marginBottom: 10 }}>🛡️</div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: "#0F172A", margin: "0 0 8px" }}>
-            Verificación de identidad
-          </h1>
-          <p style={{ fontSize: 14, color: "#64748B", margin: 0, lineHeight: 1.6 }}>
-            Requerida para comprar y vender en Colbisnes
-          </p>
+    <Wrapper router={router}>
+      {error && (
+        <div style={{ padding: "10px 16px", borderRadius: 12, background: "rgba(239,68,68,0.10)", color: "#b91c1c", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+          {error}
         </div>
+      )}
 
-        {/* Status card */}
-        {kycStatus === "approved" ? (
-          <div style={{ background: "#D1FAE5", border: "1px solid #6EE7B7", borderRadius: 20, padding: "32px 24px", textAlign: "center" }}>
-            <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: "#065F46", margin: "0 0 8px" }}>Identidad verificada</h2>
-            <p style={{ color: "#047857", fontSize: 14, margin: "0 0 20px" }}>Tu cuenta está verificada. Puedes comprar y vender libremente.</p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button onClick={() => router.push("/")} style={{ padding: "11px 22px", borderRadius: 20, border: "none", background: "#10B981", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                Ir al inicio
-              </button>
-              <button onClick={() => router.push(`/user/${session.user?.id}`)} style={{ padding: "11px 22px", borderRadius: 20, border: "1.5px solid #10B981", background: "transparent", color: "#10B981", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                Ver perfil
-              </button>
-            </div>
-          </div>
-        ) : kycStatus === "pending" ? (
-          <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 20, padding: "32px 24px", textAlign: "center" }}>
-            <div style={{ fontSize: 56, marginBottom: 12 }}>⏳</div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: "#92400E", margin: "0 0 8px" }}>Verificación en proceso</h2>
-            <p style={{ color: "#B45309", fontSize: 14, margin: "0 0 20px" }}>Estamos revisando tu documentación. Te notificaremos cuando esté lista (puede tomar unos minutos).</p>
-            <button onClick={() => window.location.reload()} style={{ padding: "11px 22px", borderRadius: 20, border: "none", background: "#F59E0B", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-              Verificar estado
-            </button>
-          </div>
-        ) : kycStatus === "rejected" ? (
-          <div style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", borderRadius: 20, padding: "32px 24px", textAlign: "center" }}>
-            <div style={{ fontSize: 56, marginBottom: 12 }}>❌</div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: "#991B1B", margin: "0 0 8px" }}>Verificación rechazada</h2>
-            <p style={{ color: "#B91C1C", fontSize: 14, margin: "0 0 20px" }}>Tu verificación fue rechazada. Puedes intentarlo de nuevo con documentos más claros.</p>
-            <button onClick={handleStartVerification} disabled={starting} style={{ padding: "11px 22px", borderRadius: 20, border: "none", background: "#EF4444", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-              Intentar de nuevo
-            </button>
-          </div>
-        ) : (
-          <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #E2E8F5", overflow: "hidden", boxShadow: "0 4px 24px rgba(31,107,255,0.07)" }}>
-            <div style={{ height: 4, background: "linear-gradient(90deg,#1448A3,#1F6BFF)" }} />
-            <div style={{ padding: "28px 24px" }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>
-                ¿Qué necesitas para verificarte?
-              </h2>
+      <div style={{ background: THEME.surfaceGradient, borderRadius: 20, border: "1.5px solid transparent", overflow: "hidden", boxShadow: THEME.cardShadow }}>
+        <div style={{ height: 4, background: `linear-gradient(90deg,${THEME.primaryLight},${THEME.primary})` }} />
+        <div style={{ padding: "28px 24px" }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: THEME.text, margin: "0 0 6px", textAlign: "center" }}>Verifica tu identidad</h2>
+          <p style={{ fontSize: 13, color: THEME.muted, margin: "0 0 20px", lineHeight: 1.6 }}>
+            Para publicar productos en Colbisnes necesitamos confirmar que eres una persona real. El proceso es guiado, seguro y solo toma un par de minutos.
+          </p>
 
-              {/* Requirements */}
-              <div style={{ display: "grid", gap: 10, marginBottom: 24 }}>
-                {[
-                  { icon: "🪪", title: "Cédula de ciudadanía", desc: "Foto frontal y trasera de tu cédula colombiana" },
-                  { icon: "🤳", title: "Selfie en vivo", desc: "Una foto tuya para comparar con el documento" },
-                  { icon: "💡", title: "Buena iluminación", desc: "Asegúrate de tener buena luz al tomar las fotos" },
-                ].map((req, i) => (
-                  <div key={i} style={{ display: "flex", gap: 14, padding: "12px 16px", borderRadius: 14, background: "#FAFBFF", border: "1px solid #E2E8F5" }}>
-                    <span style={{ fontSize: 24, flexShrink: 0 }}>{req.icon}</span>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#0F172A", marginBottom: 2 }}>{req.title}</div>
-                      <div style={{ fontSize: 12, color: "#64748B" }}>{req.desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {message && (
-                <div style={{ padding: "10px 14px", borderRadius: 10, background: "#FEE2E2", color: "#EF4444", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-                  {message}
+          <div style={{ display: "grid", gap: 10, marginBottom: 24 }}>
+            {[
+              { icon: "🪪", title: "Foto de tu cédula", desc: "Escaneo guiado de tu documento — validación automática" },
+              { icon: "🤳", title: "Prueba de vida en tiempo real", desc: "Verificamos que eres tú, en el momento, con detección de vida (liveness)" },
+              { icon: "🔒", title: "100% confidencial", desc: "Tus datos se procesan de forma cifrada y solo se usan para verificar tu identidad" },
+            ].map((r, i) => (
+              <div key={i} style={{ display: "flex", gap: 14, padding: "12px 16px", borderRadius: 14, background: THEME.surfaceAlt, border: `1px solid ${THEME.border}` }}>
+                <span style={{ fontSize: 24, flexShrink: 0 }}>{r.icon}</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: THEME.text, marginBottom: 2 }}>{r.title}</div>
+                  <div style={{ fontSize: 12, color: THEME.muted }}>{r.desc}</div>
                 </div>
-              )}
+              </div>
+            ))}
+          </div>
 
-              <button
-                onClick={handleStartVerification}
-                disabled={starting}
-                style={{ width: "100%", padding: "14px", borderRadius: 16, border: "none", background: starting ? "#94A3B8" : "linear-gradient(135deg,#1448A3,#1F6BFF)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: starting ? "not-allowed" : "pointer", boxShadow: starting ? "none" : "0 4px 14px rgba(31,107,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              >
-                {starting ? "Iniciando verificación..." : "🪪 Verificar mi identidad"}
-              </button>
-
-              <p style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", margin: "14px 0 0", lineHeight: 1.5 }}>
-                Serás redirigido a Veriff, nuestra plataforma de verificación de identidad certificada. El proceso toma menos de 2 minutos.
+          {kycStatus === "rejected" && (
+            <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)", marginBottom: 20 }}>
+              <p style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600, margin: 0 }}>
+                ⚠️ Tu verificación anterior no pudo completarse. Por favor intenta de nuevo asegurando buena iluminación y que el documento sea legible.
               </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Security note */}
-        <div style={{ marginTop: 16, padding: "14px 18px", borderRadius: 14, background: "#FAFBFF", border: "1px solid #E2E8F5", display: "flex", gap: 10 }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>🔒</span>
-          <p style={{ fontSize: 12, color: "#64748B", margin: 0, lineHeight: 1.6 }}>
-            Tu información es procesada por <strong>Veriff</strong>, plataforma certificada de verificación de identidad. Tus datos están protegidos y nunca se comparten con terceros.
-          </p>
+          <button
+            onClick={iniciarVerificacion}
+            disabled={iniciando}
+            style={{ width: "100%", padding: 14, borderRadius: 16, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 15, fontWeight: 700, cursor: iniciando ? "wait" : "pointer", boxShadow: `0 4px 14px ${THEME.primary}44`, opacity: iniciando ? 0.75 : 1 }}
+          >
+            {iniciando ? "Preparando verificación..." : "🪪 Comenzar verificación"}
+          </button>
         </div>
+      </div>
+    </Wrapper>
+  );
+}
+
+function Wrapper({ children, router }: { children: React.ReactNode; router: ReturnType<typeof useRouter> }) {
+  return (
+    <div style={{ minHeight: "100vh", background: THEME.background, fontFamily: "system-ui,sans-serif" }}>
+      <header style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <img src="/logo-white.svg?v=2" alt="Colbisnes" style={{ height: 40, width: "auto" }} />
+        <button onClick={() => router.back()} style={{ padding: "7px 16px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          ← Volver
+        </button>
+      </header>
+
+      <main style={{ maxWidth: 520, margin: "36px auto", padding: "0 20px 80px" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: THEME.text, margin: "0 0 6px" }}>Verificación de identidad</h1>
+          <p style={{ fontSize: 13, color: THEME.muted, margin: 0, lineHeight: 1.6 }}>Requerida para publicar productos en Colbisnes</p>
+        </div>
+
+        {children}
       </main>
     </div>
   );

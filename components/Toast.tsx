@@ -45,8 +45,9 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
             key={toast.id}
             style={{
               padding: 12,
-              borderRadius: 8,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              borderRadius: 10,
+              boxShadow: "0 8px 22px rgba(0,0,0,0.18)",
+              border: `1px solid ${THEME.goldSoft}`,
               background: toast.type === 'success' ? THEME.success :
                           toast.type === 'error' ? THEME.error :
                           toast.type === 'warning' ? THEME.warning : THEME.primary,

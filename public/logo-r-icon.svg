@@ -1,0 +1,23 @@
+<!-- R icon — Bandera Ardiente en formato cuadrado (favicon / app icon) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="gri" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="100" y2="0">
+      <stop offset="0%"   stop-color="#FFCD00"/>
+      <stop offset="38%"  stop-color="#FFCD00"/>
+      <stop offset="38%"  stop-color="#1F6BFF"/>
+      <stop offset="62%"  stop-color="#1F6BFF"/>
+      <stop offset="62%"  stop-color="#CE1126"/>
+      <stop offset="100%" stop-color="#CE1126"/>
+    </linearGradient>
+  </defs>
+  <!-- Tile azul marino profundo -->
+  <rect x="0" y="0" width="120" height="120" rx="26" fill="#0A1633"/>
+  <!-- CB en gradiente bandera -->
+  <text x="60" y="78" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="52" letter-spacing="-3" fill="url(#gri)">CB</text>
+  <!-- Línea tricolor inferior -->
+  <rect x="28" y="90" width="22" height="4" rx="2" fill="#FFCD00"/>
+  <rect x="50" y="90" width="14" height="4" rx="2" fill="#1F6BFF"/>
+  <rect x="64" y="90" width="28" height="4" rx="2" fill="#CE1126"/>
+</svg>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes — Finalistas Q · R · T (prueba en uso real)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F1F5F9; color: #0F172A; }
+
+  header {
+    background: #060914; color: white; padding: 22px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid #FCD116;
+  }
+  header h1 { font-size: 16px; font-weight: 700; }
+  header a { color: #60A5FA; font-size: 13px; text-decoration: none; }
+
+  .subtitle { padding: 14px 40px; background: #0F172A; color: #94A3B8; font-size: 12.5px; }
+  .subtitle strong { color: #FCD116; }
+
+  .col-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #E2E8F0; }
+  @media (max-width: 1000px) { .col-grid { grid-template-columns: 1fr; } }
+
+  .col { background: white; padding: 0 0 28px; }
+  .col-top {
+    padding: 22px 26px 16px; border-bottom: 1px solid #F1F5F9;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .col-letter {
+    font-size: 13px; font-weight: 800; color: white; background: #060914;
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .col-name { font-size: 16px; font-weight: 800; }
+
+  .section { padding: 20px 26px 6px; }
+  .section-title {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+    color: #94A3B8; text-transform: uppercase; margin-bottom: 12px;
+  }
+
+  /* Header mockup */
+  .mock-header {
+    border-radius: 10px; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .mock-header.light { background: #fff; border: 1.5px solid #E2E8F0; }
+  .mock-header.dark  { background: #0B1628; }
+  .mock-header img { height: 30px; width: auto; }
+  .mock-nav { display: flex; gap: 10px; }
+  .mock-dot { width: 7px; height: 7px; border-radius: 50%; background: #CBD5E1; }
+  .mock-header.dark .mock-dot { background: #334155; }
+
+  /* Browser tab mockup */
+  .browser {
+    background: #E2E8F0; border-radius: 10px 10px 0 0; padding: 8px 8px 0;
+    margin-bottom: 14px;
+  }
+  .tab {
+    background: #fff; border-radius: 8px 8px 0 0; padding: 8px 12px;
+    display: flex; align-items: center; gap: 8px; width: fit-content;
+    max-width: 200px;
+  }
+  .tab img { width: 16px; height: 16px; flex-shrink: 0; }
+  .tab span { font-size: 12px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Favicon size row */
+  .favicons { display: flex; align-items: flex-end; gap: 18px; padding: 6px 0; }
+  .fav-item { text-align: center; }
+  .fav-item img { display: block; margin: 0 auto 6px; }
+  .fav-16 { width: 16px; height: 16px; }
+  .fav-24 { width: 24px; height: 24px; }
+  .fav-32 { width: 32px; height: 32px; }
+  .fav-48 { width: 48px; height: 48px; }
+  .fav-label { font-size: 9px; color: #94A3B8; }
+
+  /* App icon (iOS style) */
+  .app-icons { display: flex; gap: 14px; align-items: center; }
+  .app-icon img { width: 60px; height: 60px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .app-icon-sm img { width: 40px; height: 40px; border-radius: 9px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+  /* Full logo previews */
+  .full-prev { border-radius: 10px; padding: 18px; display: flex; align-items: center; justify-content: center; min-height: 70px; margin-bottom: 8px; }
+  .full-prev img { max-height: 50px; max-width: 100%; }
+  .fp-white { background: #fff; border: 1.5px solid #E2E8F0; }
+  .fp-dark { background: #0B1628; }
+  .fp-jet  { background: #060914; }
+
+  .verdict {
+    margin: 18px 26px 0; padding: 14px 16px; border-radius: 10px;
+    font-size: 12px; line-height: 1.55;
+  }
+  .verdict.good { background: #F0FDF4; border-left: 3px solid #22C55E; color: #166534; }
+  .verdict.warn { background: #FFFBEB; border-left: 3px solid #F59E0B; color: #92400E; }
+
+  .pick-btn {
+    margin: 16px 26px 0; padding: 12px;
+    background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px;
+    color: #64748B; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    text-align: center; transition: all 0.15s; letter-spacing: 0.03em;
+  }
+  .pick-btn:hover { background: #060914; color: #FCD116; border-color: #060914; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Colbisnes — Finalistas: Q · R · T</h1>
+  <a href="logo-preview-3.html">← Volver a O–T</a>
+</header>
+<div class="subtitle">
+  La prueba que separa un buen logo de uno <strong>de clase mundial</strong>: cómo se ve en el header real, como favicon de 16px, y como ícono de app. <strong>Si funciona pequeño y en una pestaña, funciona en todo.</strong>
+</div>
+
+<div class="col-grid">
+
+  <!-- ===================== Q ===================== -->
+  <div class="col">
+    <div class="col-top">
+      <span class="col-letter">Q</span>
+      <span class="col-name">El Anillo</span>
+    </div>
+
+    <div class="section">
+      <div class="section-title">En el header del sitio</div>
+      <div class="mock-header light">
+        <img src="logo-opt-q.svg" alt="Q">
+        <div class="mock-nav"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span></div>
+      </div>
+      <div class="mock-header dark">
+        <img src="logo-opt-q.svg" alt="Q">
+        <div class="mock-nav"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Pestaña del navegador (favicon)</div>
+      <div class="browser">
+        <div class="tab"><img src="logo-q-icon.svg" alt="fav"><span>Colbisnes — Compra y Vende</span></div>
+      </div>
+      <div class="favicons">
+        <div class="fav-item"><img class="fav-16" src="logo-q-icon.svg"><div class="fav-label">16px</div></div>
+        <div class="fav-item"><img class="fav-24" src="logo-q-icon.svg"><div class="fav-label">24px</div></div>
+        <div class="fav-item"><img class="fav-32" src="logo-q-icon.svg"><div class="fav-label">32px</div></div>
+        <div class="fav-item"><img class="fav-48" src="logo-q-icon.svg"><div class="fav-label">48px</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ícono de app</div>
+      <div class="app-icons">
+        <div class="app-icon"><img src="logo-q-icon.svg"></div>
+        <div class="app-icon-sm"><img src="logo-q-icon.svg"></div>
+      </div>
+    </div>
+
+    <div class="verdict good">
+      ✅ <strong>Tiene ícono propio.</strong> El anillo funciona perfecto a 16px. Es el único de los tres que nace con favicon y app-icon listos. Versátil y escalable.
+    </div>
+    <div class="pick-btn">← Esta es la ganadora</div>
+  </div>
+
+  <!-- ===================== R ===================== -->
+  <div class="col">
+    <div class="col-top">
+      <span class="col-letter">R</span>
+      <span class="col-name">Bandera Ardiente</span>
+    </div>
+
+    <div class="section">
+      <div class="section-title">En el header del sitio</div>
+      <div class="mock-header dark">
+        <img src="logo-opt-r.svg" alt="R">
+        <div class="mock-nav"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span></div>
+      </div>
+      <div class="mock-header light">
+        <img src="logo-r-icon.svg" alt="R" style="height:30px;">
+        <span style="font-size:11px;color:#94A3B8;">(necesita el ícono en fondo claro)</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Pestaña del navegador (favicon)</div>
+      <div class="browser">
+        <div class="tab"><img src="logo-r-icon.svg" alt="fav"><span>Colbisnes — Compra y Vende</span></div>
+      </div>
+      <div class="favicons">
+        <div class="fav-item"><img class="fav-16" src="logo-r-icon.svg"><div class="fav-label">16px</div></div>
+        <div class="fav-item"><img class="fav-24" src="logo-r-icon.svg"><div class="fav-label">24px</div></div>
+        <div class="fav-item"><img class="fav-32" src="logo-r-icon.svg"><div class="fav-label">32px</div></div>
+        <div class="fav-item"><img class="fav-48" src="logo-r-icon.svg"><div class="fav-label">48px</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ícono de app</div>
+      <div class="app-icons">
+        <div class="app-icon"><img src="logo-r-icon.svg"></div>
+        <div class="app-icon-sm"><img src="logo-r-icon.svg"></div>
+      </div>
+    </div>
+
+    <div class="verdict warn">
+      ⚠️ <strong>Hecho para fondo oscuro.</strong> Espectacular en negro, pero en fondo claro necesita el tile oscuro. A 16px el tricolor se ve apretado. Muy patriótico e impactante.
+    </div>
+    <div class="pick-btn">← Esta es la ganadora</div>
+  </div>
+
+  <!-- ===================== T ===================== -->
+  <div class="col">
+    <div class="col-top">
+      <span class="col-letter">T</span>
+      <span class="col-name">El Slash</span>
+    </div>
+
+    <div class="section">
+      <div class="section-title">En el header del sitio</div>
+      <div class="mock-header light">
+        <img src="logo-opt-t.svg" alt="T">
+        <div class="mock-nav"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span></div>
+      </div>
+      <div class="mock-header dark">
+        <img src="logo-t-icon.svg" alt="T" style="height:30px;">
+        <span style="font-size:11px;color:#475569;">(necesita versión blanca)</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Pestaña del navegador (favicon)</div>
+      <div class="browser">
+        <div class="tab"><img src="logo-t-icon.svg" alt="fav"><span>Colbisnes — Compra y Vende</span></div>
+      </div>
+      <div class="favicons">
+        <div class="fav-item"><img class="fav-16" src="logo-t-icon.svg"><div class="fav-label">16px</div></div>
+        <div class="fav-item"><img class="fav-24" src="logo-t-icon.svg"><div class="fav-label">24px</div></div>
+        <div class="fav-item"><img class="fav-32" src="logo-t-icon.svg"><div class="fav-label">32px</div></div>
+        <div class="fav-item"><img class="fav-48" src="logo-t-icon.svg"><div class="fav-label">48px</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ícono de app</div>
+      <div class="app-icons">
+        <div class="app-icon"><img src="logo-t-icon.svg"></div>
+        <div class="app-icon-sm"><img src="logo-t-icon.svg"></div>
+      </div>
+    </div>
+
+    <div class="verdict warn">
+      ⚠️ <strong>El más editorial y moderno.</strong> El slash da energía premium. El ícono C/B funciona bien pequeño. Necesita versión blanca para fondos oscuros. Estilo Vogue/Supreme.
+    </div>
+    <div class="pick-btn">← Esta es la ganadora</div>
+  </div>
+
+</div>
+
+</body>
+</html>

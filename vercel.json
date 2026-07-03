@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/liberar",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/verificar-envios",
+      "schedule": "5 1 * * *"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+<!-- J: "Dos Círculos" — comprador y vendedor, Venn del negocio -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="gj1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#003893"/>
+      <stop offset="100%" stop-color="#1F6BFF"/>
+    </linearGradient>
+    <linearGradient id="gj2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FCD116"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <!-- Círculo izquierdo: azul (vendedor) -->
+  <circle cx="44" cy="62" r="40" fill="url(#gj1)" opacity="0.92"/>
+  <!-- Círculo derecho: amarillo (comprador) -->
+  <circle cx="80" cy="62" r="40" fill="url(#gj2)" opacity="0.92"/>
+  <!-- Zona de intersección más clara -->
+  <text x="62" y="68" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Arial Black',sans-serif"
+    font-weight="900" font-size="18" letter-spacing="-1" fill="white"
+    style="paint-order:stroke;stroke:rgba(0,0,0,0.15);stroke-width:2">CB</text>
+  <!-- Wordmark -->
+  <text x="142" y="62"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#0B1628">COL</text>
+  <text x="246" y="62"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#003893">BISNES</text>
+  <text x="143" y="86"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

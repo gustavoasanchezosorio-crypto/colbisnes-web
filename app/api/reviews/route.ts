@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireKyc } from "@/lib/requireKyc";
 
 export async function GET(request: Request) {
   try {
@@ -34,10 +35,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { session, response: kycError } = await requireKyc();
+    if (kycError) return kycError;
 
     const { productId, rating, comment } = await request.json();
     if (!productId || !rating || rating < 1 || rating > 5) {
@@ -47,13 +46,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      include: {
-        seller: true,
-        offers: { where: { status: "ACCEPTED" }, take: 1 },
-      },
-    });
+    const [product, order] = await Promise.all([
+      prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          seller: true,
+          offers: { where: { status: "ACCEPTED" }, take: 1 },
+        },
+      }),
+      prisma.order.findFirst({
+        where: { productId, estado: { in: ["COMPLETADO", "ENTREGADO"] } },
+        select: { buyerEmail: true },
+      }),
+    ]);
 
     if (!product || product.status !== "SOLD") {
       return NextResponse.json(
@@ -63,14 +68,9 @@ export async function POST(request: Request) {
     }
 
     const acceptedOffer = product.offers[0];
-    if (!acceptedOffer) {
-      return NextResponse.json(
-        { error: "No se encontró la oferta aceptada" },
-        { status: 400 }
-      );
-    }
-
-    const isBuyer = acceptedOffer.userId === session.user.id;
+    const isBuyerByOffer = acceptedOffer?.userId === session.user.id;
+    const isBuyerByOrder = order?.buyerEmail?.toLowerCase() === session.user.email?.toLowerCase();
+    const isBuyer = isBuyerByOffer || isBuyerByOrder;
     const isSeller = product.sellerId === session.user.id;
 
     if (!isBuyer && !isSeller) {
@@ -80,7 +80,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const toUserId = isBuyer ? product.sellerId : acceptedOffer.userId;
+    // For reviews, toUserId is the other party
+    // If buyer reviews, they rate the seller. If seller reviews, they rate the buyer (from offer or order).
+    let toUserId: string;
+    if (isBuyer) {
+      toUserId = product.sellerId;
+    } else {
+      // seller reviewing buyer
+      if (acceptedOffer) {
+        toUserId = acceptedOffer.userId;
+      } else {
+        // find buyer user by email from order
+        if (!order?.buyerEmail) {
+          return NextResponse.json({ error: "No se encontró el comprador" }, { status: 400 });
+        }
+        const buyerUser = await prisma.user.findUnique({ where: { email: order.buyerEmail }, select: { id: true } });
+        if (!buyerUser) return NextResponse.json({ error: "Comprador no encontrado" }, { status: 400 });
+        toUserId = buyerUser.id;
+      }
+    }
+    // (old line below removed, replaced above)
+    const _unused = null;
 
     const existing = await prisma.review.findUnique({
       where: {

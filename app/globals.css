@@ -8,8 +8,22 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  background: #eef2f7;
+  color: #0d1b2a;
 }
 
 button {
   cursor: pointer;
+}
+
+/* ── Tema claro Colbisnes: campos de texto ── */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(13, 27, 42, 0.4);
+}
+
+/* Menús desplegables claros y legibles en todos los navegadores */
+select option {
+  background: #ffffff;
+  color: #0d1b2a;
 }

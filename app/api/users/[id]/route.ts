@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
@@ -7,20 +9,24 @@ export async function GET(
 ) {
   try {
     const { id: userId } = await params;
+    const session = await getServerSession(authOptions);
+    const isOwner = session?.user?.id === userId;
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         name: true,
-        email: true,
         city: true,
-        phone: true,
         image: true,
         createdAt: true,
         kycStatus: true,
         kycLevel: true,
-        nequiNumber: true,
-        brebId: true,
+        // Sensitive fields only visible to the account owner
+        email: isOwner,
+        phone: isOwner,
+        nequiNumber: isOwner,
+        brebId: isOwner,
       },
     });
 
@@ -28,9 +34,8 @@ export async function GET(
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    // Obtener productos activos (siempre un array)
     const products = await prisma.product.findMany({
-      where: { sellerId: userId, status: "AVAILABLE" },
+      where: { sellerId: userId, status: { in: ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW"] } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -43,7 +48,6 @@ export async function GET(
       },
     });
 
-    // Obtener productos vendidos
     const soldProducts = await prisma.product.findMany({
       where: { sellerId: userId, status: "SOLD" },
       orderBy: { soldAt: "desc" },
@@ -57,7 +61,6 @@ export async function GET(
       },
     });
 
-    // Obtener reseñas
     const receivedReviews = await prisma.review.findMany({
       where: { toUserId: userId },
       orderBy: { createdAt: "desc" },
@@ -85,7 +88,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("GET /api/users/[id] error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-    return NextResponse.json({ error: "Error interno", details: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

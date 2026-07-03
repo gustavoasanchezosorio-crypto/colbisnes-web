@@ -1,0 +1,46 @@
+<!-- R: "La Bandera Ardiente" — Los colores de Colombia como gradiente neon. -->
+<!-- Tipografía pura. Anti-maximalismo. Solo letras y color. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" fill="none">
+  <defs>
+    <!-- Gradiente bandera colombiana: amarillo → azul → rojo -->
+    <linearGradient id="gr-flag" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="520" y2="0">
+      <stop offset="0%"   stop-color="#FFCD00"/>
+      <stop offset="38%"  stop-color="#FFCD00"/>
+      <stop offset="38%"  stop-color="#1F6BFF"/>
+      <stop offset="62%"  stop-color="#1F6BFF"/>
+      <stop offset="62%"  stop-color="#CE1126"/>
+      <stop offset="100%" stop-color="#CE1126"/>
+    </linearGradient>
+    <!-- Glow difuso -->
+    <filter id="fr-glow" x="-5%" y="-15%" width="110%" height="130%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Fondo azul marino profundo -->
+  <rect x="0" y="0" width="520" height="100" rx="14" fill="#0A1633"/>
+
+  <!-- Halo difuso (glow layer) -->
+  <text x="24" y="72"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="66" letter-spacing="-3.5"
+    fill="url(#gr-flag)" opacity="0.35" filter="url(#fr-glow)">COLBISNES</text>
+
+  <!-- Texto principal con gradiente bandera -->
+  <text x="24" y="72"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="66" letter-spacing="-3.5"
+    fill="url(#gr-flag)">COLBISNES</text>
+
+  <!-- Línea de acento bajo el texto: tricolor delgada -->
+  <rect x="24"  y="80" width="150" height="3" rx="1.5" fill="#FFCD00"/>
+  <rect x="174" y="80" width="100" height="3" rx="1.5" fill="#1F6BFF"/>
+  <rect x="274" y="80" width="170" height="3" rx="1.5" fill="#CE1126"/>
+
+  <!-- Tagline -->
+  <text x="24" y="93"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="400" font-size="10" letter-spacing="4"
+    fill="rgba(255,255,255,0.35)">COLOMBIA · COMPRA · VENDE</text>
+</svg>

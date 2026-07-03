@@ -1,0 +1,28 @@
+<!-- H: "El Sello" — circular tipo estampilla, auténtico y colombiano -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <!-- Círculo exterior con borde dentado (stroke-dasharray simula perforado) -->
+  <circle cx="62" cy="62" r="56" fill="#003893"
+    stroke="#FCD116" stroke-width="4" stroke-dasharray="6 4"/>
+  <!-- Círculo interior -->
+  <circle cx="62" cy="62" r="44" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <!-- COL grande centrado -->
+  <text x="62" y="56" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Arial Black',sans-serif"
+    font-weight="900" font-size="30" letter-spacing="2" fill="#FCD116">COL</text>
+  <!-- Separador -->
+  <line x1="28" y1="64" x2="96" y2="64" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+  <!-- BISNES pequeño -->
+  <text x="62" y="82" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="700" font-size="16" letter-spacing="3" fill="white">BISNES</text>
+  <!-- Wordmark lateral -->
+  <text x="140" y="60"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#0B1628">COL</text>
+  <text x="244" y="60"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="48" letter-spacing="-2" fill="#003893">BISNES</text>
+  <text x="141" y="84"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

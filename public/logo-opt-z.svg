@@ -1,0 +1,26 @@
+<!-- Z: "Monograma cb" — dos letras entrelazadas formando una marca compacta y atemporal. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="gz" gradientUnits="userSpaceOnUse" x1="14" y1="14" x2="110" y2="110">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1448A3"/>
+    </linearGradient>
+  </defs>
+  <!-- Monograma: c abierta + b, trazos gruesos -->
+  <!-- c: arco abierto a la derecha -->
+  <path d="M 78 36 A 30 30 0 1 0 78 88"
+    stroke="url(#gz)" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <!-- b: asta vertical + panza -->
+  <path d="M 74 20 V 100" stroke="url(#gz)" stroke-width="13" stroke-linecap="round"/>
+  <path d="M 74 64 A 22 22 0 1 1 74 98"
+    stroke="url(#gz)" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <!-- Punto amarillo (acento, sobre la b) -->
+  <circle cx="98" cy="30" r="7.5" fill="#FFCD00"/>
+  <!-- Wordmark -->
+  <text x="138" y="60"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="44" letter-spacing="-1.5" fill="#1F6BFF">Colbisnes</text>
+  <text x="140" y="84"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2" fill="#94A3B8">Colombia · Compra · Vende</text>
+</svg>

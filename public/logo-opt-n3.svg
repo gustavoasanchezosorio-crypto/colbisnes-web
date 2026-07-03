@@ -1,0 +1,13 @@
+<!-- N3: pin de ubicación = marketplace LOCAL de Colombia. El amarillo tiene rol geográfico. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 92" fill="none">
+  <text x="10" y="64"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="62" letter-spacing="-3" fill="#1F6BFF">colbisnes</text>
+  <!-- Pin de ubicación amarillo al final (compra-vende cerca de ti) -->
+  <path d="M 506 18 C 494 18 485 27 485 39 C 485 54 506 74 506 74 C 506 74 527 54 527 39 C 527 27 518 18 506 18 Z"
+    fill="#FFCD00"/>
+  <circle cx="506" cy="39" r="8" fill="#1F6BFF"/>
+  <text x="12" y="86"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="3.5" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

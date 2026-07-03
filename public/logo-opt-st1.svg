@@ -1,0 +1,9 @@
+<!-- ST1: bloque apilado 3x3 (COL/BIS/NES), fino y elegante, azul sobre claro. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" fill="none">
+  <g font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+     font-weight="200" font-size="96" fill="#1F6BFF" text-anchor="start">
+    <text x="65" y="140" textLength="230" lengthAdjust="spacing">COL</text>
+    <text x="65" y="232" textLength="230" lengthAdjust="spacing">BIS</text>
+    <text x="65" y="324" textLength="230" lengthAdjust="spacing">NES</text>
+  </g>
+</svg>

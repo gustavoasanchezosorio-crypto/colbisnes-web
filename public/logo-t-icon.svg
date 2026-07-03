@@ -1,0 +1,22 @@
+<!-- T icon — El Slash en formato cuadrado (favicon / app icon) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="gti" gradientUnits="userSpaceOnUse" x1="52" y1="20" x2="68" y2="100">
+      <stop offset="0%" stop-color="#FFCD00"/>
+      <stop offset="100%" stop-color="#FFB300"/>
+    </linearGradient>
+  </defs>
+  <!-- Tile claro -->
+  <rect x="0" y="0" width="120" height="120" rx="26" fill="#FFFFFF"/>
+  <!-- C en azul eléctrico -->
+  <text x="14" y="84"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="78" letter-spacing="-4" fill="#1F6BFF">C</text>
+  <!-- Barra diagonal amarilla -->
+  <rect x="54" y="14" width="13" height="92" rx="3"
+    fill="url(#gti)" transform="rotate(-13 60 60)"/>
+  <!-- B en azul profundo -->
+  <text x="64" y="84"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="78" letter-spacing="-4" fill="#1448A3">B</text>
+</svg>

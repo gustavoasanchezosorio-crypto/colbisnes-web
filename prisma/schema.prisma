@@ -19,7 +19,13 @@ model User {
   emailVerified DateTime?
   role          String    @default("USER")
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  updatedAt        DateTime  @updatedAt
+  phoneWhatsapp    String?
+  usdtWallet       String?
+  usdtRed          String?
+  direccionEnvio   String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
   faceDescriptor String?
 
   products         Product[]
@@ -31,15 +37,38 @@ model User {
   sentMessages     Message[]  @relation("sentMessages")
   receivedMessages Message[]  @relation("receivedMessages")
   auditLogs        AuditLog[]
+  disputesRaised   Dispute[]  @relation("disputesRaised")
+  disputesReceived Dispute[]  @relation("disputesReceived")
+  disputesResolved Dispute[]  @relation("disputesResolved")
 
   kycLevel       Int       @default(0)
-  kycStatus      String    @default("pending")
+  kycStatus      String    @default("none")
   kycDocumentId  String?
   kycRequestedAt DateTime?
   kycApprovedAt  DateTime?
   kycRejectedAt  DateTime?
   nequiNumber    String?
   brebId         String?
+
+  // Verificación premium (badge extra, sin cobro) — requiere cédula + comprobante de domicilio
+  premiumStatus         String    @default("none") // none | pending | approved | rejected
+  premiumCedulaUrl      String?
+  premiumComprobanteUrl String?
+  premiumSolicitadoAt   DateTime?
+  premiumAprobadoAt     DateTime?
+  premiumRechazadoAt    DateTime?
+
+  // 2FA (TOTP) del admin — requerido para aprobar desembolsos automáticos desde la hot wallet
+  totpSecret  String?
+  totpEnabled Boolean @default(false)
+
+  // Bloqueo por envío tardío en contraentrega / deuda pendiente con Colbisnes
+  blockedUntil       DateTime?
+  blockedReason       String?
+  deudaPendienteCOP   Int       @default(0)
+  penalizacionScorePts Int      @default(0) // puntos que se restan del trust score por penalizaciones
+
+  featuredListings FeaturedListing[]
 }
 
 model Account {
@@ -75,6 +104,7 @@ model Product {
   priceCOP         Int
   city             String
   condition        String    @default("NUEVO")
+  category         String    @default("Otros")
   status           String    @default("AVAILABLE")
   acceptedOfferId  String?
   paymentExpiresAt DateTime?
@@ -91,6 +121,39 @@ model Product {
   offers   Offer[]
   reviews  Review[]
   messages Message[]
+  tipoEntrega  String  @default("ENVIO")
+  precioEnvio  Int?
+  favoritesCount Int @default(0)
+
+  // Listado destacado (pago del vendedor para aparecer primero)
+  featuredUntil    DateTime?
+  featuredListings FeaturedListing[]
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([city])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([featuredUntil])
+}
+
+model FeaturedListing {
+  id             String    @id @default(cuid())
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  precio         Int       @default(8000)
+  dias           Int       @default(7)
+  estado         String    @default("PENDIENTE") // PENDIENTE | PAGADO | RECHAZADO | ERROR
+  wompiReference String?   @unique
+  activadoAt     DateTime?
+  expiraAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([productId])
+  @@index([userId])
+  @@index([estado])
 }
 
 model ProductImage {
@@ -112,6 +175,9 @@ model Offer {
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
+
+  @@index([productId, status])
+  @@index([userId, status])
 }
 
 model Review {
@@ -130,6 +196,7 @@ model Review {
   toUser   User   @relation("receiver", fields: [toUserId], references: [id])
 
   @@unique([productId, fromUserId])
+  @@index([toUserId])
 }
 
 model Message {
@@ -144,6 +211,11 @@ model Message {
   fromUser User     @relation("sentMessages", fields: [fromUserId], references: [id])
   toUser   User     @relation("receivedMessages", fields: [toUserId], references: [id])
   product  Product? @relation(fields: [productId], references: [id])
+
+  @@index([toUserId, read])
+  @@index([fromUserId, toUserId])
+  @@index([productId])
+  @@index([createdAt])
 }
 
 model AuditLog {
@@ -160,17 +232,158 @@ model AuditLog {
 }
 
 model Order {
-  id             String   @id @default(cuid())
-  productId      String
-  buyerEmail     String
-  metodoPago     String   // "ONLINE" | "CONTRA_ENTREGA"
-  estado         String   // "PENDIENTE" | "ESPERANDO_ENVIO" | "EN_CAMINO" | "ENTREGADO" | "CANCELADO"
-  totalPagado    Int
-  comision       Int
-  recibeVendedor Int
-  codigoSecreto  String?
-  totalUSDT      Float?  // solo para contra entrega
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  productId       String
+  buyerEmail      String
+  metodoPago      String   // "ONLINE" | "CONTRA_ENTREGA"
+  estado          String   // "PENDIENTE" | "PAGADO" | "ESPERANDO_ENVIO" | "EN_CAMINO" | "ENTREGADO" | "COMPLETADO" | "CANCELADO"
+  totalPagado     Int
+  comision        Int
+  recibeVendedor  Int
+  codigoSecreto   String?
+  totalUSDT       Float?  // solo para contra entrega
+  numeroGuia      String?
+  transportadora  String?
+  comprobanteUrl  String?
+  enviadoAt       DateTime?
+  pagoLiberado    Boolean   @default(false)
+  pagoLiberadoAt  DateTime?
+  txHashPago      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Protección de compra extendida (add-on pagado por el comprador)
+  proteccionExtendida Boolean @default(false)
+  proteccionCosto     Int     @default(0)
+
+  // Envío gestionado y cobrado por Colbisnes (margen sobre el costo declarado por el vendedor)
+  envioCobrado Int @default(0)
+  margenEnvio  Int @default(0)
+
+  // Desembolso automático desde hot wallet (USDT-BEP20) vs. liberación manual
+  pagoAutomatico Boolean @default(false)
+
+  // Garantía de contraentrega: el comprador paga la comisión de Colbisnes por adelantado (Nequi)
+  // para reservar el producto. Si el vendedor no despacha a tiempo, se penaliza.
+  comisionReservaCOP          Int?
+  comisionReservaPagada       Boolean   @default(false)
+  comisionReservaComprobanteUrl String?
+  comisionReservaReferencia   String?
+  comisionReservaConfirmadaAt DateTime?
+  fechaLimiteEnvio            DateTime?
+  envioPenalizado              Boolean  @default(false)
+
+  @@index([estado, pagoLiberado])
+  @@index([buyerEmail])
+  @@index([productId])
 }
 
+// Documentos/contactos bloqueados por deuda pendiente o incumplimiento de envío,
+// para evitar que un vendedor evada el bloqueo creando una cuenta nueva.
+model Blacklist {
+  id          String   @id @default(cuid())
+  documento   String?
+  email       String?
+  telefono    String?
+  motivo      String
+  deudaPendienteCOP Int @default(0)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([documento])
+  @@index([email])
+  @@index([telefono])
+}
+
+model HotWalletPayout {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  amountUSD Float
+  toAddress String
+  txHash    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model FaceToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// Bot de servicio al cliente "Blu" (FAQ + asistente de publicacion) con escalamiento a soporte humano
+model BluConversation {
+  id         String    @id @default(cuid())
+  userId     String?
+  userEmail  String?
+  productId  String?
+  estado     String    @default("ABIERTA") // ABIERTA | ESCALADA | CERRADA
+  escaladaAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  mensajes BluMessage[]
+
+  @@index([userId])
+  @@index([estado])
+  @@index([createdAt])
+}
+
+model BluMessage {
+  id             String          @id @default(cuid())
+  conversationId String
+  conversation   BluConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  autor          String // "USUARIO" | "BLU" | "ADMIN"
+  texto          String
+  intencion      String?
+  createdAt      DateTime        @default(now())
+
+  @@index([conversationId])
+}
+
+model Dispute {
+  id        String   @id @default(cuid())
+  orderId   String
+  reason    String
+  detalle   String?
+  evidence  Json?    // array de URLs (fotos/comprobantes)
+  status    String   @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED_BUYER | RESOLVED_SELLER | CANCELLED
+
+  raisedByUserId      String
+  raisedByUser        User    @relation("disputesRaised", fields: [raisedByUserId], references: [id])
+  raisedAgainstUserId String
+  raisedAgainstUser   User    @relation("disputesReceived", fields: [raisedAgainstUserId], references: [id])
+
+  adminNotes   String?
+  resolvedById String?
+  resolvedBy   User?    @relation("disputesResolved", fields: [resolvedById], references: [id])
+  resolvedAt   DateTime?
+
+  // true si la orden tenía protección de compra extendida — se revisa con prioridad
+  prioritaria  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([raisedByUserId])
+  @@index([raisedAgainstUserId])
+}

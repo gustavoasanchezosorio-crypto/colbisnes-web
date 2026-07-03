@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80">
+  <rect width="200" height="80" rx="12" fill="#f5f0f7"/>
+  <!-- Cuadrito rosado en la esquina superior izquierda del texto -->
+  <rect x="22" y="14" width="12" height="12" rx="2" fill="#E91E8C"/>
+  <!-- Texto Nequi en negro oscuro morado -->
+  <text x="28" y="58" font-size="42" font-weight="900" fill="#1a0a2e" font-family="Arial Black, Arial" letter-spacing="-1">Nequi</text>
+</svg>

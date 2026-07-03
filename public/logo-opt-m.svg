@@ -1,0 +1,22 @@
+<!-- M: "Stacked Mega" — apilado, impacto brutal, tipo billboard -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 160" fill="none">
+  <defs>
+    <linearGradient id="gm" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="440" y2="0">
+      <stop offset="0%" stop-color="#0B1628"/>
+      <stop offset="100%" stop-color="#1A3A70"/>
+    </linearGradient>
+  </defs>
+  <!-- COL enorme arriba -->
+  <text x="8" y="88"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="96" letter-spacing="-5" fill="url(#gm)">COL</text>
+  <!-- Línea separadora tricolor -->
+  <rect x="8" y="94" width="112" height="5" rx="2" fill="#FCD116"/>
+  <rect x="120" y="94" width="112" height="5" rx="2" fill="#003893"/>
+  <rect x="232" y="94" width="192" height="5" rx="2" fill="#CE1126"/>
+  <!-- BISNES outline azul abajo -->
+  <text x="8" y="150"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="62" letter-spacing="-3"
+    fill="none" stroke="#1F6BFF" stroke-width="2.5">BISNES</text>
+</svg>

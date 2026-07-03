@@ -1,6 +1,7 @@
 // components/WompiPagoModal.tsx
 "use client";
 import { useState, useEffect } from "react";
+import { THEME } from "@/lib/theme";
 
 interface Props {
   isOpen: boolean;
@@ -127,24 +128,27 @@ export default function WompiPagoModal({
       padding: "1rem",
     },
     modal: {
-      backgroundColor: "#1a1a2e",
-      border: "1px solid #00589F",
+      background: THEME.surfaceGradient,
+      border: "1.5px solid transparent",
       borderRadius: "12px",
       padding: "2rem",
       maxWidth: "420px",
       width: "100%",
-      color: "white",
+      color: THEME.text,
+      boxShadow: THEME.cardShadow,
     },
     titulo: {
       fontSize: "1.3rem",
       fontWeight: "bold",
-      color: "#D4AF37",
+      color: THEME.gold,
       marginBottom: "0.5rem",
+      width: "100%",
+      textAlign: "center" as const,
     },
     monto: {
       fontSize: "1.8rem",
       fontWeight: "bold",
-      color: "#00589F",
+      color: THEME.primary,
       textAlign: "center" as const,
       margin: "1rem 0",
     },
@@ -162,16 +166,16 @@ export default function WompiPagoModal({
       width: "100%",
       padding: "0.8rem",
       borderRadius: "8px",
-      border: "1px solid #00589F",
-      backgroundColor: "#0f0f23",
-      color: "white",
+      border: `1px solid ${THEME.border}`,
+      backgroundColor: THEME.surfaceAlt,
+      color: THEME.text,
       fontSize: "1rem",
       marginTop: "0.5rem",
       boxSizing: "border-box" as const,
     },
     error: {
-      backgroundColor: "#ff4444",
-      color: "white",
+      backgroundColor: "#fee2e2",
+      color: "#b91c1c",
       padding: "0.5rem",
       borderRadius: "6px",
       marginTop: "0.5rem",
@@ -183,17 +187,17 @@ export default function WompiPagoModal({
     <div style={estilos.overlay}>
       <div style={estilos.modal}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={estilos.titulo}>💳 Pagar con Wompi</h2>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", color: "white", fontSize: "1.5rem", cursor: "pointer" }}
+            style={{ background: "none", border: "none", color: THEME.muted, fontSize: "1.5rem", cursor: "pointer", position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}
           >
             ✕
           </button>
         </div>
 
-        <p style={{ color: "#aaa", fontSize: "0.9rem" }}>{nombreProducto}</p>
+        <p style={{ color: THEME.muted, fontSize: "0.9rem" }}>{nombreProducto}</p>
         <div style={estilos.monto}>
           ${Number(monto).toLocaleString("es-CO")} COP
         </div>
@@ -201,23 +205,23 @@ export default function WompiPagoModal({
         {/* PASO: Elegir método */}
         {paso === "metodo" && (
           <div>
-            <p style={{ color: "#ccc", marginBottom: "1rem", textAlign: "center" }}>
+            <p style={{ color: THEME.textSoft, marginBottom: "1rem", textAlign: "center" }}>
               Elige cómo quieres pagar:
             </p>
             <button
-              style={{ ...estilos.boton, backgroundColor: "#8B4FDB", color: "white" }}
+              style={{ ...estilos.boton, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "white" }}
               onClick={() => setPaso("nequi")}
             >
               📱 Pagar con Nequi
             </button>
             <button
-              style={{ ...estilos.boton, backgroundColor: "#333", color: "#aaa", cursor: "not-allowed" }}
+              style={{ ...estilos.boton, backgroundColor: THEME.surfaceAlt, color: THEME.muted, cursor: "not-allowed" }}
               disabled
             >
               🏦 PSE — Próximamente
             </button>
             <button
-              style={{ ...estilos.boton, backgroundColor: "#333", color: "#aaa", cursor: "not-allowed" }}
+              style={{ ...estilos.boton, backgroundColor: THEME.surfaceAlt, color: THEME.muted, cursor: "not-allowed" }}
               disabled
             >
               💳 Tarjeta — Próximamente
@@ -228,7 +232,7 @@ export default function WompiPagoModal({
         {/* PASO: Nequi */}
         {paso === "nequi" && (
           <div>
-            <p style={{ color: "#ccc", marginBottom: "0.5rem" }}>
+            <p style={{ color: THEME.textSoft, marginBottom: "0.5rem" }}>
               Ingresa tu número de celular registrado en Nequi:
             </p>
             <input
@@ -241,13 +245,13 @@ export default function WompiPagoModal({
             />
             {mensajeError && <div style={estilos.error}>{mensajeError}</div>}
             <button
-              style={{ ...estilos.boton, backgroundColor: "#8B4FDB", color: "white" }}
+              style={{ ...estilos.boton, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "white" }}
               onClick={iniciarPagoNequi}
             >
               Enviar solicitud de pago
             </button>
             <button
-              style={{ ...estilos.boton, backgroundColor: "transparent", color: "#aaa", border: "1px solid #555" }}
+              style={{ ...estilos.boton, backgroundColor: "transparent", color: THEME.muted, border: `1px solid ${THEME.border}` }}
               onClick={() => setPaso("metodo")}
             >
               ← Volver
@@ -259,13 +263,13 @@ export default function WompiPagoModal({
         {paso === "procesando" && (
           <div style={{ textAlign: "center", padding: "1rem 0" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📱</div>
-            <p style={{ color: "#D4AF37", fontWeight: "bold", fontSize: "1.1rem" }}>
+            <p style={{ color: THEME.gold, fontWeight: "bold", fontSize: "1.1rem" }}>
               Revisa tu app de Nequi
             </p>
-            <p style={{ color: "#aaa", fontSize: "0.9rem", margin: "0.5rem 0" }}>
+            <p style={{ color: THEME.muted, fontSize: "0.9rem", margin: "0.5rem 0" }}>
               Enviamos una solicitud de pago a tu celular. Apruébala en la app de Nequi.
             </p>
-            <div style={{ color: "#00589F", marginTop: "1rem" }}>
+            <div style={{ color: THEME.primary, marginTop: "1rem" }}>
               ⏳ Verificando pago automáticamente...
             </div>
           </div>
@@ -275,10 +279,10 @@ export default function WompiPagoModal({
         {paso === "exito" && (
           <div style={{ textAlign: "center", padding: "1rem 0" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
-            <p style={{ color: "#00ff88", fontWeight: "bold", fontSize: "1.2rem" }}>
+            <p style={{ color: "#15803d", fontWeight: "bold", fontSize: "1.2rem" }}>
               ¡Pago exitoso!
             </p>
-            <p style={{ color: "#aaa", fontSize: "0.9rem" }}>
+            <p style={{ color: THEME.muted, fontSize: "0.9rem" }}>
               Tu pago fue procesado. El vendedor recibirá el dinero cuando confirme la entrega.
             </p>
           </div>
@@ -288,12 +292,12 @@ export default function WompiPagoModal({
         {paso === "error" && (
           <div style={{ textAlign: "center", padding: "1rem 0" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>❌</div>
-            <p style={{ color: "#ff4444", fontWeight: "bold" }}>Pago no completado</p>
-            <p style={{ color: "#aaa", fontSize: "0.9rem", margin: "0.5rem 0" }}>
+            <p style={{ color: "#b91c1c", fontWeight: "bold" }}>Pago no completado</p>
+            <p style={{ color: THEME.muted, fontSize: "0.9rem", margin: "0.5rem 0" }}>
               {mensajeError}
             </p>
             <button
-              style={{ ...estilos.boton, backgroundColor: "#00589F", color: "white" }}
+              style={{ ...estilos.boton, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "white" }}
               onClick={() => { setPaso("nequi"); setMensajeError(""); }}
             >
               Intentar de nuevo

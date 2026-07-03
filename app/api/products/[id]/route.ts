@@ -10,7 +10,7 @@ export async function GET(
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
-        seller: { select: { id: true, name: true, email: true, image: true } },
+        seller: { select: { id: true, name: true, image: true, kycStatus: true } }, // email omitido intencionalmente (privacidad)
         images: true,
         offers: {
           include: { user: { select: { id: true, name: true } } },

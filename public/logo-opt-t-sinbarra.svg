@@ -1,0 +1,17 @@
+<!-- T sin barra — COLBISNES limpio en azul eléctrico, sin slash -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 110" fill="none">
+  <!-- COL en azul eléctrico -->
+  <text x="6" y="83"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="74" letter-spacing="-4" fill="#1F6BFF">COL</text>
+  <!-- BISNES en azul profundo -->
+  <text x="200" y="83"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="74" letter-spacing="-4" fill="#1448A3">BISNES</text>
+  <!-- Punto amarillo de acento entre las dos palabras -->
+  <circle cx="188" cy="55" r="9" fill="#FFCD00"/>
+  <!-- Tagline -->
+  <text x="6" y="103"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="11" letter-spacing="4" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

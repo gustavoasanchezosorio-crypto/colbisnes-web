@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes · Nueva tanda (con/sin amarillo)</title>
+<style>
+  :root { --blue:#1F6BFF; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+    background:#F1F5F9; color:#0A1633; padding:48px 24px 80px; }
+  .head { max-width:1000px; margin:0 auto 30px; text-align:center; }
+  .head h1 { font-size:30px; letter-spacing:-1px; color:var(--blue); }
+  .head p { color:#64748B; margin-top:10px; font-size:15px; }
+  .legend { max-width:760px; margin:0 auto 30px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .chip { font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:20px; }
+  .chip.blue { background:#E0EBFF; color:#1448A3; }
+  .chip.yellow { background:#FFF4CC; color:#8A6D00; }
+  .grid { max-width:1000px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(440px,1fr)); gap:24px; }
+  .card { background:#fff; border-radius:18px; overflow:hidden;
+    box-shadow:0 6px 22px rgba(15,23,42,.08); border:1px solid #E2E8F0; }
+  .tag { display:flex; align-items:center; gap:12px; padding:15px 20px; border-bottom:1px solid #EEF2F7; }
+  .tag .letter { background:var(--blue); color:#fff; font-weight:800; font-size:13px;
+    padding:5px 11px; border-radius:8px; }
+  .tag .name { font-weight:700; font-size:15px; }
+  .tag .pill { margin-left:auto; font-size:11px; font-weight:700; padding:3px 9px; border-radius:14px; }
+  .pill.b { background:#E0EBFF; color:#1448A3; }
+  .pill.y { background:#FFF4CC; color:#8A6D00; }
+  .stage { padding:30px 24px; display:grid; place-items:center; }
+  .stage img { width:100%; max-width:400px; height:auto; }
+  .foot { padding:13px 20px; font-size:12.5px; color:#64748B; border-top:1px solid #EEF2F7; line-height:1.5; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Nueva tanda · el amarillo ahora SÍ tiene función</h1>
+    <p>Mitad <b>puro azul</b> (sin amarillo). Mitad con amarillo, pero cada uno con un <b>rol concreto</b>.</p>
+  </div>
+  <div class="legend">
+    <span class="chip blue">● Solo azul = N1 · N4 · N6</span>
+    <span class="chip yellow">● Amarillo con función = N2 · N3 · N5</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="tag"><span class="letter">N1</span><span class="name">Puro azul</span><span class="pill b">solo azul</span></div>
+      <div class="stage"><img src="logo-opt-n1.svg" alt="N1"></div>
+      <div class="foot">El nombre y nada más. Limpísimo, sin gimmicks. Imposible que sobre nada.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">N2</span><span class="name">El punto de la “i”</span><span class="pill y">amarillo = la i</span></div>
+      <div class="stage"><img src="logo-opt-n2.svg" alt="N2"></div>
+      <div class="foot">El amarillo <b>es la tilde de la i</b> (su punto natural). Tiene un rol obvio: forma parte de la palabra.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">N3</span><span class="name">Pin de ubicación</span><span class="pill y">amarillo = local</span></div>
+      <div class="stage"><img src="logo-opt-n3.svg" alt="N3"></div>
+      <div class="foot">El amarillo es un <b>pin de mapa</b> → “compra y vende cerca de ti, en Colombia”. Significado geográfico.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">N4</span><span class="name">Dos azules</span><span class="pill b">solo azul</span></div>
+      <div class="stage"><img src="logo-opt-n4.svg" alt="N4"></div>
+      <div class="foot">“col” claro + “bisnes” profundo. Profundidad sin meter un segundo color.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">N5</span><span class="name">Sello verificado</span><span class="pill y">amarillo = confianza</span></div>
+      <div class="stage"><img src="logo-opt-n5.svg" alt="N5"></div>
+      <div class="foot">El amarillo es un <b>check de verificado</b> → “trato seguro, vendedor confiable”. Clave en un marketplace.</div>
+    </div>
+    <div class="card">
+      <div class="tag"><span class="letter">N6</span><span class="name">Capitalizado</span><span class="pill b">solo azul</span></div>
+      <div class="stage"><img src="logo-opt-n6.svg" alt="N6"></div>
+      <div class="foot">“Colbisnes” con mayúscula inicial. Más formal y corporativo que la minúscula.</div>
+    </div>
+  </div>
+
+  <div class="head" style="margin-top:46px; margin-bottom:0;">
+    <p><b>Mi pregunta clave:</b> ¿prefieres el logo <b>solo azul</b> (N1/N4/N6) o que el amarillo signifique algo (N2/N3/N5)? Eso me dice por dónde seguir.</p>
+  </div>
+</body>
+</html>

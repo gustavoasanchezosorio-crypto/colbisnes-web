@@ -1,0 +1,16 @@
+<!-- F4: firma de fondo grande y tenue, nombre centrado encima. Estilo "marca de autor". -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" fill="none">
+  <!-- Firma de fondo, azul muy claro, ocupa todo el ancho -->
+  <g transform="translate(15 20) scale(0.38)" opacity="0.22">
+    <g stroke="#1F6BFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M 35 292 C 300 250 850 150 1210 78"/>
+      <path d="M 492 278 C 520 230 560 180 590 148"/>
+      <path d="M 675 256 C 800 220 980 195 1070 178 C 1110 170 1180 138 1290 122"/>
+      <circle cx="1388" cy="113" r="12" fill="#1F6BFF" stroke="none"/>
+    </g>
+  </g>
+  <!-- Nombre encima, centrado -->
+  <text x="280" y="98" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="58" letter-spacing="-3" fill="#1F6BFF">colbisnes</text>
+</svg>

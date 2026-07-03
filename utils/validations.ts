@@ -5,6 +5,7 @@ export const productSchema = z.object({
   title: z.string().min(3, "Mínimo 3 caracteres").max(100),
   priceCOP: z.number().min(1000, "Precio mínimo $1,000"),
   city: z.enum(CITIES),
+  category: z.string().min(1, "Selecciona una categoria"),
   description: z.string().min(10, "Mínimo 10 caracteres").max(500),
 });
 

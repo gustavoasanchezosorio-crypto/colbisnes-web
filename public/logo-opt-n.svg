@@ -1,0 +1,29 @@
+<!-- N: "Redondo Amigable" — burbujas, cercano, para todos los colombianos -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 124" fill="none">
+  <defs>
+    <linearGradient id="gn" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0B2D8C"/>
+    </linearGradient>
+    <filter id="fn"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#38BDF8" flood-opacity="0.28"/></filter>
+  </defs>
+  <!-- Círculo grande con gradiente cielo-azul -->
+  <circle cx="62" cy="62" r="56" fill="url(#gn)" filter="url(#fn)"/>
+  <!-- Highlight circular superior -->
+  <ellipse cx="48" cy="30" rx="28" ry="16" fill="rgba(255,255,255,0.15)" transform="rotate(-15 48 30)"/>
+  <!-- CB en blanco, redondeado -->
+  <text x="62" y="78" text-anchor="middle"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="46" letter-spacing="-2" fill="white">CB</text>
+  <!-- Wordmark con letras redondeadas visualmente amplias -->
+  <text x="140" y="66"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="50" letter-spacing="-1" fill="#0B1628">Col</text>
+  <text x="248" y="66"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="800" font-size="50" letter-spacing="-1" fill="#0B2D8C">bisnes</text>
+  <!-- Tagline -->
+  <text x="141" y="90"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="12" letter-spacing="2" fill="#94A3B8">Colombia · Compra · Vende</text>
+</svg>

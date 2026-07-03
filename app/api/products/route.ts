@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { bloqueoResponse } from "@/lib/accountBlock";
 
 export const dynamic = "force-dynamic";
+
+const VALID_STATUSES = ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW", "SOLD"] as const;
+const VALID_CONDITIONS = ["NUEVO", "USADO", "REACONDICIONADO"] as const;
 
 async function releaseExpiredProducts() {
   const now = new Date();
@@ -14,82 +18,108 @@ async function releaseExpiredProducts() {
     },
     select: { id: true, acceptedOfferId: true },
   });
-  if (expired.length === 0) return { released: 0 };
+  if (expired.length === 0) return;
   await prisma.product.updateMany({
-    where: { id: { in: expired.map(p => p.id) } },
+    where: { id: { in: expired.map((p) => p.id) } },
     data: { status: "AVAILABLE", acceptedOfferId: null, paymentExpiresAt: null },
   });
-  const expiredOfferIds = expired.map(p => p.acceptedOfferId).filter(Boolean) as string[];
+  const expiredOfferIds = expired.map((p) => p.acceptedOfferId).filter(Boolean) as string[];
   if (expiredOfferIds.length > 0) {
     try {
       await prisma.offer.updateMany({
         where: { id: { in: expiredOfferIds } },
         data: { status: "REJECTED" },
       });
-    } catch (e) { console.warn("No se pudo actualizar ofertas expiradas", e); }
+    } catch (e) {
+      console.warn("No se pudo actualizar ofertas expiradas", e);
+    }
   }
-  return { released: expired.length };
 }
 
 export async function GET(request: Request) {
   try {
     await releaseExpiredProducts();
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("q") || "";
-    const city = searchParams.get("city") || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10));
+    const skip = (page - 1) * limit;
+    const query = (searchParams.get("q") || searchParams.get("searchQuery") || "").slice(0, 200);
+    const city = (searchParams.get("city") || "").slice(0, 100);
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
-    const status = searchParams.get("status") || "";
-    const condition = searchParams.get("condition") || "";
+    const statusParam = searchParams.get("status") || "";
+    const condition = (searchParams.get("condition") || "").slice(0, 50);
+    const category = (searchParams.get("category") || "").slice(0, 100);
 
     const where: any = {};
     if (query) {
       where.OR = [
-        { title: { contains: query } },
-        { description: { contains: query } },
+        { title: { contains: query, mode: "insensitive" } },
+        { description: { contains: query, mode: "insensitive" } },
       ];
     }
     if (city) where.city = city;
-    if (condition) where.condition = condition;
+    if (condition && (VALID_CONDITIONS as readonly string[]).includes(condition)) {
+      where.condition = condition;
+    }
+    if (category) where.category = category;
     if (minPrice || maxPrice) {
       where.priceCOP = {};
-      if (minPrice) where.priceCOP.gte = parseInt(minPrice);
-      if (maxPrice) where.priceCOP.lte = parseInt(maxPrice);
+      if (minPrice) where.priceCOP.gte = Math.max(0, parseInt(minPrice) || 0);
+      if (maxPrice) where.priceCOP.lte = Math.min(1_000_000_000, parseInt(maxPrice) || 1_000_000_000);
     }
-    if (status && ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW", "SOLD"].includes(status)) {
-      where.status = status;
+    if (statusParam && (VALID_STATUSES as readonly string[]).includes(statusParam)) {
+      where.status = statusParam;
     }
 
     const products = await prisma.product.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      // Productos destacados (featuredUntil en el futuro) aparecen primero
+      orderBy: [{ featuredUntil: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+      skip,
+      take: limit,
       include: {
         seller: {
           select: {
             id: true,
             name: true,
             city: true,
-            receivedReviews: { select: { rating: true } },
           },
         },
-        images: { select: { url: true }, take: 1 },
-        _count: { select: { offers: true } },
+        images: { select: { url: true } },
+        _count: { select: { offers: { where: { status: "PENDING" } } } },
+        offers: {
+          where: { status: "ACCEPTED" },
+          select: { id: true, userId: true },
+          take: 1,
+        },
       },
     });
 
-    const productsWithRating = products.map(product => {
-      const reviews = product.seller.receivedReviews;
-      const avgRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
-      return {
-        ...product,
-        seller: {
-          ...product.seller,
-          avgRating: Math.round(avgRating * 10) / 10,
-          totalReviews: reviews.length,
-        },
-        firstImage: product.images[0]?.url || null,
-      };
+    // Batch-compute seller ratings with a single groupBy query instead of N+1
+    const sellerIds = [...new Set(products.map((p) => p.seller.id))];
+    const ratingsRaw = await prisma.review.groupBy({
+      by: ["toUserId"],
+      where: { toUserId: { in: sellerIds } },
+      _avg: { rating: true },
+      _count: { rating: true },
     });
+    const ratingMap = new Map(
+      ratingsRaw.map((r) => [
+        r.toUserId,
+        { avgRating: Math.round((r._avg.rating || 0) * 10) / 10, totalReviews: r._count.rating },
+      ])
+    );
+
+    const productsWithRating = products.map((product) => ({
+      ...product,
+      seller: {
+        ...product.seller,
+        ...(ratingMap.get(product.seller.id) ?? { avgRating: 0, totalReviews: 0 }),
+      },
+      firstImage: product.images[0]?.url || null,
+    }));
+
     return NextResponse.json(productsWithRating, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });
@@ -102,34 +132,64 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    // Verificar que el vendedor haya completado el KYC
+    const seller = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { kycStatus: true },
+    });
+    if (!seller || seller.kycStatus !== "approved") {
+      return NextResponse.json(
+        { error: "Debes verificar tu identidad antes de publicar productos. Ve a /kyc para completar tu verificación.", kycRequired: true },
+        { status: 403 }
+      );
+    }
+
+    const bloqueo = await bloqueoResponse(session.user.id);
+    if (bloqueo) return bloqueo;
+
     const body = await request.json();
-    const { title, description, priceCOP, city, condition, images } = body;
+    const { title, description, priceCOP, city, condition, category, images } = body;
 
-    const finalCondition = condition || "USADO";
-    if (!title || !description || !priceCOP || !city) {
-      return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
+    if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
+      return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
     }
-    if (typeof priceCOP !== "number" || priceCOP <= 0) {
-      return NextResponse.json({ error: "Precio invalido" }, { status: 400 });
+    if (!description || typeof description !== "string" || description.trim().length < 10 || description.length > 5000) {
+      return NextResponse.json({ error: "Descripción inválida (10-5000 caracteres)" }, { status: 400 });
     }
+    if (typeof priceCOP !== "number" || priceCOP < 1000 || priceCOP > 1_000_000_000) {
+      return NextResponse.json({ error: "Precio inválido (mínimo $1.000 COP)" }, { status: 400 });
+    }
+    if (!city || typeof city !== "string" || city.length > 100) {
+      return NextResponse.json({ error: "Ciudad inválida" }, { status: 400 });
+    }
+    if (images && (!Array.isArray(images) || images.length > 10)) {
+      return NextResponse.json({ error: "Máximo 10 imágenes" }, { status: 400 });
+    }
+    const validImageUrls = (images as string[] | undefined)?.filter(
+      (url) => typeof url === "string" && url.startsWith("https://res.cloudinary.com/")
+    );
 
-    console.log("Creating product with images:", JSON.stringify(images));
+    const finalCondition = (VALID_CONDITIONS as readonly string[]).includes(condition)
+      ? condition
+      : "USADO";
+
     const product = await prisma.product.create({
       data: {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         priceCOP,
-        city,
+        city: city.trim(),
         condition: finalCondition,
+        category: (typeof category === "string" && category.length <= 100) ? category : "Otros",
         status: "AVAILABLE",
         sellerId: session.user.id,
-        images: images?.length ? {
-          create: images.map((url: string) => ({ url })),
-        } : undefined,
+        images: validImageUrls?.length
+          ? { create: validImageUrls.map((url) => ({ url })) }
+          : undefined,
       },
       include: { images: true },
     });

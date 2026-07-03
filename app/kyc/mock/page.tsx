@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { THEME } from "@/lib/theme";
 
 function MockKycPageInner() {
   const searchParams = useSearchParams();
@@ -50,10 +51,10 @@ function MockKycPageInner() {
   };
 
   return (
-    <div style={{ textAlign: "center", padding: "2rem" }}>
-      <h1>Simulación de verificación KYC</h1>
-      <p>Haz clic en una opción para simular el resultado de la verificación.</p>
-      <p><strong>Usuario:</strong> {userId}</p>
+    <div style={{ minHeight: "100vh", background: THEME.background, color: THEME.text, textAlign: "center", padding: "2rem", fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif" }}>
+      <h1 style={{ color: THEME.text }}>Simulación de verificación KYC</h1>
+      <p style={{ color: THEME.muted }}>Haz clic en una opción para simular el resultado de la verificación.</p>
+      <p style={{ color: THEME.muted }}><strong style={{ color: THEME.text }}>Usuario:</strong> {userId}</p>
       <div style={{ marginTop: "2rem" }}>
         <button
           onClick={handleApprove}

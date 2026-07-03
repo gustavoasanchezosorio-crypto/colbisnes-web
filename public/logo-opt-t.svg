@@ -1,0 +1,35 @@
+<!-- T: "El Slash" — Energía editorial de portada de revista global. -->
+<!-- La barra diagonal es el NEGOCIO que conecta COL con BISNES. -->
+<!-- Inspirado en las revistas más icónicas del mundo. Sin ícono. Solo tipografía y trazo. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 110" fill="none">
+  <defs>
+    <linearGradient id="gt-slash" gradientUnits="userSpaceOnUse" x1="190" y1="0" x2="220" y2="110">
+      <stop offset="0%" stop-color="#FFCD00"/>
+      <stop offset="100%" stop-color="#FFB300"/>
+    </linearGradient>
+    <filter id="ft-slash" x="-30%" y="-10%" width="160%" height="120%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#FFCD00" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- COL en azul eléctrico: la identidad Colbisnes -->
+  <text x="6" y="83"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="74" letter-spacing="-4" fill="#1F6BFF">COL</text>
+
+  <!-- Barra diagonal amarilla: el negocio que los une -->
+  <!-- Rect ancho 16px, alto 120px, rotado -13° centrado en ~(207, 55) -->
+  <rect x="199" y="-8" width="16" height="126" rx="3"
+    fill="url(#gt-slash)" filter="url(#ft-slash)"
+    transform="rotate(-13 207 55)"/>
+
+  <!-- BISNES en azul profundo: la acción -->
+  <text x="222" y="83"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="900" font-size="74" letter-spacing="-4" fill="#1448A3">BISNES</text>
+
+  <!-- Tagline bajo todo -->
+  <text x="6" y="103"
+    font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif"
+    font-weight="500" font-size="11" letter-spacing="4" fill="#94A3B8">COLOMBIA · COMPRA · VENDE</text>
+</svg>

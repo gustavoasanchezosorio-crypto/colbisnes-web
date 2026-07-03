@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colbisnes — Opciones O–T (Vanguardia Global)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F1F5F9; color: #0F172A; }
+
+  header {
+    background: #060914; color: white;
+    padding: 20px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid #FCD116;
+  }
+  header h1 { font-size: 15px; font-weight: 700; }
+  .nav-links { display: flex; gap: 20px; }
+  header a { color: #60A5FA; font-size: 13px; text-decoration: none; }
+
+  .insight-bar {
+    background: #0F172A; color: #94A3B8;
+    padding: 10px 40px;
+    font-size: 11.5px; letter-spacing: 0.04em;
+    display: flex; gap: 32px; align-items: center;
+  }
+  .insight-bar strong { color: #FCD116; font-weight: 700; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #E2E8F0; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: white; padding: 32px; }
+
+  .card-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .card-letter {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+    color: white; background: #060914;
+    padding: 3px 9px; border-radius: 20px;
+    text-transform: uppercase;
+  }
+  .card-name { font-size: 17px; font-weight: 800; color: #0F172A; }
+  .card-tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 2px 8px; border-radius: 12px;
+    text-transform: uppercase;
+  }
+  .tag-gold   { border: 1.5px solid #FCD116; color: #92740C; background: #FFFBEB; }
+  .tag-blue   { border: 1.5px solid #BFDBFE; color: #1E40AF; background: #EFF6FF; }
+  .tag-dark   { border: 1.5px solid #CBD5E1; color: #475569; background: #F8FAFC; }
+  .tag-red    { border: 1.5px solid #FECACA; color: #991B1B; background: #FEF2F2; }
+  .tag-green  { border: 1.5px solid #BBF7D0; color: #166534; background: #F0FDF4; }
+
+  .card-desc  { font-size: 13px; color: #64748B; margin-bottom: 20px; line-height: 1.55; }
+  .card-insight {
+    font-size: 11px; color: #94A3B8; margin-bottom: 18px;
+    padding: 8px 12px; background: #F8FAFC; border-radius: 8px;
+    border-left: 3px solid #FCD116;
+    line-height: 1.5;
+  }
+
+  .previews { display: flex; flex-direction: column; gap: 8px; }
+  .preview {
+    border-radius: 12px; padding: 24px 28px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 88px;
+  }
+  .preview img { max-height: 72px; max-width: 100%; width: auto; display: block; }
+  .preview.white  { background: #FFFFFF; border: 1.5px solid #E2E8F0; }
+  .preview.light  { background: #F0F4FF; border: 1.5px solid #DBEAFE; }
+  .preview.dark   { background: #0B1628; }
+  .preview.jet    { background: #060914; }
+  .preview.yellow { background: #FCD116; }
+  .preview.gray   { background: #F1F5F9; border: 1.5px solid #E2E8F0; }
+
+  .preview-label {
+    font-size: 10px; color: #CBD5E1; text-align: center;
+    margin-top: 4px; letter-spacing: 0.07em; text-transform: uppercase;
+  }
+  .preview-label.dark-label { color: #94A3B8; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .pick-btn {
+    margin-top: 16px;
+    display: block; width: 100%;
+    padding: 11px;
+    background: #F8FAFC; border: 1.5px solid #E2E8F0;
+    border-radius: 10px; color: #64748B;
+    font-size: 12px; font-weight: 700; cursor: pointer; text-align: center;
+    transition: all 0.15s; letter-spacing: 0.03em;
+  }
+  .pick-btn:hover { background: #060914; color: #FCD116; border-color: #060914; }
+
+  .winner-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+    color: #92400E; background: #FEF3C7; border: 1.5px solid #FCD116;
+    padding: 2px 9px; border-radius: 12px; text-transform: uppercase;
+    margin-left: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Colbisnes — 6 logos de vanguardia global (O–T)</h1>
+  <div class="nav-links">
+    <a href="logo-preview.html">← A–D</a>
+    <a href="logo-preview-2.html">← E–N</a>
+  </div>
+</header>
+
+<div class="insight-bar">
+  <span><strong>Principio Nike:</strong> funciona en 1 pixel, en negro.</span>
+  <span><strong>FedEx:</strong> el significado vive en el espacio negativo.</span>
+  <span><strong>2025:</strong> anti-maximalismo. Geometría pura. Sin gradientes vacíos.</span>
+</div>
+
+<div class="grid">
+
+  <!-- O: La Esmeralda -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-letter">O</span>
+      <span class="card-name">La Esmeralda</span>
+      <span class="card-tag tag-green">Colombia #1</span>
+    </div>
+    <div class="card-insight">
+      💎 Colombia produce el <strong>55% de las esmeraldas del mundo</strong>. Ningún marketplace del mundo usa este símbolo. Ícono de 8 facetas, profundidad 3D, CB en oro.
+    </div>
+    <p class="card-desc">Octágono tipo gema facetada. Verde profundo con reflejo. CB en dorado colombiano. BISNES en verde. Único en el mercado.</p>
+    <div class="previews">
+      <div class="row2">
+        <div><div class="preview white"><img src="logo-opt-o.svg" alt="O blanco"></div><div class="preview-label dark-label">Blanco</div></div>
+        <div><div class="preview dark"><img src="logo-opt-o.svg" alt="O oscuro"></div><div class="preview-label">Oscuro</div></div>
+      </div>
+    </div>
+    <div class="pick-btn">← Me quedo con esta</div>
+  </div>
+
+  <!-- P: La Órbita -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-letter">P</span>
+      <span class="card-name">La Órbita</span>
+      <span class="card-tag tag-blue">FedEx Concept</span>
+    </div>
+    <div class="card-insight">
+      🪐 El arco <strong>ES la letra C</strong>. El punto amarillo es el peso colombiano orbitando. Doble significado: icono + primera letra. Igual que el arrow escondido de FedEx.
+    </div>
+    <p class="card-desc">Arco puro en azul marino. Punto dorado en la punta superior. El C del arco y el C de COLBISNES son el mismo símbolo. Concepto de alta ingeniería visual.</p>
+    <div class="previews">
+      <div class="row2">
+        <div><div class="preview white"><img src="logo-opt-p.svg" alt="P blanco"></div><div class="preview-label dark-label">Blanco</div></div>
+        <div><div class="preview light"><img src="logo-opt-p.svg" alt="P claro"></div><div class="preview-label dark-label">Azul claro</div></div>
+      </div>
+    </div>
+    <div class="pick-btn">← Me quedo con esta</div>
+  </div>
+
+  <!-- Q: El Anillo -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-letter">Q</span>
+      <span class="card-name">El Anillo</span>
+      <span class="card-tag tag-dark">Espacio Negativo</span>
+    </div>
+    <div class="card-insight">
+      🔵 El anillo <strong>con la apertura = la letra C</strong>. La B vive adentro. CB juntos en un solo símbolo. El punto amarillo marca la apertura. Escala a cualquier tamaño.
+    </div>
+    <p class="card-desc">Anillo azul oscuro, brecha intencional en la derecha forma el C. La B en el centro completa el monograma CB. Geométricamente perfecto. Funciona a 16px.</p>
+    <div class="previews">
+      <div class="row2">
+        <div><div class="preview white"><img src="logo-opt-q.svg" alt="Q blanco"></div><div class="preview-label dark-label">Blanco</div></div>
+        <div><div class="preview gray"><img src="logo-opt-q.svg" alt="Q gris"></div><div class="preview-label dark-label">Gris</div></div>
+      </div>
+    </div>
+    <div class="pick-btn">← Me quedo con esta</div>
+  </div>
+
+  <!-- R: La Bandera Ardiente -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-letter">R</span>
+      <span class="card-name">La Bandera Ardiente</span>
+      <span class="card-tag tag-gold">Patria</span>
+    </div>
+    <div class="card-insight">
+      🇨🇴 Los colores de la bandera colombiana como gradiente en el texto. <strong>Amarillo → Azul → Rojo</strong>. Sin gradientes vacíos: las franjas SON Colombia. Fondo oscuro profundo.
+    </div>
+    <p class="card-desc">Wordmark COLBISNES con los tres colores de Colombia divididos en el texto. Fondo negro profundo. Glow sutil. Línea tricolor bajo el nombre. Identidad que no necesita explicación.</p>
+    <div class="previews">
+      <div><div class="preview jet" style="min-height:100px; padding:20px;"><img src="logo-opt-r.svg" alt="R oscuro"></div><div class="preview-label">Fondo profundo</div></div>
+    </div>
+    <div class="pick-btn">← Me quedo con esta</div>
+  </div>
+
+  <!-- S: Bicolor Extremo -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-letter">S</span>
+      <span class="card-name">Bicolor Extremo</span>
+      <span class="card-tag tag-gold">Máximo impacto</span>
+      <span class="winner-badge">⚡ Candidato</span>
+    </div>
+    <div class="card-insight">
+      🟡 <strong>La dualidad hecha logo</strong>: oscuro + amarillo. Comprador + vendedor. COL sobre oscuro, BISNES sobre amarillo. Inspirado en el domino-split de las marcas más memorables del mundo.
+    </div>
+    <p class="card-desc">Dos bloques que se dividen el nombre. Fondo negro con COL en amarillo. Fondo amarillo con BISNES en negro. Sin degradados. Sin iconos. Solo contraste puro. El más memorable.</p>
+    <div class="previews">
+      <div><div class="preview white" style="padding:16px 12px;"><img src="logo-opt-s.svg" alt="S"></div><div class="preview-label dark-label">Vista directa</div></div>
+      <div style="margin-top:8px;"><div class="preview dark" style="padding:16px 12px;"><img src="logo-opt-s.svg" alt="S oscuro"></div><div class="preview-label">Fondo oscuro</div></div>
+    </div>
+    <div class="pick-btn">← Me quedo con esta</div>
+  </div>
+
+  <!-- T: El Slash -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-letter">T</span>
+      <span class="card-name">El Slash</span>
+      <span class="card-tag tag-blue">Editorial Global</span>
+    </div>
+    <div class="card-insight">
+      ✦ Energía de portada de revista. La barra diagonal amarilla es <strong>el negocio que conecta</strong> COL con BISNES. Tipografía máxima. Sin ícono. Acción y velocidad.
+    </div>
+    <p class="card-desc">COL en negro + barra diagonal dorada + BISNES en azul bandera. Sin elementos decorativos. Un solo gesto visual que dice todo. Tipo Vogue, Supreme, Virgil Abloh.</p>
+    <div class="previews">
+      <div><div class="preview white"><img src="logo-opt-t.svg" alt="T blanco"></div><div class="preview-label dark-label">Fondo blanco</div></div>
+      <div style="margin-top:8px;"><div class="preview light"><img src="logo-opt-t.svg" alt="T claro"></div><div class="preview-label dark-label">Fondo azul claro</div></div>
+    </div>
+    <div class="pick-btn">← Me quedo con esta</div>
+  </div>
+
+</div>
+
+</body>
+</html>
