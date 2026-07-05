@@ -174,6 +174,7 @@ function PageInner() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [bluAnalizando, setBluAnalizando] = useState(false);
   const [bluSugerencia, setBluSugerencia] = useState<{ tituloSugerido: string; tipoArticulo: string; marca: string | null; modelo: string | null; color: string | null } | null>(null);
+  const [bluError, setBluError] = useState<string | null>(null);
   const bluAnalizadoRef = useRef<string | null>(null);
 
   // Analiza automaticamente la primera foto del producto para sugerir un titulo (asistente Chucho Bot)
@@ -183,12 +184,14 @@ function PageInner() {
       bluAnalizadoRef.current = null;
       setBluSugerencia(null);
       setBluAnalizando(false);
+      setBluError(null);
       return;
     }
     const firma = `${file.name}_${file.size}_${file.lastModified}`;
     if (bluAnalizadoRef.current === firma) return;
     bluAnalizadoRef.current = firma;
     setBluSugerencia(null);
+    setBluError(null);
     setBluAnalizando(true);
     const reader = new FileReader();
     reader.onload = async () => {
@@ -203,14 +206,19 @@ function PageInner() {
         });
         const data = await res.json().catch(() => ({}));
         if (bluAnalizadoRef.current !== firma) return; // el usuario ya cambio de foto
-        if (res.ok && data.sugerencia) setBluSugerencia(data.sugerencia);
+        if (res.ok && data.sugerencia) {
+          setBluSugerencia(data.sugerencia);
+        } else {
+          setBluError(data?.error || "No pudimos analizar la foto. Puedes seguir publicando escribiendo el título manualmente.");
+        }
       } catch {
         // La sugerencia de Chucho Bot es opcional: si falla, no bloquea publicar
+        if (bluAnalizadoRef.current === firma) setBluError("No pudimos analizar la foto (sin conexión). Puedes seguir publicando escribiendo el título manualmente.");
       } finally {
         if (bluAnalizadoRef.current === firma) setBluAnalizando(false);
       }
     };
-    reader.onerror = () => { if (bluAnalizadoRef.current === firma) setBluAnalizando(false); };
+    reader.onerror = () => { if (bluAnalizadoRef.current === firma) { setBluAnalizando(false); setBluError("No pudimos leer la imagen."); } };
     reader.readAsDataURL(file);
   }, [imageFiles]);
   const [precioDisplay, setPrecioDisplay] = useState("");
@@ -490,6 +498,8 @@ function PageInner() {
               <div style={{ display: "grid", gap: 12 }}>
                 <Input
                   placeholder="Título del producto *"
+                  spellCheck
+                  lang="es"
                   {...register("title")}
                   onKeyDown={e => {
                     // Permite: letras, tildes, ñ, espacios, guiones, paréntesis, puntos, comas y teclas de control
@@ -528,6 +538,8 @@ function PageInner() {
                 <TextArea
                   placeholder="Descripción detallada *"
                   rows={3}
+                  spellCheck
+                  lang="es"
                   {...register("description")}
                 />
                 {errors.description && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.description.message}</p>}
@@ -538,6 +550,12 @@ function PageInner() {
                     <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
                       <img src="/chucho-avatar.png" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
                       Chucho Bot está mirando la foto…
+                    </p>
+                  )}
+                  {bluError && !bluAnalizando && (
+                    <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+                      <img src="/chucho-avatar.png" alt="" style={{ width: 16, height: 16, borderRadius: "50%", opacity: 0.6 }} />
+                      {bluError}
                     </p>
                   )}
                   {bluSugerencia && (

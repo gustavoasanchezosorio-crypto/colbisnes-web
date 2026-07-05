@@ -304,6 +304,33 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         @media(max-width:680px){.prod-grid{grid-template-columns:1fr}}
       `}</style>
 
+      <div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.75rem"}}>
+        <button
+          onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) router.back(); else router.push("/"); }}
+          aria-label="Volver"
+          style={{
+            display:"flex",alignItems:"center",justifyContent:"center",
+            width:"38px",height:"38px",borderRadius:"50%",border:`1px solid ${THEME.border}`,
+            background:"#ffffff",color:THEME.text,cursor:"pointer",fontSize:"1.15rem",
+            boxShadow:THEME.cardShadow,flexShrink:0
+          }}
+        >
+          ←
+        </button>
+        <button
+          onClick={() => router.push("/")}
+          aria-label="Cerrar"
+          style={{
+            display:"flex",alignItems:"center",justifyContent:"center",
+            width:"38px",height:"38px",borderRadius:"50%",border:`1px solid ${THEME.border}`,
+            background:"#ffffff",color:THEME.text,cursor:"pointer",fontSize:"1.05rem",fontWeight:"bold",
+            boxShadow:THEME.cardShadow,flexShrink:0
+          }}
+        >
+          ✕
+        </button>
+      </div>
+
       <div className="prod-grid">
 
         {/* ══ GALERÍA (sticky) ════════════════════════════════════════════════ */}
