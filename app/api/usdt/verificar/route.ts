@@ -3,8 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-const TOLERANCIA = 0.5;
-const RANGO_BLOQUES = 45000;
+// Tolerancia estrecha: solo para redondeo de decimales, no para "casi coincide".
+const TOLERANCIA = 0.005;
+// BSC produce un bloque cada ~3s. Usamos esto como respaldo si no conocemos el bloque de creación de la orden.
+const SEGUNDOS_POR_BLOQUE = 3;
+// Margen de seguridad antes de la creación de la orden, por si hay desfase de reloj entre servidor y nodo BSC.
+const MARGEN_SEGUNDOS = 300;
 
 function walletATopic(wallet: string): string {
   const limpio = wallet.toLowerCase().replace("0x", "");
@@ -40,7 +44,13 @@ export async function GET(req: NextRequest) {
     });
     const blockData = await blockRes.json();
     const bloqueActual = parseInt(blockData.result, 16);
-    const bloqueDesde = Math.max(0, bloqueActual - RANGO_BLOQUES);
+
+    // Limitamos la búsqueda a bloques posteriores a la creación de la orden (con margen de seguridad),
+    // en vez de una ventana fija de ~36h, para que transferencias antiguas o de otros compradores
+    // no puedan "coincidir por casualidad" con una orden nueva.
+    const segundosDesdeCreacion = Math.max(0, (Date.now() - new Date(orden.createdAt).getTime()) / 1000);
+    const bloquesDesdeCreacion = Math.ceil((segundosDesdeCreacion + MARGEN_SEGUNDOS) / SEGUNDOS_POR_BLOQUE);
+    const bloqueDesde = Math.max(0, bloqueActual - bloquesDesdeCreacion);
 
     const logsBody = {
       jsonrpc: "2.0",
@@ -78,13 +88,27 @@ export async function GET(req: NextRequest) {
       const valor = Number(valorRaw) / 1e18;
       console.log("  log -> tx:", log.transactionHash, "valor:", valor);
       if (Math.abs(valor - montoEsperado) <= TOLERANCIA) {
+        // Un mismo hash de transacción no puede usarse para pagar más de una orden.
+        const yaUsado = await prisma.order.findFirst({ where: { txHashPago: log.transactionHash } });
+        if (yaUsado) {
+          console.warn("USDT verificar - tx ya usada por otra orden, se ignora:", log.transactionHash);
+          continue;
+        }
         txEncontrada = log;
         break;
       }
     }
 
     if (txEncontrada) {
-      await prisma.order.update({ where: { id: orderId }, data: { estado: "PAGADO" } });
+      // Verificación final atómica: solo confirma si la orden sigue esperando pago Y ninguna otra
+      // orden reclamó este mismo hash mientras tanto (evita condiciones de carrera).
+      const actualizado = await prisma.order.updateMany({
+        where: { id: orderId, estado: "ESPERANDO_PAGO_CRYPTO", txHashPago: null },
+        data: { estado: "PAGADO", txHashPago: txEncontrada.transactionHash },
+      });
+      if (actualizado.count === 0) {
+        return NextResponse.json({ estado: orden.estado, encontrado: false, wallet });
+      }
       await prisma.product.update({ where: { id: orden.productId }, data: { status: "IN_ESCROW" } });
       return NextResponse.json({ estado: "PAGADO", encontrado: true, txHash: txEncontrada.transactionHash });
     }
