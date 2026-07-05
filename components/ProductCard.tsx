@@ -179,13 +179,13 @@ export const ProductCard = React.memo(function ProductCard({
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 34,
             boxShadow: "0 8px 24px rgba(0,63,122,0.18)",
-          }}>🔒</div>
+          }}>☕</div>
           <p style={{ margin: 0, lineHeight: 1.15 }}>
-            <span style={{ display: "block", fontWeight: 800, fontSize: "1.2rem", color: THEME.text }}>Este producto</span>
-            <span style={{ display: "block", fontWeight: 800, fontSize: "1.45rem", letterSpacing: "-0.8px", color: "#1F6BFF", marginTop: 2 }}>esta en custodia</span>
+            <span style={{ display: "block", fontWeight: 800, fontSize: "1.2rem", color: THEME.text }}>Aqui se esta cerrando un</span>
+            <span style={{ display: "block", fontWeight: 800, fontSize: "1.65rem", letterSpacing: "-1.2px", color: "#1F6BFF", marginTop: 2 }}>bisnes</span>
           </p>
-          <p style={{ fontSize: "1.0rem", color: THEME.textSoft, margin: 0, lineHeight: 1.5, maxWidth: 280, fontWeight: 600 }}>
-            Ya se esta cerrando este bisnes. El pago esta protegido por Colbisnes mientras se confirma la entrega.
+          <p style={{ fontSize: "1.05rem", color: THEME.textSoft, margin: 0, lineHeight: 1.5, maxWidth: 280, fontWeight: 600 }}>
+            Tomate un tintico, el pago esta protegido por Colbisnes mientras se confirma la entrega.
           </p>
         </div>
       )}
