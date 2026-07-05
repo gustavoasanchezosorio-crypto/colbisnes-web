@@ -199,39 +199,48 @@ function PageInner() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [bluAnalizando, setBluAnalizando] = useState(false);
-  const [bluSugerencia, setBluSugerencia] = useState<{ tituloSugerido: string; tipoArticulo: string; marca: string | null; modelo: string | null; color: string | null } | null>(null);
+  const [bluSugerencia, setBluSugerencia] = useState<{ tituloSugerido: string; descripcionSugerida?: string; categoriaSugerida?: string; condicionSugerida?: "NUEVO" | "USADO"; tipoArticulo: string; marca: string | null; modelo: string | null; color: string | null } | null>(null);
   const [bluError, setBluError] = useState<string | null>(null);
   const bluAnalizadoRef = useRef<string | null>(null);
 
-  // Analiza automaticamente la primera foto del producto para sugerir un titulo (asistente Chucho Bot)
+  const leerComoBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1] || "");
+    reader.onerror = () => reject(new Error("No pudimos leer la imagen"));
+    reader.readAsDataURL(file);
+  });
+
+  // Analiza automaticamente todas las fotos del producto para sugerir titulo, descripcion,
+  // categoria y condicion (asistente Chucho Bot), al estilo de apps como Wallapop.
   useEffect(() => {
-    const file = imageFiles[0];
-    if (!file) {
+    if (!imageFiles.length) {
       bluAnalizadoRef.current = null;
       setBluSugerencia(null);
       setBluAnalizando(false);
       setBluError(null);
       return;
     }
-    const firma = `${file.name}_${file.size}_${file.lastModified}`;
+    const firma = imageFiles.map(f => `${f.name}_${f.size}_${f.lastModified}`).join("|");
     if (bluAnalizadoRef.current === firma) return;
     bluAnalizadoRef.current = firma;
     setBluSugerencia(null);
     setBluError(null);
     setBluAnalizando(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
+    (async () => {
       try {
-        const dataUrl = reader.result as string;
-        const base64 = dataUrl.split(",")[1] || "";
+        const imagenes = await Promise.all(imageFiles.map(async file => ({
+          imageBase64: await leerComoBase64(file),
+          mediaType: file.type,
+        })));
+        if (bluAnalizadoRef.current !== firma) return; // el usuario ya cambio las fotos
         const res = await fetch("/api/blu/analizar-foto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ imageBase64: base64, mediaType: file.type }),
+          body: JSON.stringify({ imagenes }),
         });
         const data = await res.json().catch(() => ({}));
-        if (bluAnalizadoRef.current !== firma) return; // el usuario ya cambio de foto
+        if (bluAnalizadoRef.current !== firma) return;
         if (res.ok && data.sugerencia) {
           setBluSugerencia(data.sugerencia);
         } else {
@@ -243,9 +252,7 @@ function PageInner() {
       } finally {
         if (bluAnalizadoRef.current === firma) setBluAnalizando(false);
       }
-    };
-    reader.onerror = () => { if (bluAnalizadoRef.current === firma) { setBluAnalizando(false); setBluError("No pudimos leer la imagen."); } };
-    reader.readAsDataURL(file);
+    })();
   }, [imageFiles]);
   const [precioDisplay, setPrecioDisplay] = useState("");
   const { unreadTotal, nudgeTick } = useNotifications();
@@ -589,10 +596,19 @@ function PageInner() {
                       <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
                       <span style={{ fontSize: 12.5, color: THEME.text, flex: 1, minWidth: 120 }}>
                         Chucho Bot cree que es: <strong>{bluSugerencia.tituloSugerido}</strong>
+                        {bluSugerencia.descripcionSugerida && (
+                          <><br /><span style={{ color: THEME.muted }}>{bluSugerencia.descripcionSugerida}</span></>
+                        )}
                       </span>
                       <button
                         type="button"
-                        onClick={() => { setValue("title", bluSugerencia.tituloSugerido, { shouldValidate: true, shouldDirty: true }); setBluSugerencia(null); }}
+                        onClick={() => {
+                          setValue("title", bluSugerencia.tituloSugerido, { shouldValidate: true, shouldDirty: true });
+                          if (bluSugerencia.descripcionSugerida) setValue("description", bluSugerencia.descripcionSugerida, { shouldValidate: true, shouldDirty: true });
+                          if (bluSugerencia.categoriaSugerida) setValue("category", bluSugerencia.categoriaSugerida, { shouldValidate: true, shouldDirty: true });
+                          if (bluSugerencia.condicionSugerida) setValue("condition", bluSugerencia.condicionSugerida, { shouldValidate: true, shouldDirty: true });
+                          setBluSugerencia(null);
+                        }}
                         style={{ border: "none", borderRadius: 10, padding: "5px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary})`, color: "#fff" }}
                       >
                         Usar sugerencia
