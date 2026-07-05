@@ -592,14 +592,18 @@ function PageInner() {
                     </p>
                   )}
                   {bluSugerencia && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, padding: "8px 12px", borderRadius: 12, background: THEME.surfaceAlt, border: `1.5px solid ${THEME.border}` }}>
-                      <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
-                      <span style={{ fontSize: 12.5, color: THEME.text, flex: 1, minWidth: 120 }}>
-                        Chucho Bot cree que es: <strong>{bluSugerencia.tituloSugerido}</strong>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginTop: 8, padding: "10px 14px", borderRadius: 12, background: THEME.surfaceAlt, border: `1.5px solid ${THEME.border}`, fontFamily: "inherit" }}>
+                      <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1, minWidth: 140, fontFamily: "inherit" }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark, lineHeight: 1.4, letterSpacing: "normal" }}>
+                          {bluSugerencia.tituloSugerido}
+                        </p>
                         {bluSugerencia.descripcionSugerida && (
-                          <><br /><span style={{ color: THEME.muted }}>{bluSugerencia.descripcionSugerida}</span></>
+                          <p style={{ margin: "3px 0 0", fontSize: 12.5, fontWeight: 400, color: THEME.textSoft, lineHeight: 1.45, letterSpacing: "normal" }}>
+                            {bluSugerencia.descripcionSugerida}
+                          </p>
                         )}
-                      </span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -609,7 +613,7 @@ function PageInner() {
                           if (bluSugerencia.condicionSugerida) setValue("condition", bluSugerencia.condicionSugerida, { shouldValidate: true, shouldDirty: true });
                           setBluSugerencia(null);
                         }}
-                        style={{ border: "none", borderRadius: 10, padding: "5px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary})`, color: "#fff" }}
+                        style={{ border: "none", borderRadius: 10, padding: "6px 12px", fontSize: 11.5, fontFamily: "inherit", fontWeight: 700, cursor: "pointer", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary})`, color: "#fff", flexShrink: 0 }}
                       >
                         Usar sugerencia
                       </button>
@@ -617,7 +621,7 @@ function PageInner() {
                         type="button"
                         onClick={() => setBluSugerencia(null)}
                         aria-label="Descartar sugerencia de Chucho Bot"
-                        style={{ border: "none", background: "transparent", color: THEME.muted, fontSize: 15, cursor: "pointer", fontWeight: 900, padding: "0 4px" }}
+                        style={{ border: "none", background: "transparent", color: THEME.muted, fontSize: 15, fontFamily: "inherit", cursor: "pointer", fontWeight: 900, padding: "0 4px", flexShrink: 0 }}
                       >
                         ×
                       </button>
