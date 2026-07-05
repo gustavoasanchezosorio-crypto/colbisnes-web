@@ -3,42 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
+import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 
 export const dynamic = "force-dynamic";
 
 const VALID_STATUSES = ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW", "SOLD"] as const;
 const VALID_CONDITIONS = ["NUEVO", "USADO", "REACONDICIONADO"] as const;
 
-async function releaseExpiredProducts() {
-  const now = new Date();
-  const expired = await prisma.product.findMany({
-    where: {
-      status: "PAYMENT_PENDING",
-      paymentExpiresAt: { not: null, lt: now },
-    },
-    select: { id: true, acceptedOfferId: true },
-  });
-  if (expired.length === 0) return;
-  await prisma.product.updateMany({
-    where: { id: { in: expired.map((p) => p.id) } },
-    data: { status: "AVAILABLE", acceptedOfferId: null, paymentExpiresAt: null },
-  });
-  const expiredOfferIds = expired.map((p) => p.acceptedOfferId).filter(Boolean) as string[];
-  if (expiredOfferIds.length > 0) {
-    try {
-      await prisma.offer.updateMany({
-        where: { id: { in: expiredOfferIds } },
-        data: { status: "REJECTED" },
-      });
-    } catch (e) {
-      console.warn("No se pudo actualizar ofertas expiradas", e);
-    }
-  }
-}
-
 export async function GET(request: Request) {
   try {
-    await releaseExpiredProducts();
+    await liberarProductosExpirados();
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10));

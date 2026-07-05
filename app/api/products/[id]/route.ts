@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,6 +11,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    await liberarProductosExpirados();
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
