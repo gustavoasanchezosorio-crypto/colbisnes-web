@@ -98,6 +98,7 @@ export const ProductCard = React.memo(function ProductCard({
   }, [product.id]);
 
   const enTramiteParaOtros = product.status === 'PAYMENT_PENDING' && timer && timer !== "00:00" && !isOwner && !esCompradorAutorizado;
+  const enCustodiaParaOtros = product.status === 'IN_ESCROW' && !isOwner && !esCompradorAutorizado;
 
   return (
     <div
@@ -148,6 +149,43 @@ export const ProductCard = React.memo(function ProductCard({
             Tomate un tintico en{" "}
             <span style={{ fontWeight: 900, color: THEME.gold, fontSize: "1.15rem" }}>{timer}</span>
             {" "}si no se realiza el pago el producto estara disponible de nuevo
+          </p>
+        </div>
+      )}
+      {enCustodiaParaOtros && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 50,
+          borderRadius: 20,
+          background: "rgba(240,246,255,0.88)",
+          backdropFilter: "blur(14px) saturate(1.4)",
+          WebkitBackdropFilter: "blur(14px) saturate(1.4)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "28px 24px",
+          gap: 10,
+          border: "1px solid rgba(31,107,255,0.35)",
+          animation: "liquidFadeIn 0.4s ease",
+        }}>
+          <div style={{
+            width: 68, height: 68,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, rgba(31,107,255,0.18), rgba(31,107,255,0.06))",
+            border: "1px solid rgba(31,107,255,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 34,
+            boxShadow: "0 8px 24px rgba(0,63,122,0.18)",
+          }}>🔒</div>
+          <p style={{ margin: 0, lineHeight: 1.15 }}>
+            <span style={{ display: "block", fontWeight: 800, fontSize: "1.2rem", color: THEME.text }}>Este producto</span>
+            <span style={{ display: "block", fontWeight: 800, fontSize: "1.45rem", letterSpacing: "-0.8px", color: "#1F6BFF", marginTop: 2 }}>esta en custodia</span>
+          </p>
+          <p style={{ fontSize: "1.0rem", color: THEME.textSoft, margin: 0, lineHeight: 1.5, maxWidth: 280, fontWeight: 600 }}>
+            Ya se esta cerrando este bisnes. El pago esta protegido por Colbisnes mientras se confirma la entrega.
           </p>
         </div>
       )}
