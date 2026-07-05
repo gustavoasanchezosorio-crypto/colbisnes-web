@@ -28,6 +28,7 @@
     "express-rate-limit": "^8.3.1",
     "face-api.js": "^0.22.2",
     "formidable": "^3.5.4",
+    "heic2any": "^0.0.4",
     "next": "^16.1.6",
     "next-auth": "^4.24.13",
     "otplib": "^13.4.1",

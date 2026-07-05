@@ -63,6 +63,21 @@ interface ImagePickerProps {
   disabled?: boolean;
 }
 
+async function normalizarHeic(file: File): Promise<File> {
+  const esHeic = /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+  if (!esHeic) return file;
+  try {
+    const heic2any = (await import("heic2any")).default;
+    const resultado = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+    const blob = Array.isArray(resultado) ? resultado[0] : resultado;
+    return new File([blob], file.name.replace(/\.hei[cf]$/i, ".jpg"), { type: "image/jpeg" });
+  } catch {
+    // Si la conversión falla (formato corrupto, etc.) seguimos con el archivo original;
+    // el backend igual lo rechazará con un mensaje claro en vez de fallar en silencio.
+    return file;
+  }
+}
+
 function comprimirImagen(file: File, maxAncho = 1600, calidad = 0.78): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -105,10 +120,13 @@ function ImagePicker({ files, previews, onChange, disabled }: ImagePickerProps) 
     for (const file of selected) {
       if (slot > 4) break;
       let finalFile = file;
-      // Siempre normalizamos a JPEG (no solo cuando pesa mucho): esto evita que fotos en
-      // formatos como HEIC/HEIC (iPhone) lleguen con un mediaType que Chucho Bot no reconoce,
-      // y de paso comprime las que pesan más de 350KB.
-      try { finalFile = await comprimirImagen(file, file.size > 350 * 1024 ? 1600 : 2400); } catch { finalFile = file; }
+      // HEIC/HEIF (fotos de iPhone) no lo decodifica <canvas> en la mayoría de navegadores,
+      // así que primero se convierte con una librería dedicada (heic2any) a JPEG real.
+      try { finalFile = await normalizarHeic(finalFile); } catch { /* sigue con el original */ }
+      // Luego normalizamos siempre a JPEG (no solo cuando pesa mucho): esto evita que otros
+      // formatos lleguen con un mediaType que Chucho Bot no reconoce, y de paso comprime
+      // las fotos que pesan más de 350KB.
+      try { finalFile = await comprimirImagen(finalFile, finalFile.size > 350 * 1024 ? 1600 : 2400); } catch { /* sigue con el archivo normalizado */ }
       nf[slot] = finalFile; np[slot] = URL.createObjectURL(finalFile);
       slot++;
     }
