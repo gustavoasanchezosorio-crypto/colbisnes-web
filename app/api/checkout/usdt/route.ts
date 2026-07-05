@@ -106,9 +106,14 @@ export async function POST(req: NextRequest) {
     const extrasUSD = parseFloat((extras.extraTotal / tasaCOP).toFixed(2));
     const totalUSDFinal = parseFloat((pricing.totalUSD + extrasUSD).toFixed(2));
 
-    // Crear orden Y pasar producto a IN_ESCROW en una transacción atómica
-    // NOTA: USDT se considera pagado cuando el comprador declara el envío.
-    // El estado inicial es ESPERANDO_PAGO_CRYPTO hasta que se confirme manualmente.
+    // Crear orden Y pasar producto a PAYMENT_PENDING (NO a IN_ESCROW) en una transacción atómica.
+    // El producto solo debe pasar a IN_ESCROW cuando /api/usdt/verificar confirme el pago real
+    // en blockchain. Si se marcara IN_ESCROW aquí, el producto se vería "vendido/en custodia"
+    // aunque el comprador nunca haya transferido nada — y quedaría bloqueado para siempre si
+    // abandona el pago (no existía forma de liberarlo de vuelta a AVAILABLE).
+    // Damos 30 minutos (igual al que se muestra en la pantalla de pago) y el cron de
+    // /api/cron/liberar se encarga de liberar el producto si el plazo vence sin pago.
+    const expiraEn = new Date(Date.now() + 30 * 60 * 1000);
     const [orden] = await prisma.$transaction([
       prisma.order.create({
         data: {
@@ -126,10 +131,9 @@ export async function POST(req: NextRequest) {
           margenEnvio:    extras.margenEnvio,
         },
       }),
-      // Pasar producto a IN_ESCROW para que confirm-delivery funcione
       prisma.product.update({
         where: { id: productoId },
-        data: { status: "IN_ESCROW", paidAt: new Date(), paymentExpiresAt: null },
+        data: { status: "PAYMENT_PENDING", paymentExpiresAt: expiraEn },
       }),
     ]);
 

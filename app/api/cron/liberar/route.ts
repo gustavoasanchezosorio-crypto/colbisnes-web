@@ -49,6 +49,21 @@ async function handleRelease() {
     }
   }
 
+  // Cancela cualquier orden de USDT que haya quedado esperando pago para estos productos
+  // (si no, seguiría apareciendo como "en curso" en /api/orders/por-producto aunque el
+  // producto ya volvió a estar disponible para otros compradores).
+  try {
+    await prisma.order.updateMany({
+      where: {
+        productId: { in: expired.map((p) => p.id) },
+        estado: "ESPERANDO_PAGO_CRYPTO",
+      },
+      data: { estado: "CANCELADO" },
+    });
+  } catch (e) {
+    console.warn("No se pudieron cancelar órdenes crypto expiradas (opcional):", e);
+  }
+
   return { released: expired.length };
 }
 

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
+import { sendWhatsapp } from "@/lib/whatsapp";
+import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 
 const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -109,7 +112,40 @@ export async function GET(req: NextRequest) {
       if (actualizado.count === 0) {
         return NextResponse.json({ estado: orden.estado, encontrado: false, wallet });
       }
-      await prisma.product.update({ where: { id: orden.productId }, data: { status: "IN_ESCROW" } });
+      const producto = await prisma.product.update({
+        where: { id: orden.productId },
+        data: { status: "IN_ESCROW", paidAt: new Date(), paymentExpiresAt: null },
+        include: { seller: true },
+      });
+
+      // Notificar a comprador y vendedor que el pago quedó confirmado (antes no se avisaba a nadie)
+      try {
+        if (producto.seller) {
+          const htmlVendedor = colbisnesEmailTemplate({
+            preheader: "Pago recibido",
+            titulo: "¡Recibiste un pago! 💰",
+            cuerpo: `Hola ${producto.seller.name || "Vendedor"}, el pago en USDT por <strong>${producto.title}</strong> fue confirmado en blockchain.<br/><br/>El dinero está protegido por Colbisnes mientras se completa el envío y la entrega.`,
+            ctaTexto: "Ver mis ventas",
+            ctaUrl: "https://colbisnes-web.vercel.app",
+          });
+          await sendEmail({ to: producto.seller.email, subject: "Pago recibido - Colbisnes", html: htmlVendedor });
+          await sendWhatsapp({
+            to: (producto.seller as any).phoneWhatsapp,
+            body: `💰 *Colbisnes* - Pago confirmado\n\nHola ${producto.seller.name || "Vendedor"}, se confirmó el pago en USDT por *${producto.title}*.\n\nAlista el envío desde la app.`,
+          });
+        }
+        const htmlComprador = colbisnesEmailTemplate({
+          preheader: "Tu pago fue confirmado",
+          titulo: "¡Tu pago fue confirmado! ✅",
+          cuerpo: `Hola, confirmamos tu pago en USDT por <strong>${producto.title}</strong>.<br/><br/>Tu dinero queda protegido por Colbisnes hasta que confirmes que recibiste el producto.`,
+          ctaTexto: "Ver mi compra",
+          ctaUrl: "https://colbisnes-web.vercel.app",
+        });
+        await sendEmail({ to: orden.buyerEmail, subject: "Tu pago fue confirmado - Colbisnes", html: htmlComprador });
+      } catch (notifError) {
+        console.error("Error enviando notificación de pago USDT confirmado:", notifError);
+      }
+
       return NextResponse.json({ estado: "PAGADO", encontrado: true, txHash: txEncontrada.transactionHash });
     }
 
