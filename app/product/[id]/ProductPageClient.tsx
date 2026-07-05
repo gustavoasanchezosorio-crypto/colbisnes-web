@@ -291,7 +291,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   const disponible   = product.status === "AVAILABLE";
 
   return (
-    <div style={{maxWidth:"960px",margin:"0 auto",padding:"1rem 1rem 4.5rem",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif",color:THEME.text}}>
+    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif",color:THEME.text}}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -304,33 +304,41 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         @media(max-width:680px){.prod-grid{grid-template-columns:1fr}}
       `}</style>
 
-      <div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.75rem"}}>
+      <header style={{
+        position:"sticky",top:0,zIndex:100,
+        background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
+        boxShadow:"0 2px 20px rgba(0,89,159,0.3)",
+        height:"60px",display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"0 1rem",
+      }}>
         <button
           onClick={() => { if (typeof window !== "undefined" && window.history.length > 1) router.back(); else router.push("/"); }}
           aria-label="Volver"
           style={{
             display:"flex",alignItems:"center",justifyContent:"center",
-            width:"38px",height:"38px",borderRadius:"50%",border:`1px solid ${THEME.border}`,
-            background:"#ffffff",color:THEME.text,cursor:"pointer",fontSize:"1.15rem",
-            boxShadow:THEME.cardShadow,flexShrink:0
+            width:"38px",height:"38px",borderRadius:"50%",border:"1px solid rgba(255,255,255,0.5)",
+            background:"rgba(255,255,255,0.15)",color:"#ffffff",cursor:"pointer",fontSize:"1.15rem",
+            flexShrink:0
           }}
         >
           ←
         </button>
+        <span style={{color:"#ffffff",fontWeight:800,fontSize:"1.05rem",letterSpacing:"0.3px"}}>Colbisnes</span>
         <button
           onClick={() => router.push("/")}
           aria-label="Cerrar"
           style={{
             display:"flex",alignItems:"center",justifyContent:"center",
-            width:"38px",height:"38px",borderRadius:"50%",border:`1px solid ${THEME.border}`,
-            background:"#ffffff",color:THEME.text,cursor:"pointer",fontSize:"1.05rem",fontWeight:"bold",
-            boxShadow:THEME.cardShadow,flexShrink:0
+            width:"38px",height:"38px",borderRadius:"50%",border:"1px solid rgba(255,255,255,0.5)",
+            background:"rgba(255,255,255,0.15)",color:"#ffffff",cursor:"pointer",fontSize:"1.05rem",fontWeight:"bold",
+            flexShrink:0
           }}
         >
           ✕
         </button>
-      </div>
+      </header>
 
+      <div style={{maxWidth:"960px",margin:"0 auto",padding:"1rem 1rem 4.5rem"}}>
       <div className="prod-grid">
 
         {/* ══ GALERÍA (sticky) ════════════════════════════════════════════════ */}
@@ -1029,6 +1037,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
           onSuccess={() => { cargarOrden(); }}
         />
       )}
+      </div>
     </div>
   );
 }
