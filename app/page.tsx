@@ -543,31 +543,33 @@ function PageInner() {
                   }}
                 />
                 {errors.title && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.title.message}</p>}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  <Input
-                    placeholder="Precio COP *"
-                    type="text"
-                    inputMode="numeric"
-                    value={precioDisplay}
-                    onChange={e => {
-                      const raw = e.target.value.replace(/\./g, "").replace(/,/g, "");
-                      const num = parseInt(raw) || 0;
-                      setPrecioDisplay(num > 0 ? num.toLocaleString("es-CO") : "");
-                      // Actualiza react-hook-form con el valor numérico
-                      const syntheticEvent = { target: { value: num, name: "priceCOP" } };
-                      register("priceCOP").onChange(syntheticEvent as any);
-                    }}
-                    onKeyDown={e => {
-                      const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
-                      if (nav) return;
-                      if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
-                    }}
-                  />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <Input
+                      placeholder="Precio COP *"
+                      type="text"
+                      inputMode="numeric"
+                      value={precioDisplay}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\./g, "").replace(/,/g, "");
+                        const num = parseInt(raw) || 0;
+                        setPrecioDisplay(num > 0 ? num.toLocaleString("es-CO") : "");
+                        // Actualiza react-hook-form con el valor numérico
+                        const syntheticEvent = { target: { value: num, name: "priceCOP" } };
+                        register("priceCOP").onChange(syntheticEvent as any);
+                      }}
+                      onKeyDown={e => {
+                        const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
+                        if (nav) return;
+                        if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                      }}
+                    />
+                    {errors.priceCOP && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.priceCOP.message}</p>}
+                  </div>
                   <Select {...register("city")}>{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</Select>
                   <Select {...register("category")}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</Select>
                   <Select {...register("condition")}><option value="NUEVO">Nuevo</option><option value="USADO">Usado</option></Select>
                 </div>
-                {errors.priceCOP && <p style={{ color: "red", fontSize: 12, margin: "-8px 0 0" }}>{errors.priceCOP.message}</p>}
                 <TextArea
                   placeholder="Descripción detallada *"
                   rows={3}
