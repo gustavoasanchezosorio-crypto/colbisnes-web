@@ -85,7 +85,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   const [noLeidosTotal, setNoLeidos]    = useState(0);
   const [ultimoMensajeId, setUltimoMsgId] = useState<string | null>(null);
   const [hayMensajeNuevo, setHayNuevo]  = useState(false);
-  const [ordenActiva, setOrdenActiva]   = useState<{id:string;estado:string;buyerEmail:string;numeroGuia?:string;comisionReservaCOP?:number;comisionReservaPagada?:boolean;comisionReservaComprobanteUrl?:string;nequiNumero?:string|null;fechaLimiteEnvio?:string;envioPenalizado?:boolean} | null>(null);
+  const [ordenActiva, setOrdenActiva]   = useState<{id:string;estado:string;buyerEmail:string;metodoPago?:string;numeroGuia?:string;comisionReservaCOP?:number;comisionReservaPagada?:boolean;comisionReservaComprobanteUrl?:string;nequiNumero?:string|null;fechaLimiteEnvio?:string;envioPenalizado?:boolean} | null>(null);
   const [mostrarPagarComision, setMostrarPagarComision] = useState(false);
   const searchParams = useSearchParams();
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(
@@ -660,14 +660,18 @@ export default function ProductPageClient({ productId }: { productId: string }) 
           {product.status==="IN_ESCROW" && (!ordenActiva?.estado || ordenActiva.estado!=="ESPERANDO_COMISION") && esComprador && (
             <div style={{background:"rgba(34,197,94,0.10)",border:"1.5px solid rgba(34,197,94,0.35)",borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:"#15803d",margin:"0 0 0.4rem"}}>✅ ¿Recibiste tu producto?</p>
-              <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:"0 0 0.7rem"}}>Confirma la entrega para liberar el pago al vendedor.</p>
+              <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:"0 0 0.7rem"}}>
+                {ordenActiva?.metodoPago === "CONTRA_ENTREGA"
+                  ? "Recuerda: pagas el producto en efectivo directo al mensajero al recibirlo. Confirma aquí una vez lo tengas en tus manos."
+                  : "Confirma la entrega para liberar el pago al vendedor."}
+              </p>
               <button onClick={async()=>{
                 const r=await fetch("/api/payments/confirm-delivery",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId})});
                 if(r.ok){cargarProducto();cargarOrden();}
               }}
                 style={{background:VERDE,color:"white",border:"none",borderRadius:"10px",padding:"0.7rem",cursor:"pointer",fontWeight:"800",width:"100%",fontSize:"0.93rem",
                   boxShadow:`0 4px 14px ${VERDE}44`}}>
-                Confirmar entrega y liberar pago
+                {ordenActiva?.metodoPago === "CONTRA_ENTREGA" ? "Confirmar entrega" : "Confirmar entrega y liberar pago"}
               </button>
             </div>
           )}
