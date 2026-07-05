@@ -67,13 +67,20 @@ async function normalizarHeic(file: File): Promise<File> {
   const esHeic = /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
   if (!esHeic) return file;
   try {
-    const heic2any = (await import("heic2any")).default;
-    const resultado = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
-    const blob = Array.isArray(resultado) ? resultado[0] : resultado;
-    return new File([blob], file.name.replace(/\.hei[cf]$/i, ".jpg"), { type: "image/jpeg" });
+    // Con timeout: algunos HEIC (ej. contenedores multi-imagen de Live Photos) hacen que
+    // heic2any se cuelgue en vez de fallar rápido. Si tarda demasiado, seguimos con el
+    // archivo original — el backend igual lo transcodifica con Cloudinary al subirlo.
+    const conversion = (async () => {
+      const heic2any = (await import("heic2any")).default;
+      const resultado = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+      const blob = Array.isArray(resultado) ? resultado[0] : resultado;
+      return new File([blob], file.name.replace(/\.hei[cf]$/i, ".jpg"), { type: "image/jpeg" });
+    })();
+    const timeout = new Promise<File>((resolve) => setTimeout(() => resolve(file), 8000));
+    return await Promise.race([conversion, timeout]);
   } catch {
     // Si la conversión falla (formato corrupto, etc.) seguimos con el archivo original;
-    // el backend igual lo rechazará con un mensaje claro en vez de fallar en silencio.
+    // el backend igual lo transcodifica al subirlo (Cloudinary maneja HEIC/HEIF).
     return file;
   }
 }

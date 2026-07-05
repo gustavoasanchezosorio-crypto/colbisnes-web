@@ -26,9 +26,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Máximo 10 imágenes" }, { status: 400 });
     }
 
+    const EXT_IMAGEN = /\.(jpe?g|png|webp|gif|hei[cf]|bmp|tiff?)$/i;
     const uploadedUrls = [];
     for (const file of files) {
-      if (!file.type.startsWith("image/")) {
+      // Algunos navegadores/SO no asignan un MIME type a las fotos HEIC/HEIF (file.type queda
+      // vacío), así que si el tipo no viene reconocido igual aceptamos por extensión conocida.
+      const pareceImagen = file.type.startsWith("image/") || (!file.type && EXT_IMAGEN.test(file.name));
+      if (!pareceImagen) {
         return NextResponse.json({ error: "Solo se permiten imagenes" }, { status: 400 });
       }
       if (file.size > 5 * 1024 * 1024) {
@@ -39,7 +43,10 @@ export async function POST(request: Request) {
       const buffer = Buffer.from(bytes);
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: "colbisnes", resource_type: "image" },
+          // format:"jpg" fuerza a Cloudinary a transcodificar el archivo (incluyendo HEIC/HEIF
+          // de iPhone) a un JPG real del lado del servidor, sin depender de que el navegador
+          // haya podido convertirlo antes de subirlo.
+          { folder: "colbisnes", resource_type: "image", format: "jpg" },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
