@@ -32,11 +32,12 @@ export async function GET(req: NextRequest) {
     const esComprador = orden.buyerEmail.toLowerCase() === session.user.email.toLowerCase();
 
     if (!esVendedor && !esComprador) {
-      // Terceros solo ven el estado — sin email, monto, guía de envío ni transportadora
+      // Terceros solo ven el estado y el plazo límite de envío — sin email, monto, guía ni transportadora
       return NextResponse.json({
         orden: {
           id: orden.id,
           estado: orden.estado,
+          fechaLimiteEnvio: orden.fechaLimiteEnvio,
         },
       });
     }

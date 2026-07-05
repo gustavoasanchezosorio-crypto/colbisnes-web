@@ -100,6 +100,23 @@ export const ProductCard = React.memo(function ProductCard({
   const enTramiteParaOtros = product.status === 'PAYMENT_PENDING' && timer && timer !== "00:00" && !isOwner && !esCompradorAutorizado;
   const enCustodiaParaOtros = product.status === 'IN_ESCROW' && !isOwner && !esCompradorAutorizado;
 
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    if (!enCustodiaParaOtros || !ordenActiva?.fechaLimiteEnvio) return;
+    const id = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [enCustodiaParaOtros, ordenActiva?.fechaLimiteEnvio]);
+
+  const custodiaTimer = (() => {
+    if (!ordenActiva?.fechaLimiteEnvio) return null;
+    const diff = new Date(ordenActiva.fechaLimiteEnvio).getTime() - ahora;
+    if (diff <= 0) return "00:00:00";
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  })();
+
   return (
     <div
       style={{
@@ -187,6 +204,12 @@ export const ProductCard = React.memo(function ProductCard({
           <p style={{ fontSize: "1.05rem", color: THEME.textSoft, margin: 0, lineHeight: 1.5, maxWidth: 280, fontWeight: 600 }}>
             Tomate un tintico, el pago esta protegido por Colbisnes mientras se confirma la entrega.
           </p>
+          {custodiaTimer && (
+            <p style={{ fontSize: "0.85rem", color: THEME.muted, margin: 0, lineHeight: 1.4, maxWidth: 280 }}>
+              Tiempo estimado de espera:{" "}
+              <span style={{ fontWeight: 900, color: THEME.gold, fontSize: "0.95rem", fontVariantNumeric: "tabular-nums" }}>{custodiaTimer}</span>
+            </p>
+          )}
         </div>
       )}
       <style>{`@keyframes liquidFadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(14px); } }`}</style>
