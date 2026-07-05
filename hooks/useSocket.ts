@@ -8,7 +8,7 @@ export const useSocket = (userId?: string) => {
   useEffect(() => {
     if (!userId) return;
 
-    const socketIo = io('http://localhost:3001');
+    const socketIo = io({ auth: { token: userId } });
     setSocket(socketIo);
 
     socketIo.on('connect', () => {

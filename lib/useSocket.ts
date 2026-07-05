@@ -5,7 +5,9 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io("http://localhost:3001");
+    // Product status updates are public (viewers don't need to be logged in);
+    // the server only checks that some token is present, not who it belongs to.
+    socket = io({ auth: { token: "anonymous" } });
   }
   return socket;
 }

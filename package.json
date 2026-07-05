@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev --webpack -p 3006\" \"node server.js\"",
+    "dev": "node server.js",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "next lint",
     "postinstall": "prisma generate"
   },
