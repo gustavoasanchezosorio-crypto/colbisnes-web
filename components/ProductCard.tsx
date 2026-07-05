@@ -277,6 +277,26 @@ export const ProductCard = React.memo(function ProductCard({
                 por Colbisnes
               </div>
             </div>
+            {(isOwner || esCompradorAutorizado) && (
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleReviewClick(); }}
+                style={{
+                  pointerEvents: "auto",
+                  marginTop: 4,
+                  background: "rgba(255,255,255,0.95)",
+                  color: "#0a2e6b",
+                  border: "none",
+                  borderRadius: 20,
+                  padding: "8px 18px",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.28)",
+                }}
+              >
+                ⭐ Calificar transacción
+              </button>
+            )}
           </div>
         </div>
       )}
