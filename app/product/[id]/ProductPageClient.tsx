@@ -129,13 +129,13 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   useEffect(() => {
     if (!mostrarChat || !chatConUserId) return;
     cargarMensajes();
-    const iv = setInterval(cargarMensajes, 3000);
+    const iv = setInterval(cargarMensajes, 2000);
     return () => clearInterval(iv);
   }, [mostrarChat, chatConUserId]);
   useEffect(() => {
     if (!esVendedor || !product) return;
     cargarConvsSeller();
-    const iv = setInterval(cargarConvsSeller, 5000);
+    const iv = setInterval(cargarConvsSeller, 3000);
     return () => clearInterval(iv);
   }, [esVendedor, product?.id]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensajes]);

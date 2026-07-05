@@ -48,6 +48,15 @@ export default function MensajesPage() {
     if (session?.user?.id) cargarConversaciones();
   }, [session]);
 
+  // Refresca la lista de conversaciones aunque no haya ningún chat abierto,
+  // para que los mensajes/conversaciones nuevas aparezcan sin necesidad de
+  // entrar a un chat o recargar la página manualmente.
+  useEffect(() => {
+    if (!session?.user?.id || convActiva) return;
+    const intervalo = setInterval(cargarConversaciones, 3000);
+    return () => clearInterval(intervalo);
+  }, [session, convActiva]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes]);
@@ -55,7 +64,7 @@ export default function MensajesPage() {
   useEffect(() => {
     if (!convActiva) return;
     cargarMensajes(convActiva);
-    const intervalo = setInterval(() => cargarMensajes(convActiva), 3000);
+    const intervalo = setInterval(() => cargarMensajes(convActiva), 2000);
     return () => clearInterval(intervalo);
   }, [convActiva]);
 

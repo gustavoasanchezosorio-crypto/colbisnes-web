@@ -13,7 +13,7 @@ type NotificationContextType = {
 
 const NotificationContext = createContext<NotificationContextType>({ unreadTotal: 0, nudgeTick: 0 });
 
-const POLL_MS = 4000;
+const POLL_MS = 2500;
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
@@ -36,7 +36,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       console.warn('[notificaciones] Error creando el audio de notificación:', err);
     }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try { navigator.vibrate([90, 50, 90, 50, 160]); } catch {}
+      try { navigator.vibrate([160, 60, 160, 60, 260]); } catch {}
     }
     setNudgeTick((t) => t + 1);
   }, []);
