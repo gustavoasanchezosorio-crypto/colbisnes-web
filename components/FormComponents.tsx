@@ -15,6 +15,7 @@ export const Button: React.FC<ButtonProps> = ({ children, style, ...props }) => 
       borderRadius: 30,
       border: "none",
       fontWeight: 800,
+      fontFamily: "inherit",
       cursor: "pointer",
       background: "linear-gradient(135deg,#2fa4dc,#1466cc 52%,#0a2e6b)",
       color: "#fff",
@@ -37,6 +38,7 @@ export const OutlineButton: React.FC<ButtonProps> = ({ children, style, ...props
       background: "#ffffff",
       color: THEME.primary,
       fontWeight: 700,
+      fontFamily: "inherit",
       cursor: "pointer",
       transition: "all 0.2s",
       ...style,
@@ -64,6 +66,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           background: "#ffffff",
           color: THEME.text,
           fontSize: "0.95rem",
+          fontFamily: "inherit",
           transition: "all 0.2s",
           outline: "none",
           ...style,
@@ -90,6 +93,7 @@ export const Select: React.FC<SelectProps> = ({ children, style, ...props }) => 
       color: THEME.text,
       cursor: "pointer",
       fontSize: "0.95rem",
+      fontFamily: "inherit",
       ...style,
     }}
   >
@@ -115,6 +119,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
           background: "#ffffff",
           color: THEME.text,
           fontSize: "0.95rem",
+          fontFamily: "inherit",
           resize: "vertical",
           ...style,
         }}
