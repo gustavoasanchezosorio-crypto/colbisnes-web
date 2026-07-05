@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     if (!imageBase64) return json({ error: "Falta la imagen" }, 400);
     if (!(MEDIA_TYPES as readonly string[]).includes(mediaType)) {
-      return json({ error: "Formato de imagen no soportado" }, 400);
+      return json({ error: "Chucho Bot no reconoce este formato de foto (prueba con JPG o PNG)." }, 400);
     }
     if (imageBase64.length > MAX_BASE64_LENGTH) return json({ error: "La imagen es muy pesada" }, 400);
 

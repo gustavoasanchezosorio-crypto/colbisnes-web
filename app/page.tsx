@@ -105,9 +105,10 @@ function ImagePicker({ files, previews, onChange, disabled }: ImagePickerProps) 
     for (const file of selected) {
       if (slot > 4) break;
       let finalFile = file;
-      if (file.size > 350 * 1024) {
-        try { finalFile = await comprimirImagen(file); } catch { finalFile = file; }
-      }
+      // Siempre normalizamos a JPEG (no solo cuando pesa mucho): esto evita que fotos en
+      // formatos como HEIC/HEIC (iPhone) lleguen con un mediaType que Chucho Bot no reconoce,
+      // y de paso comprime las que pesan más de 350KB.
+      try { finalFile = await comprimirImagen(file, file.size > 350 * 1024 ? 1600 : 2400); } catch { finalFile = file; }
       nf[slot] = finalFile; np[slot] = URL.createObjectURL(finalFile);
       slot++;
     }
