@@ -8,14 +8,40 @@ const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 // Tolerancia estrecha: solo para redondeo de decimales, no para "casi coincide".
 const TOLERANCIA = 0.005;
-// BSC produce un bloque cada ~3s. Usamos esto como respaldo si no conocemos el bloque de creación de la orden.
-const SEGUNDOS_POR_BLOQUE = 3;
 // Margen de seguridad antes de la creación de la orden, por si hay desfase de reloj entre servidor y nodo BSC.
 const MARGEN_SEGUNDOS = 300;
 
 function walletATopic(wallet: string): string {
   const limpio = wallet.toLowerCase().replace("0x", "");
   return "0x" + "0".repeat(24) + limpio;
+}
+
+async function obtenerBloque(url: string, numero: number): Promise<{ timestamp: number } | null> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBlockByNumber", params: ["0x" + numero.toString(16), false], id: 3 }),
+  });
+  const data = await res.json();
+  if (!data.result) return null;
+  return { timestamp: parseInt(data.result.timestamp, 16) };
+}
+
+// El tiempo de bloque de BSC ha cambiado varias veces por hardforks de la red (de ~3s
+// bajó a ~1.5s y luego más) — un valor fijo se queda desactualizado y hace que el rango
+// de búsqueda empiece DESPUÉS del pago real, perdiéndolo por completo (confirmado en
+// producción el 2026-07-06: con un valor fijo de 3s/bloque, el rango calculado excluyó
+// una transacción real que sí llegó a la wallet). En vez de asumir un valor, lo medimos
+// comparando el bloque actual con uno ~2000 bloques atrás.
+async function segundosPorBloque(url: string, bloqueActual: number): Promise<number> {
+  const muestra = Math.max(0, bloqueActual - 2000);
+  const [actual, anterior] = await Promise.all([obtenerBloque(url, bloqueActual), obtenerBloque(url, muestra)]);
+  const deltaBloques = bloqueActual - muestra;
+  if (!actual || !anterior || deltaBloques <= 0) return 1; // respaldo conservador si algo falla
+  const deltaSegundos = actual.timestamp - anterior.timestamp;
+  if (deltaSegundos <= 0) return 1;
+  // Margen adicional del 50% por si la red se pone más rápida entre esta medición y la búsqueda.
+  return (deltaSegundos / deltaBloques) * 0.5;
 }
 
 export async function GET(req: NextRequest) {
@@ -52,7 +78,8 @@ export async function GET(req: NextRequest) {
     // en vez de una ventana fija de ~36h, para que transferencias antiguas o de otros compradores
     // no puedan "coincidir por casualidad" con una orden nueva.
     const segundosDesdeCreacion = Math.max(0, (Date.now() - new Date(orden.createdAt).getTime()) / 1000);
-    const bloquesDesdeCreacion = Math.ceil((segundosDesdeCreacion + MARGEN_SEGUNDOS) / SEGUNDOS_POR_BLOQUE);
+    const segPorBloque = await segundosPorBloque(url, bloqueActual);
+    const bloquesDesdeCreacion = Math.ceil((segundosDesdeCreacion + MARGEN_SEGUNDOS) / segPorBloque);
     const bloqueDesde = Math.max(0, bloqueActual - bloquesDesdeCreacion);
 
     const logsBody = {
