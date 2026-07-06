@@ -86,6 +86,15 @@ export async function POST(req: NextRequest) {
     // La orden queda en ESPERANDO_COMISION hasta que un admin confirme el comprobante Nequi.
     // El plazo de 24 horas hábiles (8am-8pm) para que el vendedor despache corre desde este momento
     // (creación/aceptación de la compra), sin importar cuándo se confirme la comisión.
+    //
+    // El producto pasa a PAYMENT_PENDING (NO a IN_ESCROW) aquí — mismo patrón que
+    // /api/checkout/usdt. Todavía no hay dinero real confirmado en este punto (el comprador
+    // apenas está a punto de transferir la comisión por Nequi); marcarlo IN_ESCROW ya
+    // permitía a cualquier comprador llamar /api/payments/confirm-delivery de inmediato y
+    // dejar el producto SOLD para siempre sin pagar nada (bug encontrado en auditoría 2026-07-06).
+    // Solo /api/admin/confirmar-comision-nequi debe pasar el producto a IN_ESCROW, una vez el
+    // admin confirma manualmente que la comisión sí se transfirió.
+    const PLAZO_COMISION_MS = 24 * 60 * 60 * 1000; // 24h para subir comprobante y que el admin lo confirme
     const [orden] = await prisma.$transaction([
       prisma.order.create({
         data: {
@@ -107,7 +116,7 @@ export async function POST(req: NextRequest) {
       }),
       prisma.product.update({
         where: { id: productoId },
-        data: { status: "IN_ESCROW", paidAt: ahora, paymentExpiresAt: null },
+        data: { status: "PAYMENT_PENDING", paymentExpiresAt: new Date(Date.now() + PLAZO_COMISION_MS) },
       }),
     ]);
 

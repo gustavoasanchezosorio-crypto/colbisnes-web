@@ -25,14 +25,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Esta orden no está esperando confirmación de comisión" }, { status: 400 });
     }
 
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        estado: "ESPERANDO_ENVIO",
-        comisionReservaPagada: true,
-        comisionReservaConfirmadaAt: new Date(),
-      },
-    });
+    // El producto debe seguir en PAYMENT_PENDING (estado que le puso /api/checkout/contra-entrega
+    // al crear esta orden). Si ya no lo está —por ejemplo porque liberarProductosExpirados() lo
+    // devolvió a AVAILABLE tras vencer el plazo, o porque ya está IN_ESCROW/SOLD por otra vía—
+    // NO confirmamos a ciegas: podríamos reactivar una reserva vieja sobre un producto que ya
+    // sigue otro camino (posiblemente vendido a otro comprador). Fail closed, no fail open.
+    const producto = await prisma.product.findUnique({ where: { id: orden.productId } });
+    if (!producto || producto.status !== "PAYMENT_PENDING") {
+      return NextResponse.json(
+        {
+          error: `El producto ya no está en espera de pago (estado actual: ${producto?.status ?? "no encontrado"}). No se confirmó la comisión; verifica manualmente antes de continuar.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Solo aquí, con la comisión efectivamente confirmada por el admin, el producto entra a
+    // IN_ESCROW de verdad (bug encontrado en auditoría 2026-07-06: antes esto pasaba en
+    // contra-entrega/route.ts al crear la orden, sin que hubiera dinero real confirmado).
+    await prisma.$transaction([
+      prisma.order.update({
+        where: { id: orderId },
+        data: {
+          estado: "ESPERANDO_ENVIO",
+          comisionReservaPagada: true,
+          comisionReservaConfirmadaAt: new Date(),
+        },
+      }),
+      prisma.product.update({
+        where: { id: orden.productId },
+        data: { status: "IN_ESCROW", paidAt: new Date(), paymentExpiresAt: null },
+      }),
+    ]);
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
@@ -57,7 +81,7 @@ export async function GET() {
     const productIds = ordenes.map(o => o.productId);
     const productos = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, title: true, sellerId: true, seller: { select: { name: true, email: true } } },
+      select: { id: true, title: true, status: true, sellerId: true, seller: { select: { name: true, email: true } } },
     });
     const productosPorId = Object.fromEntries(productos.map(p => [p.id, p]));
 
@@ -65,6 +89,11 @@ export async function GET() {
       ordenes: ordenes.map(o => ({
         id: o.id,
         productoTitulo: productosPorId[o.productId]?.title || "—",
+        // Estado real del producto en este momento: debería ser siempre PAYMENT_PENDING
+        // mientras la orden está ESPERANDO_COMISION. Si aparece otra cosa (AVAILABLE porque
+        // expiró, IN_ESCROW/SOLD por otra vía), es una señal de que algo quedó inconsistente
+        // y esta orden no debería confirmarse sin revisar manualmente primero.
+        productoEstado: productosPorId[o.productId]?.status || null,
         vendedorNombre: productosPorId[o.productId]?.seller?.name || productosPorId[o.productId]?.seller?.email,
         buyerEmail: o.buyerEmail,
         comisionReservaCOP: o.comisionReservaCOP,

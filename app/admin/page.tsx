@@ -429,6 +429,10 @@ export default function AdminPanel() {
                               <p style={{ margin: "2px 0 0", color: T.muted, fontSize: 13 }}>Vendedor: {o.vendedorNombre}</p>
                               <p style={{ margin: "2px 0 0", color: T.muted, fontSize: 13 }}>Comprador: {o.buyerEmail}</p>
                               <p style={{ margin: "2px 0 0", color: T.muted, fontSize: 13 }}>Referencia: <strong>{o.comisionReservaReferencia || "—"}</strong></p>
+                              <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: o.productoEstado !== "PAYMENT_PENDING" ? 700 : 400, color: o.productoEstado !== "PAYMENT_PENDING" ? "#b91c1c" : T.muted }}>
+                                Estado del producto: {o.productoEstado || "—"}
+                                {o.productoEstado !== "PAYMENT_PENDING" && " ⚠️ inesperado — verifica manualmente antes de confirmar"}
+                              </p>
                             </div>
                             <span style={{ padding: "4px 12px", borderRadius: 20, background: "#f3e8ff", color: "#7c3aed", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" as const }}>
                               ${Number(o.comisionReservaCOP || 0).toLocaleString("es-CO")} COP

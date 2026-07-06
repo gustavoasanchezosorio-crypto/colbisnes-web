@@ -36,15 +36,18 @@ export async function liberarProductosExpirados() {
     }
   }
 
-  // Cancela cualquier orden USDT que haya quedado esperando pago para estos productos,
-  // para que no siga apareciendo como "en curso" en /api/orders/por-producto.
+  // Cancela cualquier orden USDT o contra-entrega (comisión Nequi) que haya quedado
+  // esperando pago para estos productos, para que no siga apareciendo como "en curso" en
+  // /api/orders/por-producto ni quede como orden zombie sin reconciliar (bug encontrado en
+  // auditoría 2026-07-06: una orden ESPERANDO_COMISION podía quedar huérfana para siempre
+  // porque ningún cron la tocaba una vez el producto volvía a AVAILABLE).
   try {
     await prisma.order.updateMany({
-      where: { productId: { in: ids }, estado: "ESPERANDO_PAGO_CRYPTO" },
+      where: { productId: { in: ids }, estado: { in: ["ESPERANDO_PAGO_CRYPTO", "ESPERANDO_COMISION"] } },
       data: { estado: "CANCELADO" },
     });
   } catch (e) {
-    console.warn("No se pudieron cancelar órdenes crypto expiradas (opcional):", e);
+    console.warn("No se pudieron cancelar órdenes crypto/comisión expiradas (opcional):", e);
   }
 
   return { released: expired.length };

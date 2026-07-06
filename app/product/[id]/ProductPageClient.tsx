@@ -573,7 +573,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               </button>
             </div>
           )}
-          {product.status==="PAYMENT_PENDING" && esComprador && (
+          {product.status==="PAYMENT_PENDING" && esComprador && ordenActiva?.estado !== "ESPERANDO_COMISION" && (
             <div style={{background:"rgba(224,123,0,0.10)",border:`1.5px solid rgba(224,123,0,0.35)`,borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:"#b45309",margin:"0 0 0.3rem",fontSize:"0.9rem"}}>Tu oferta fue aceptada</p>
               {countdown>0 && <p style={{margin:"0 0 0.5rem",fontSize:"0.82rem",color:THEME.muted}}>Vence en: {Math.floor(countdown/60)}:{String(countdown%60).padStart(2,"0")} min</p>}
@@ -645,7 +645,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               </div>
             </div>
           )}
-          {product.status==="IN_ESCROW" && ordenActiva?.estado==="ESPERANDO_COMISION" && esComprador && (
+          {product.status==="PAYMENT_PENDING" && ordenActiva?.estado==="ESPERANDO_COMISION" && esComprador && (
             <div style={{background:"rgba(147,51,234,0.08)",border:"1.5px solid rgba(147,51,234,0.3)",borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:"#7e22ce",margin:"0 0 0.4rem"}}>💜 Falta pagar la comisión de reserva</p>
               <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:"0 0 0.7rem"}}>
@@ -666,7 +666,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               )}
             </div>
           )}
-          {product.status==="IN_ESCROW" && ordenActiva?.estado==="ESPERANDO_COMISION" && esVendedor && (
+          {product.status==="PAYMENT_PENDING" && ordenActiva?.estado==="ESPERANDO_COMISION" && esVendedor && (
             <div style={{background:"#f4f7fb",border:`1.5px solid ${THEME.border}`,borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:THEME.text,margin:"0 0 0.25rem"}}>⏳ Esperando pago de la comisión de reserva</p>
               <p style={{fontSize:"0.82rem",color:THEME.muted,margin:0}}>El comprador aún no ha pagado la comisión de reserva a Colbisnes. Aún no puedes registrar el envío — te avisaremos apenas se confirme.</p>

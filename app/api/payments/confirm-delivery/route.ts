@@ -32,6 +32,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "El producto no está en custodia" }, { status: 400 });
     }
 
+    // Defensa en profundidad (post-auditoría 2026-07-06): IN_ESCROW ahora solo debería
+    // establecerse una vez confirmado un pago real (ver contra-entrega/route.ts y
+    // confirmar-comision-nequi/route.ts para el caso que causó el bug original). Aun así,
+    // verificamos que no exista una orden de este producto todavía esperando el pago —si
+    // existiera, algo quedó inconsistente y es más seguro bloquear y dejar que soporte
+    // revise, que permitir marcar el producto SOLD sin plata confirmada.
+    const ordenPendientePago = await prisma.order.findFirst({
+      where: { productId, estado: { in: ["ESPERANDO_COMISION", "ESPERANDO_PAGO_CRYPTO"] } },
+    });
+    if (ordenPendientePago) {
+      return NextResponse.json(
+        { error: "Hay una orden de este producto todavía esperando confirmación de pago. Contacta a soporte." },
+        { status: 409 }
+      );
+    }
+
     // Verificar que es el comprador: ya sea por oferta aceptada O por buyerEmail en la orden
     const acceptedOffer = product.offers[0];
     const esBuyerPorOferta = acceptedOffer?.userId === session.user.id;

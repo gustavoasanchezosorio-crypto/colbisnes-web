@@ -51,7 +51,28 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(properties) || !signature.checksum) {
       return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
     }
-    const secret      = process.env.WOMPI_EVENTS_SECRET!;
+
+    // Los campos que esta ruta usa para decidir a qué estado pasa la orden y por cuánto
+    // dinero DEBEN estar siempre cubiertos por la firma. Antes `properties` se tomaba tal
+    // cual del body (atacante): si alguien lograba reutilizar un checksum válido de OTRO
+    // evento real firmando solo, por ejemplo, "transaction.id", podía cambiar status/amount
+    // libremente sin invalidar la firma, porque esos campos habrían quedado fuera de lo
+    // firmado. Exigimos aquí el set estándar que Wompi firma por defecto para
+    // transaction.updated (auditoría 2026-07-06).
+    const CAMPOS_REQUERIDOS = ["transaction.id", "transaction.status", "transaction.amount_in_cents"];
+    if (!CAMPOS_REQUERIDOS.every((campo) => properties.includes(campo))) {
+      console.error("Webhook Wompi rechazado: signature.properties no cubre los campos requeridos:", properties);
+      return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
+    }
+
+    const secret = process.env.WOMPI_EVENTS_SECRET;
+    if (!secret) {
+      // Fail closed: antes, si la env var no estaba configurada, `secret` quedaba literalmente
+      // como el string "undefined" y el webhook seguía procesándose (fail open) — auditoría
+      // 2026-07-06. Sin secreto no hay nada que verificar, así que rechazamos de una vez.
+      console.error("WOMPI_EVENTS_SECRET no está configurado — rechazando webhook");
+      return NextResponse.json({ error: "Configuración de servidor incompleta" }, { status: 500 });
+    }
 
     let valoresConcatenados = "";
     for (const prop of properties) {
@@ -64,7 +85,18 @@ export async function POST(req: NextRequest) {
     const cadenaCompleta = valoresConcatenados + timestamp + secret;
     const firmaCalculada = crypto.createHash("sha256").update(cadenaCompleta).digest("hex");
 
-    if (firmaCalculada !== signature.checksum) {
+    // Comparación de tiempo constante — antes era `!==` directo sobre strings, vulnerable a
+    // timing attacks (auditoría 2026-07-06). Si el checksum recibido no es hex válido del
+    // mismo largo que el calculado, se trata como inválido sin invocar timingSafeEqual (que
+    // lanza una excepción si los buffers tienen longitudes distintas).
+    const bufCalculada = Buffer.from(firmaCalculada, "hex");
+    const bufRecibida  = Buffer.from(String(signature.checksum || ""), "hex");
+    const firmaValida =
+      bufCalculada.length === bufRecibida.length &&
+      bufCalculada.length > 0 &&
+      crypto.timingSafeEqual(bufCalculada, bufRecibida);
+
+    if (!firmaValida) {
       console.error("Firma invalida en webhook Wompi");
       return NextResponse.json({ error: "Firma invalida" }, { status: 401 });
     }
@@ -140,6 +172,18 @@ export async function POST(req: NextRequest) {
     else if (status === "ERROR")    nuevoEstado = "ERROR";
 
     if (status === "APPROVED") {
+      // Verificación cruzada del monto: el checksum prueba que Wompi firmó ESTOS valores,
+      // pero no que coincidan con lo que esta orden realmente debía cobrar. Sin esto, una
+      // referencia reciclada o mal extraída podría confirmar el pago de una orden cara usando
+      // la firma válida de una transacción real pero de menor monto — auditoría 2026-07-06.
+      const montoEsperadoCentavos = orden.totalPagado * 100;
+      if (typeof transaction.amount_in_cents === "number" && transaction.amount_in_cents !== montoEsperadoCentavos) {
+        console.error(
+          `Webhook Wompi rechazado: amount_in_cents (${transaction.amount_in_cents}) no coincide con el total esperado de la orden ${orden.id} (${montoEsperadoCentavos})`
+        );
+        return NextResponse.json({ error: "Monto no coincide con la orden" }, { status: 400 });
+      }
+
       // Transacción atómica: actualizar orden Y producto al mismo tiempo
       await prisma.$transaction([
         prisma.order.update({
