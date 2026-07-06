@@ -97,7 +97,9 @@ export function calcularPrecioUSDT(precioBaseCOP: number, tasaCOP: number, nivel
   const colchonVariable = parseFloat((Math.min(precioBaseCOP, USDT_COLCHON_TOPE_COP) / 1_000_000 * USDT_COLCHON_USD_POR_MILLON).toFixed(2));
   const comisionUSD     = parseFloat((Math.min(precioBaseCOP, USDT_EXTRA_TOPE_COP) / 1_000_000 * USDT_EXTRA_USD_POR_MILLON).toFixed(2));
   const precioBaseUSD   = parseFloat((precioBaseCOP / tasaCOP).toFixed(2)) + USDT_COLCHON_FIJO_USD + colchonVariable;
-  const totalUSD        = parseFloat((precioBaseUSD + comisionUSD).toFixed(2));
+  // Redondeado hacia arriba a múltiplos de 0.10 USDT: más fácil de escribir sin errores
+  // de tipeo en la wallet del comprador que un monto con dos decimales cualquiera.
+  const totalUSD        = Math.ceil((precioBaseUSD + comisionUSD) * 10) / 10;
   return { precioBaseUSD, comisionUSD, totalUSD, wallet: process.env.NEXT_PUBLIC_USDT_WALLET!, red: "BNB Chain (BEP20)", testMode: false };
 }
 
