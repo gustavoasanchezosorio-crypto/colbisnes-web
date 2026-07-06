@@ -1,6 +1,7 @@
 const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
+const cron = require('node-cron');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3006', 10);
@@ -80,4 +81,28 @@ app.prepare().then(() => {
   httpServer.listen(port, () => {
     console.log(`✅ Servidor listo (Next.js + WebSocket) en puerto ${port}`);
   });
+
+  // Cron jobs (migrated from vercel.json — Vercel's cron infra no longer applies
+  // once this runs as a persistent server). Same schedules, same endpoints; we just
+  // trigger them ourselves via loopback HTTP instead of an external scheduler.
+  async function runCron(path) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error(`⏭️  Cron ${path} omitido: falta CRON_SECRET`);
+      return;
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}${path}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cronSecret}` },
+      });
+      const body = await res.text();
+      console.log(`⏰ Cron ${path} → ${res.status}: ${body}`);
+    } catch (err) {
+      console.error(`❌ Cron ${path} falló:`, err);
+    }
+  }
+
+  cron.schedule('0 0 * * *', () => runCron('/api/cron/liberar'), { timezone: 'UTC' });
+  cron.schedule('5 1 * * *', () => runCron('/api/cron/verificar-envios'), { timezone: 'UTC' });
 });
