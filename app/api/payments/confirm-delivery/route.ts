@@ -73,13 +73,13 @@ export async function POST(request: Request) {
       try {
         const montoVendedor = orden?.recibeVendedor != null ? Number(orden.recibeVendedor) : Number(product.priceCOP);
         const html = colbisnesEmailTemplate({
-          preheader: "Tu pago fue liberado",
-          titulo: "¡Tu pago fue liberado! ⭐",
-          cuerpo: `Hola ${product.seller.name || 'Vendedor'}, el comprador confirmó que recibió <strong>${product.title}</strong> en buen estado.<br/><br/>Tu pago de <strong style="color:#1F6BFF;">$${montoVendedor.toLocaleString('es-CO')} COP</strong> ya fue liberado. ¡Gracias por vender en Colbisnes!`,
+          preheader: "Tu pago está en proceso de liberación",
+          titulo: "¡Entrega confirmada! ⭐",
+          cuerpo: `Hola ${product.seller.name || 'Vendedor'}, el comprador confirmó que recibió <strong>${product.title}</strong> en buen estado.<br/><br/>Tu pago de <strong style="color:#1F6BFF;">$${montoVendedor.toLocaleString('es-CO')} COP</strong> está en proceso de liberación y lo recibirás pronto. ¡Gracias por vender en Colbisnes!`,
           ctaTexto: "Ver mis ventas",
           ctaUrl: "https://colbisnes-web.vercel.app",
         });
-        await sendEmail({ to: product.seller.email, subject: 'Tu pago fue liberado - Colbisnes', html });
+        await sendEmail({ to: product.seller.email, subject: 'Entrega confirmada - Colbisnes', html });
         await sendWhatsapp({
           to: (product.seller as any).phoneWhatsapp,
           body: `⭐ *Colbisnes* - Entrega confirmada!\n\nHola ${product.seller.name || 'Vendedor'}, el comprador confirmó la entrega de *${product.title}*.\n\nTu pago de $${montoVendedor.toLocaleString('es-CO')} COP está en proceso de liberación.`,

@@ -4,7 +4,6 @@ export const WOMPI_IVA            = 0.19;
 export const GMF_PCT              = 0.004;
 export const COLBISNES_PCT_ONLINE = 0.10; // 10% comisión Colbisnes sobre ventas online (Wompi)
 export const COLBISNES_PCT_CE     = 0.03; // 3%  comisión Colbisnes sobre contra entrega
-export const COLBISNES_PCT_USDT   = 0.05; // 5%  comisión Colbisnes sobre pagos USDT
 export const TEST_MODE            = process.env.NEXT_PUBLIC_TEST_MODE === "true";
 export const TEST_AMOUNT          = 50;
 
@@ -76,12 +75,29 @@ export function calcularPrecioContraEntrega(precioBase: number, nivelVendedor?: 
   return { precioBase, comisionColbisnes, totalComprador, costoWompi: 0, gmf: 0, gananciaColbisnes: comisionColbisnes, recibeVendedor: precioBase, testMode: false };
 }
 
+// Única comisión de Colbisnes sobre pagos USDT: cargo plano de $5 USD por cada millón
+// de COP del precio base (proporcional a la fracción), con un tope de USDT_EXTRA_MAX_USD.
+// No se aplica ningún porcentaje adicional ni descuento por nivel de vendedor —
+// a diferencia de online/contra-entrega, esta comisión es igual para todos.
+export const USDT_EXTRA_USD_POR_MILLON = 5;
+export const USDT_EXTRA_MAX_USD        = 500;
+export const USDT_EXTRA_TOPE_COP       = (USDT_EXTRA_MAX_USD / USDT_EXTRA_USD_POR_MILLON) * 1_000_000; // 100,000,000
+
+// Colchón (no es comisión/ganancia, cubre costos reales): $2 USD fijos + $2 USD
+// adicionales por cada millón de COP, para mitigar la variación de precio entre que
+// se genera el cobro y se confirma el pago, más los cobros de red de la blockchain.
+// Tiene el mismo tope de $500 USD que la comisión, alcanzado en 250,000,000 COP.
+export const USDT_COLCHON_FIJO_USD       = 2;
+export const USDT_COLCHON_USD_POR_MILLON = 2;
+export const USDT_COLCHON_MAX_USD        = 500;
+export const USDT_COLCHON_TOPE_COP       = (USDT_COLCHON_MAX_USD / USDT_COLCHON_USD_POR_MILLON) * 1_000_000; // 250,000,000
+
 export function calcularPrecioUSDT(precioBaseCOP: number, tasaCOP: number, nivelVendedor?: string | null): USDTPricing {
   if (TEST_MODE) return { precioBaseUSD: 0.01, comisionUSD: 0, totalUSD: 0.01, wallet: process.env.NEXT_PUBLIC_USDT_WALLET!, red: "BNB Chain (BEP20)", testMode: true };
-  const COLCHON_USD = 2; // Colchón de $2 USD para cubrir fluctuaciones
-  const precioBaseUSD = parseFloat((precioBaseCOP / tasaCOP).toFixed(2)) + COLCHON_USD;
-  const comisionUSD   = parseFloat((precioBaseUSD * COLBISNES_PCT_USDT * multiplicadorPorNivel(nivelVendedor)).toFixed(2));
-  const totalUSD      = parseFloat((precioBaseUSD + comisionUSD).toFixed(2));
+  const colchonVariable = parseFloat((Math.min(precioBaseCOP, USDT_COLCHON_TOPE_COP) / 1_000_000 * USDT_COLCHON_USD_POR_MILLON).toFixed(2));
+  const comisionUSD     = parseFloat((Math.min(precioBaseCOP, USDT_EXTRA_TOPE_COP) / 1_000_000 * USDT_EXTRA_USD_POR_MILLON).toFixed(2));
+  const precioBaseUSD   = parseFloat((precioBaseCOP / tasaCOP).toFixed(2)) + USDT_COLCHON_FIJO_USD + colchonVariable;
+  const totalUSD        = parseFloat((precioBaseUSD + comisionUSD).toFixed(2));
   return { precioBaseUSD, comisionUSD, totalUSD, wallet: process.env.NEXT_PUBLIC_USDT_WALLET!, red: "BNB Chain (BEP20)", testMode: false };
 }
 
