@@ -252,7 +252,6 @@ async function main() {
   await prisma.offer.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.product.deleteMany();
-  await prisma.faceToken.deleteMany();
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();

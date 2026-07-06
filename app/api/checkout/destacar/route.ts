@@ -39,7 +39,21 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const referencia: string = "destacado" + featured.id.replace(/[^a-zA-Z0-9]/g, "") + Date.now();
+    // Reutilizar la MISMA referencia si el registro PENDIENTE ya tenía una. Antes esta
+    // línea generaba una referencia nueva (con Date.now()) en CADA GET y la
+    // sobreescribía en la fila reutilizada — incluyendo la primera vez que se reutilizaba
+    // una solicitud pendiente vía `pendienteExistente` de arriba. Si el vendedor ya había
+    // sido redirigido a una página de pago de Wompi con la referencia vieja (p. ej. volvió
+    // atrás, reintentó por una red móvil lenta, o dio doble clic en "Destacar"), esa página
+    // de Wompi seguía viva con la referencia vieja horneada en la firma. Al pagar ahí, el
+    // webhook busca `featuredListing.findUnique({ where: { wompiReference: referenciaVieja } })`
+    // (app/api/webhooks/wompi/route.ts) y ya no la encuentra — porque esta ruta la había
+    // reemplazado por una nueva — así que un pago real y aprobado en Wompi nunca se
+    // reflejaba en Colbisnes (el producto no quedaba destacado pese al cobro) (auditoría
+    // 2026-07-06). Ahora solo se genera y persiste una referencia nueva la primera vez
+    // (cuando `wompiReference` todavía es null); toda solicitud posterior a la misma
+    // solicitud PENDIENTE reutiliza exactamente la misma referencia ya guardada.
+    const referencia: string = featured.wompiReference ?? ("destacado" + featured.id.replace(/[^a-zA-Z0-9]/g, "") + Date.now());
     const montoEnCentavos: string = String(DESTACADO_PRECIO * 100);
     const moneda: string = "COP";
     const secretoIntegridad: string = process.env.WOMPI_INTEGRITY_SECRET!;
@@ -48,7 +62,9 @@ export async function GET(req: NextRequest) {
     if (!secretoIntegridad) throw new Error("WOMPI_INTEGRITY_SECRET no está configurado");
     if (!publicKey) throw new Error("NEXT_PUBLIC_WOMPI_PUBLIC_KEY no está configurado");
 
-    await prisma.featuredListing.update({ where: { id: featured.id }, data: { wompiReference: referencia } });
+    if (!featured.wompiReference) {
+      await prisma.featuredListing.update({ where: { id: featured.id }, data: { wompiReference: referencia } });
+    }
 
     const cadenaConcatenada: string = referencia + montoEnCentavos + moneda + secretoIntegridad;
     const firma: string = crypto.createHash("sha256").update(cadenaConcatenada, "utf8").digest("hex");

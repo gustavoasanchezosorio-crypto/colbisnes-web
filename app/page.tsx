@@ -376,7 +376,15 @@ function PageInner() {
   const handleUpdateOffer = useCallback(async (offerId: string, status: string) => {
     try {
       const res = await fetch("/api/offers", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ offerId, status }) });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message);
+      if (!res.ok) {
+        const resp = await res.json().catch(() => ({}));
+        if (resp.kycRequired) {
+          showToast("Debes verificar tu identidad antes de aceptar ofertas. Redirigiendo...", "warning");
+          setTimeout(() => { window.location.href = "/kyc"; }, 1800);
+          return;
+        }
+        throw new Error(resp.error || resp.message || `Error ${res.status}`);
+      }
       if (selectedProductId) await Promise.all([fetchOffers(selectedProductId), refetch()]);
       showToast(`Oferta ${status === "ACCEPTED" ? "aceptada" : "rechazada"}`, "success");
     } catch (err: any) { showToast(err.message || "Error al actualizar la oferta", "error"); }

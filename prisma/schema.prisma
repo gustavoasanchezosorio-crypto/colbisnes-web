@@ -26,7 +26,6 @@ model User {
   direccionEnvio   String?
   resetToken       String?
   resetTokenExpiry DateTime?
-  faceDescriptor String?
 
   products         Product[]
   offers           Offer[]
@@ -315,17 +314,6 @@ model Favorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
-}
-
-model FaceToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  email     String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([token])
-  @@index([expiresAt])
 }
 
 // Bot de servicio al cliente "Blu" (FAQ + asistente de publicacion) con escalamiento a soporte humano

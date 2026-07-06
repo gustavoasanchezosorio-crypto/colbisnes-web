@@ -1,5 +1,5 @@
 // Helpers compartidos para los scripts de QA contra producción.
-const BASE = "https://colbisnes-web.vercel.app";
+const BASE = process.env.QA_BASE || "https://colbisnes-web-production.up.railway.app";
 
 // Realiza el login real vía NextAuth (credentials) y devuelve el cookie jar (string) a usar
 // en llamadas subsiguientes. Replica exactamente el flujo que hace el navegador:

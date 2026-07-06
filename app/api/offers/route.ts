@@ -18,12 +18,40 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get("productId");
     if (!productId) return NextResponse.json({ error: "productId is required" }, { status: 400 });
 
+    const session = await getServerSession(authOptions);
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { sellerId: true, acceptedOfferId: true },
+    });
+    if (!product) return NextResponse.json([]);
+
     const offers = await prisma.offer.findMany({
       where: { productId },
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { id: true, name: true } } },
     });
-    return NextResponse.json(offers);
+
+    // Esta es la ruta que de verdad consulta la página de producto (cargarOfertas)
+    // para armar tanto el panel del vendedor como "tu oferta: $X — estado". Antes
+    // devolvía monto, mensaje y nombre de TODOS los compradores a CUALQUIER
+    // visitante, sin sesión siquiera — un competidor o cualquier curioso podía ver
+    // qué ofrecía cada quien (auditoría 2026-07-06). Misma regla que en
+    // /api/products/[id]: el vendedor ve todo; cada quien ve su propia oferta
+    // completa; la oferta ya ACEPTADA se expone solo con el monto (sin mensaje
+    // ni identidad) para quien no sea ni vendedor ni el propio comprador.
+    const esVendedor = session?.user?.id === product.sellerId;
+    const miUserId = session?.user?.id;
+    const visibles = esVendedor
+      ? offers
+      : offers
+          .filter((o) => o.userId === miUserId || o.id === product.acceptedOfferId)
+          .map((o) =>
+            o.userId === miUserId
+              ? o
+              : { id: o.id, productId: o.productId, amountCOP: o.amountCOP, status: o.status }
+          );
+
+    return NextResponse.json(visibles);
   } catch (error) {
     console.error("GET /api/offers error:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
@@ -185,8 +213,15 @@ export async function PATCH(request: Request) {
     }
 
     try {
-      const { io } = require("@/server.js");
-      io.to(`product-${offer.productId}`).emit("product-status-changed", { productId: offer.productId, status: "PAYMENT_PENDING" });
+      // `global.io` lo asigna server.js una sola vez al arrancar (mismo proceso,
+      // servidor a medida sobre Railway). Antes esto hacía `require("@/server.js")`
+      // esperando encontrar `io` ahí, pero ese módulo nunca exportaba nada — el
+      // require devolvía un objeto vacío y este emit fallaba en silencio desde
+      // siempre (auditoría 2026-07-06).
+      const io = (global as any).io;
+      if (io) {
+        io.to(`product-${offer.productId}`).emit("product-status-changed", { productId: offer.productId, status: "PAYMENT_PENDING" });
+      }
     } catch(e) {}
     return NextResponse.json({ success: true, status: "ACCEPTED", product: result.updatedProduct });
   } catch (error) {

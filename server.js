@@ -2,6 +2,8 @@ const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
+const { getToken } = require('next-auth/jwt');
+const cookie = require('cookie');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3006', 10);
@@ -40,38 +42,79 @@ app.prepare().then(() => {
     },
   });
 
-  // Simple auth middleware — clients must send their NextAuth session token
-  io.use((socket, next) => {
-    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization;
-    if (!token) {
-      return next(new Error('Authentication required'));
+  // Se expone `io` a las rutas de API de Next.js que corren en este MISMO proceso
+  // (servidor a medida sobre Railway, ya no serverless) para poder emitir eventos
+  // en tiempo real sin un segundo canal. Antes app/api/offers/route.ts hacía
+  // `require("@/server.js")` esperando encontrar `io` ahí, pero este archivo nunca
+  // exportaba nada — ese require devolvía un objeto vacío y cada emit fallaba en
+  // silencio (try/catch vacío alrededor). El aviso en tiempo real de "oferta
+  // aceptada, tienes 10 minutos para pagar" nunca llegaba a disparar; el polling
+  // de 5s en la página de producto disimulaba el problema (auditoría 2026-07-06).
+  global.io = io;
+
+  // Autenticación real del socket. Antes bastaba con que `auth.token` no viniera
+  // vacío — hasta el literal "anonymous" que manda el cliente para las vistas
+  // públicas de producto lo cumplía — y ese valor nunca se verificaba contra nada:
+  // cualquiera podía conectarse alegando cualquier userId, que luego se guardaba
+  // tal cual para usarse después en "join-room" y "send-message" (auditoría
+  // 2026-07-06). Ahora la identidad del socket sale ÚNICAMENTE de la cookie de
+  // sesión real de NextAuth (la misma que ya viaja en el handshake por ser
+  // same-origin), desencriptada y verificada con NEXTAUTH_SECRET. Si no hay
+  // cookie de sesión o es inválida, el socket queda anónimo (userId=null) — eso
+  // sigue permitido a propósito, porque ver el estado de un producto es
+  // información pública — pero un socket anónimo no puede enviar mensajes ni
+  // suplantar a otro usuario (ver "send-message" más abajo).
+  io.use(async (socket, next) => {
+    try {
+      const cookieHeader = socket.handshake.headers?.cookie;
+      const parsedCookies = cookieHeader ? cookie.parse(cookieHeader) : {};
+      const verifiedToken = await getToken({
+        req: { cookies: parsedCookies, headers: socket.handshake.headers },
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+      socket.data.userId = verifiedToken?.id || null;
+    } catch (err) {
+      console.error('Error verificando sesión en socket (se trata como anónimo):', err);
+      socket.data.userId = null;
     }
-    // Store userId from token for room authorization later
-    socket.data.token = token;
     next();
   });
 
   io.on('connection', (socket) => {
     console.log('🟢 Nuevo cliente conectado:', socket.id);
 
-    socket.on('join-room', ({ userId, productId }) => {
+    socket.on('join-room', ({ productId }) => {
       if (!productId || typeof productId !== 'string') return;
-      // Each socket can only join rooms relevant to their userId
-      socket.data.userId = userId;
+      // El estado de un producto es información pública (cualquier visitante
+      // puede verla sin iniciar sesión), así que no se exige identidad para
+      // unirse a esta sala. Lo que ya NO se hace es confiar en un `userId`
+      // mandado por el cliente — ese campo se ignora por completo; la única
+      // identidad real de este socket es `socket.data.userId`, ya verificada
+      // en el middleware de arriba (auditoría 2026-07-06).
       socket.join(`product-${productId}`);
-      console.log(`Usuario ${userId} se unió a sala product-${productId}`);
+      console.log(`Socket ${socket.id} (userId=${socket.data.userId || 'anónimo'}) se unió a sala product-${productId}`);
     });
 
     socket.on('send-message', (data) => {
       if (!data?.productId || typeof data.productId !== 'string') return;
-      // Only broadcast to the specific product room
+      // Un socket sin sesión verificada no puede enviar mensajes, y ninguno
+      // puede hacerse pasar por otro usuario: `fromUserId` debe coincidir con
+      // la identidad real ya verificada del socket, no con lo que el payload
+      // diga (auditoría 2026-07-06). Nota: hoy ningún cliente en producción
+      // emite este evento — el chat real usa /api/messages, con sesión, KYC
+      // y rate limit — pero el servidor no debe depender de eso para ser
+      // seguro.
+      if (!socket.data.userId || data.fromUserId !== socket.data.userId) return;
       io.to(`product-${data.productId}`).emit('new-message', data);
     });
 
-    socket.on('product-updated', (data) => {
-      if (!data?.productId || typeof data.productId !== 'string') return;
-      io.to(`product-${data.productId}`).emit('product-status-changed', data);
-    });
+    // (Se retiró el handler `product-updated` que existía aquí: permitía que
+    // CUALQUIER socket, sin ninguna verificación, transmitiera un
+    // "product-status-changed" con datos arbitrarios a la sala de cualquier
+    // producto. Ningún cliente lo usaba — los cambios de estado reales se
+    // emiten directamente desde las rutas de API vía `global.io` (ver arriba)
+    // — así que era superficie de ataque sin ningún beneficio (auditoría
+    // 2026-07-06).)
 
     socket.on('disconnect', () => {
       console.log('🔴 Cliente desconectado:', socket.id);
