@@ -6,8 +6,11 @@ import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 
 const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-// Tolerancia estrecha: solo para redondeo de decimales, no para "casi coincide".
-const TOLERANCIA = 0.005;
+// Pagar de MÁS nunca es un problema para Colbisnes, así que no hay límite superior.
+// Pagar de MENOS solo se tolera hasta este margen, para absorber comisiones de red/retiro
+// que cobran algunos exchanges/wallets al enviar (varían y están fuera de nuestro control) —
+// más allá de esto, la orden se queda pendiente para revisión manual en vez de auto-aceptarse.
+const TOLERANCIA_PAGO_DE_MENOS = 0.30;
 // Margen de seguridad antes de la creación de la orden, por si hay desfase de reloj entre servidor y nodo BSC.
 const MARGEN_SEGUNDOS = 300;
 
@@ -117,7 +120,7 @@ export async function GET(req: NextRequest) {
       const valorRaw = BigInt(valorHex);
       const valor = Number(valorRaw) / 1e18;
       console.log("  log -> tx:", log.transactionHash, "valor:", valor);
-      if (Math.abs(valor - montoEsperado) <= TOLERANCIA) {
+      if (valor >= montoEsperado - TOLERANCIA_PAGO_DE_MENOS) {
         // Un mismo hash de transacción no puede usarse para pagar más de una orden.
         const yaUsado = await prisma.order.findFirst({ where: { txHashPago: log.transactionHash } });
         if (yaUsado) {
