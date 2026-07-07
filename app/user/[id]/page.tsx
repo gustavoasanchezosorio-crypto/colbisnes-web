@@ -96,6 +96,12 @@ export default function UserProfilePage() {
           >
             ← Volver
           </button>
+          <button
+            onClick={() => router.push("/")}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: 10, padding: "7px 14px", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 700, lineHeight: 1 }}
+          >
+            🏠 Inicio
+          </button>
           {session ? (
             !isOwnProfile && (
               <Link href={`/user/${session.user.id}`} style={{ color: "white", fontSize: 13, textDecoration: "none", padding: "6px 14px", border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: 20 }}>Mi perfil</Link>

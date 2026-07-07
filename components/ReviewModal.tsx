@@ -18,6 +18,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   onSubmitReview,
 }) => {
   const [rating, setRating] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number>(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,32 +53,53 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
     }}>
       <div style={{
         background: THEME.surfaceGradient,
-        padding: 30,
         borderRadius: 20,
         width: 400,
         border: `1px solid ${THEME.border}`,
         boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
+        overflow: "hidden",
       }}>
-        <h2 style={{ fontSize: "1.5rem", marginBottom: 20, color: THEME.text, textAlign: "center" }}>Calificar transacción</h2>
-        <p style={{ marginBottom: 16, color: THEME.textSoft }}>Producto: <strong style={{ color: THEME.text }}>{product.title}</strong></p>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontSize: "0.9rem", fontWeight: 500, color: THEME.textSoft }}>Puntuación (1-5)</label>
-          <select
-            value={rating}
-            onChange={(e) => setRating(Number(e.target.value))}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 12,
-              border: `1px solid ${THEME.border}`,
-              background: THEME.surface,
-              color: THEME.text,
-              fontSize: "0.95rem",
-            }}
-            disabled={isSubmitting}
-          >
-            {[1, 2, 3, 4, 5].map(r => <option key={r} value={r}>{r} ⭐</option>)}
-          </select>
+        <div style={{
+          background: "linear-gradient(135deg,#5ccbf2 0%,#1466cc 55%,#0a2e6b 100%)",
+          padding: "24px 30px",
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: "2rem", marginBottom: 6 }}>🤝</div>
+          <h2 style={{ fontSize: "1.4rem", margin: 0, color: "#fff", fontWeight: 700 }}>Calificar transacción</h2>
+          <p style={{ margin: "6px 0 0", color: "rgba(255,255,255,0.85)", fontSize: "0.85rem" }}>
+            Producto: <strong style={{ color: "#fff" }}>{product.title}</strong>
+          </p>
+        </div>
+        <div style={{ padding: 30 }}>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: "block", marginBottom: 10, fontSize: "0.9rem", fontWeight: 500, color: THEME.textSoft, textAlign: "center" }}>¿Cómo calificarías esta transacción?</label>
+          <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+            {[1, 2, 3, 4, 5].map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRating(r)}
+                onMouseEnter={() => setHoverRating(r)}
+                onMouseLeave={() => setHoverRating(0)}
+                disabled={isSubmitting}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: isSubmitting ? "default" : "pointer",
+                  fontSize: "2rem",
+                  lineHeight: 1,
+                  padding: 2,
+                  filter: r <= (hoverRating || rating) ? "none" : "grayscale(100%) opacity(0.4)",
+                  transform: r <= (hoverRating || rating) ? "scale(1.1)" : "scale(1)",
+                  transition: "transform 0.1s, filter 0.1s",
+                }}
+                aria-label={`${r} estrellas`}
+              >
+                ⭐
+              </button>
+            ))}
+          </div>
+          <p style={{ textAlign: "center", marginTop: 8, color: THEME.gold, fontWeight: 600, fontSize: "0.95rem" }}>{rating} / 5</p>
         </div>
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: "block", marginBottom: 8, fontSize: "0.9rem", fontWeight: 500, color: THEME.textSoft }}>Comentario (opcional)</label>
@@ -105,6 +127,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           <OutlineButton onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </OutlineButton>
+        </div>
         </div>
       </div>
     </div>
