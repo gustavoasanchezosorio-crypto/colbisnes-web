@@ -47,11 +47,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El producto no está disponible para pago" }, { status: 400 });
     }
 
-    // Idempotencia: si ya existe una orden activa para este producto (de cualquier método), devolverla
+    // Idempotencia: si ya existe una orden ACTIVA para este producto (de cualquier método), devolverla.
+    // CRÍTICO: hay que excluir también CANCELADO — una orden cancelada (p.ej. por vencerse el plazo
+    // de pago vía liberarProductosExpirados) NO es una orden en curso. Antes no se excluía, así que al
+    // ir a pagar una oferta NUEVA, este findFirst devolvía la orden vieja CANCELADA y mandaba al
+    // comprador a una pantalla "orden ya no activa" — el pago quedaba "pegado" a una orden muerta
+    // (incidente 2026-07-07: producto con oferta nueva aceptada seguía apuntando a la orden cancelada).
     const ordenExistente = await prisma.order.findFirst({
       where: {
         productId: productoId,
-        estado: { notIn: ["RECHAZADO", "ANULADO", "ERROR"] },
+        estado: { notIn: ["RECHAZADO", "ANULADO", "ERROR", "CANCELADO"] },
       },
     });
     if (ordenExistente) {
@@ -116,9 +121,14 @@ export async function POST(req: NextRequest) {
     // en blockchain. Si se marcara IN_ESCROW aquí, el producto se vería "vendido/en custodia"
     // aunque el comprador nunca haya transferido nada — y quedaría bloqueado para siempre si
     // abandona el pago (no existía forma de liberarlo de vuelta a AVAILABLE).
-    // Damos 30 minutos (igual al que se muestra en la pantalla de pago) y el cron de
-    // /api/cron/liberar se encarga de liberar el producto si el plazo vence sin pago.
-    const expiraEn = new Date(Date.now() + 30 * 60 * 1000);
+    // Damos 10 minutos (mismo plazo que se comunica al comprador al aceptarse su oferta,
+    // en app/api/offers/route.ts, e igual al que se muestra en la pantalla de pago) — antes
+    // esto daba 30 minutos aquí, pisando el plazo de 10 que ya se le había prometido al
+    // comprador por email/WhatsApp desde el momento de la aceptación (descuadre reportado
+    // por el usuario 2026-07-07). El chequeo en tiempo real vía liberarProductosExpirados()
+    // (llamado desde GET /api/products y /api/products/[id]) libera el producto en cuanto
+    // alguien carga esas rutas después de vencido el plazo; el cron diario es solo respaldo.
+    const expiraEn = new Date(Date.now() + 10 * 60 * 1000);
     const [orden] = await prisma.$transaction([
       prisma.order.create({
         data: {

@@ -35,9 +35,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El producto no está disponible para pago" }, { status: 400 });
     }
 
-    // Idempotencia: si ya existe una orden activa para este producto, devolverla o bloquear
+    // Idempotencia: si ya existe una orden activa para este producto, devolverla o bloquear.
+    // Se excluye CANCELADO (además de RECHAZADO/ANULADO/ERROR): una orden cancelada por vencerse
+    // el plazo de pago no es una orden en curso y no debe bloquear ni reusarse para una oferta nueva.
     const ordenExistente = await prisma.order.findFirst({
-      where: { productId: productoId, estado: { notIn: ["RECHAZADO", "ANULADO", "ERROR"] } },
+      where: { productId: productoId, estado: { notIn: ["RECHAZADO", "ANULADO", "ERROR", "CANCELADO"] } },
     });
     if (ordenExistente) {
       if (ordenExistente.buyerEmail === session.user.email) {
