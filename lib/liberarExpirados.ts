@@ -50,5 +50,21 @@ export async function liberarProductosExpirados() {
     console.warn("No se pudieron cancelar órdenes crypto/comisión expiradas (opcional):", e);
   }
 
+  // Aviso en tiempo real: quien esté viendo la ficha del producto lo ve volver a
+  // "disponible" sin recargar (mismo canal `product-status-changed` que usa la
+  // aceptación de oferta en app/api/offers/route.ts). `global.io` lo asigna server.js
+  // una sola vez al arrancar; si no está (p.ej. en el cron fuera del proceso web),
+  // simplemente se omite sin romper la liberación.
+  try {
+    const io = (global as any).io;
+    if (io) {
+      for (const id of ids) {
+        io.to(`product-${id}`).emit("product-status-changed", { productId: id, status: "AVAILABLE" });
+      }
+    }
+  } catch (e) {
+    console.warn("No se pudo emitir product-status-changed al liberar (opcional):", e);
+  }
+
   return { released: expired.length };
 }
