@@ -47,6 +47,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Solo el vendedor puede registrar el envio" }, { status: 403 });
     }
 
+    // Idempotencia: si la orden ya fue marcada como enviada (o avanzó más allá),
+    // no re-subimos la imagen ni fallamos. Esto cubre el caso en que el servidor
+    // sí guardó el envío pero la respuesta no llegó al navegador y el vendedor
+    // reintenta — antes eso podía re-subir una imagen o dar error confuso.
+    if (["EN_CAMINO", "ENTREGADO", "COMPLETADO"].includes(orden.estado)) {
+      return NextResponse.json({ ok: true, yaRegistrado: true });
+    }
+
     // En contra entrega, el comprador debe haber pagado (y un admin confirmado) la comisión
     // de reserva antes de que el vendedor pueda despachar.
     if (orden.estado === "ESPERANDO_COMISION") {

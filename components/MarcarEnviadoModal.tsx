@@ -28,21 +28,58 @@ export default function MarcarEnviadoModal({ orderId, onClose, onSuccess }: Prop
     }
   };
 
+  // Comprime/reescala la foto en el navegador antes de subirla. Las fotos de
+  // celular pesan 3-8 MB; subir eso por una red móvil lenta era lo que dejaba
+  // "Registrando..." congelado. La reducimos a máx 1600px y JPEG ~0.7 (típico
+  // 200-500 KB) para que la subida sea de segundos. Si algo falla, se sube el
+  // archivo original sin romper el flujo.
+  const comprimirImagen = (file: File): Promise<Blob> =>
+    new Promise((resolve) => {
+      if (!file.type.startsWith("image/")) { resolve(file); return; }
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1600;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width >= height) { height = Math.round(height * (MAX / width)); width = MAX; }
+          else { width = Math.round(width * (MAX / height)); height = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.7);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+
   const handleSubmit = async () => {
+    if (enviando) return; // guarda anti doble-envío
     setError("");
     if (!numeroGuia.trim()) { setError("Ingresa el numero de guia"); return; }
     const validacion = validarNumeroGuia(transportadora, numeroGuia.trim());
     if (!validacion.valido) { setError(validacion.motivo || "Número de guía inválido"); return; }
     if (!comprobante) { setError("Sube una foto de la guía o el comprobante de envío — es obligatorio para proteger al comprador"); return; }
     setEnviando(true);
+
+    // Timeout duro: si el servidor no responde en 60s, abortamos para no dejar
+    // el botón "Registrando..." congelado para siempre (bug reportado en pruebas).
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     try {
+      const imagen = await comprimirImagen(comprobante);
+
       const fd = new FormData();
       fd.append("orderId", orderId);
       fd.append("numeroGuia", numeroGuia.trim());
       fd.append("transportadora", transportadora);
-      if (comprobante) fd.append("comprobante", comprobante);
+      fd.append("comprobante", imagen, "comprobante.jpg");
 
-      const res = await fetch("/api/orders/marcar-enviado", { method: "POST", credentials: "include", body: fd });
+      const res = await fetch("/api/orders/marcar-enviado", { method: "POST", credentials: "include", body: fd, signal: controller.signal });
       const text = await res.text();
       let data: any = {};
       try { data = JSON.parse(text); } catch { data = { error: "Respuesta invalida (" + res.status + ")" }; }
@@ -51,8 +88,14 @@ export default function MarcarEnviadoModal({ orderId, onClose, onSuccess }: Prop
       onSuccess();
       onClose();
     } catch (e: any) {
-      setError(e.message || "Error al registrar el envio");
+      if (e.name === "AbortError") {
+        // Puede que el servidor sí lo haya guardado aunque la respuesta no llegó.
+        setError("La conexión tardó demasiado. Si ya subiste la guía, recarga la página para verificar antes de reintentar.");
+      } else {
+        setError(e.message || "Error al registrar el envio");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setEnviando(false);
     }
   };

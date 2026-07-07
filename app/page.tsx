@@ -195,6 +195,18 @@ function PageInner() {
   const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
   const [paymentModalProduct, setPaymentModalProduct] = useState<any | null>(null);
   const [showPublishForm, setShowPublishForm] = useState(false);
+  const publishFormRef = useRef<HTMLDivElement | null>(null);
+
+  // Al abrir el formulario de publicar, llevar la vista hacia él. El botón vive
+  // en el header y el formulario aparece más abajo; sin esto el usuario quedaba
+  // mirando el mismo punto y no veía que el formulario se había abierto.
+  useEffect(() => {
+    if (showPublishForm) {
+      requestAnimationFrame(() => {
+        publishFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [showPublishForm]);
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -533,7 +545,7 @@ function PageInner() {
 
       <main style={{ maxWidth: 1160, margin: "auto", padding: "28px 16px 60px" }}>
         {isAuthenticated && showPublishForm && (
-          <div style={{ background: THEME.surfaceGradient, borderRadius: 20, padding: "24px 20px", border: "1.5px solid transparent", marginBottom: 24, boxShadow: THEME.cardShadow }}>
+          <div ref={publishFormRef} style={{ background: THEME.surfaceGradient, borderRadius: 20, padding: "24px 20px", border: "1.5px solid transparent", marginBottom: 24, boxShadow: THEME.cardShadow, scrollMarginTop: 80 }}>
             <h2 style={{ fontSize: 17, fontWeight: 800, color: THEME.text, margin: "0 0 18px", textAlign: "center" }}>Publicar producto</h2>
             <form onSubmit={handleSubmit(onPublish)}>
               <div style={{ display: "grid", gap: 12 }}>
