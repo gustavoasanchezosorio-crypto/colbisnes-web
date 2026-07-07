@@ -9,12 +9,19 @@ export default function USDTPagoContent() {
   const router  = useRouter();
   const orderId = params.get("orderId");
   const total   = params.get("total");
-  // La wallet de la URL es solo un valor inicial de respaldo (puede quedar
-  // desactualizada si el link de checkout es viejo). En cuanto el backend
-  // responde, siempre se usa la wallet vigente en el servidor.
-  const [wallet, setWallet] = useState(params.get("wallet") || "");
+  // La wallet SIEMPRE se toma del servidor (fuente de verdad), nunca de la URL.
+  // Un link/pantalla viejo puede traer en la URL una wallet que ya no es la vigente
+  // (pasó en producción 2026-07-07: se cambió la hot wallet y una pantalla cacheada
+  // seguía mostrando la wallet anterior — el comprador pagó a una dirección obsoleta).
+  // Por eso no se pinta ni se habilita ningún botón de pago hasta que el servidor
+  // confirma la wallet actual y que la orden sigue siendo pagable.
+  const [wallet, setWallet] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [estado, setEstado] = useState<"esperando" | "verificando" | "pagado">("esperando");
+  const [cargando, setCargando] = useState(true);
+  // La orden ya no es pagable (cancelada, expirada, anulada o inexistente): no se
+  // debe mostrar la pantalla de pago, para que nadie transfiera a una orden muerta.
+  const [ordenInvalida, setOrdenInvalida] = useState(false);
   // Fecha límite real de pago (viene del servidor), y "ahora" que avanza cada segundo
   // para pintar el contador hacia atrás. Antes solo había un texto fijo "10 minutos"
   // que nunca contaba — el comprador no veía cuánto tiempo le quedaba realmente.
@@ -22,7 +29,7 @@ export default function USDTPagoContent() {
   const [ahora, setAhora] = useState<number>(Date.now());
 
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId) { setCargando(false); setOrdenInvalida(true); return; }
     const verificar = async () => {
       try {
         const res = await fetch("/api/usdt/verificar?orderId=" + orderId);
@@ -32,8 +39,12 @@ export default function USDTPagoContent() {
         if (data.estado === "PAGADO") {
           setEstado("pagado");
           setTimeout(() => router.push("/?tracking=" + orderId), 2000);
+        } else if (data.error || (data.yaConfirmado && data.estado !== "ESPERANDO_PAGO_CRYPTO")) {
+          // yaConfirmado + estado distinto de PAGADO = orden cancelada/anulada/expirada.
+          setOrdenInvalida(true);
         }
       } catch {}
+      finally { setCargando(false); }
     };
     const interval = setInterval(verificar, 6000);
     verificar();
@@ -79,6 +90,34 @@ export default function USDTPagoContent() {
           <div style={{ width: 80, height: 80, background: "linear-gradient(135deg,#22c55e,#16a34a)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 40, boxShadow: "0 10px 30px rgba(34,197,94,0.4)" }}>✓</div>
           <h2 style={{ color: THEME.text, fontWeight: 900, fontSize: 22 }}>Pago detectado</h2>
           <p style={{ color: THEME.muted, fontSize: 14 }}>Redirigiendo a tu pedido...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mientras el servidor no confirme la wallet vigente y que la orden es pagable,
+  // NO se muestra ninguna dirección ni botón de pago — así nadie transfiere a una
+  // wallet obsoleta ni a una orden ya cancelada/expirada.
+  if (cargando || (!wallet && !ordenInvalida)) {
+    return (
+      <div style={{ minHeight: "100vh", background: THEME.background, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "-apple-system,sans-serif" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 44, height: 44, border: `4px solid ${THEME.border}`, borderTopColor: THEME.primary, borderRadius: "50%", margin: "0 auto 16px", animation: "girar 0.9s linear infinite" }} />
+          <p style={{ color: THEME.muted, fontSize: 14 }}>Cargando datos de pago...</p>
+        </div>
+        <style>{`@keyframes girar { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (ordenInvalida) {
+    return (
+      <div style={{ minHeight: "100vh", background: THEME.background, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "-apple-system,sans-serif", padding: "24px" }}>
+        <div style={{ textAlign: "center", maxWidth: 380 }}>
+          <div style={{ width: 80, height: 80, background: "linear-gradient(135deg,#94a3b8,#64748b)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 38, boxShadow: "0 10px 30px rgba(100,116,139,0.4)" }}>⚠️</div>
+          <h2 style={{ color: THEME.text, fontWeight: 900, fontSize: 22, margin: "0 0 8px" }}>Esta orden ya no está activa</h2>
+          <p style={{ color: THEME.muted, fontSize: 14, lineHeight: 1.5, margin: "0 0 20px" }}>El plazo de pago venció o la orden fue cancelada. <strong>No transfieras a esta pantalla.</strong> Si aún quieres el producto, vuelve al inicio y realiza una nueva oferta para generar una orden de pago vigente.</p>
+          <button onClick={() => router.push("/")} style={{ padding: "12px 22px", borderRadius: 14, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>Volver al inicio</button>
         </div>
       </div>
     );
