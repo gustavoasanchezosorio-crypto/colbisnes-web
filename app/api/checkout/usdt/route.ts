@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
+import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,13 +19,17 @@ export async function POST(req: NextRequest) {
     const { productoId, proteccionExtendida } = await req.json();
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });
 
-    // Obtener tasa desde el servidor — no confiar en la tasa enviada por el cliente
-    let tasaCOP = 4200; // fallback
-    try {
-      const tasaRes = await fetch(`${process.env.NEXT_PUBLIC_URL || "https://colbisnes-web.vercel.app"}/api/tasa-usdt`);
-      const tasaData = await tasaRes.json();
-      if (tasaData.tasa && !isNaN(tasaData.tasa)) tasaCOP = tasaData.tasa;
-    } catch { /* usar fallback */ }
+    // Obtener tasa desde el servidor — no confiar en la tasa enviada por el cliente.
+    // Antes esto se auto-llamaba por HTTP a NEXT_PUBLIC_URL + "/api/tasa-usdt", una ruta
+    // frágil que dependía de esa variable de entorno apuntando al dominio correcto; cuando
+    // apuntaba (o caía al fallback) a un dominio muerto, fallaba en silencio y la orden se
+    // creaba con la tasa fija 4200 mientras el checkout mostraba la tasa real — descuadre
+    // confirmado en producción el 2026-07-06. Ahora se llama la función compartida
+    // directamente en el mismo proceso, sin HTTP de por medio.
+    const { tasa: tasaCOP, fuente: fuenteTasa } = await obtenerTasaUSDT();
+    if (fuenteTasa === "fallback") {
+      console.error("POST /api/checkout/usdt: creando orden con tasa de respaldo (4200), no se pudo obtener tasa en vivo. productoId:", productoId);
+    }
 
     const producto = await prisma.product.findUnique({ where: { id: productoId } });
     if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { enviarUSDT, esDireccionValida } from "@/lib/hotWallet";
+import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -60,12 +61,14 @@ export async function POST(req: NextRequest) {
     // Monto correcto a pagar al vendedor: recibeVendedor (COP, = precio del producto, sin comisión)
     // convertido a USD con la tasa actual — NO se usa totalUSDT porque ese incluye la comisión de
     // Colbisnes y el colchón cambiario, que deben quedarse en la plataforma.
-    let tasaCOP = 4200;
-    try {
-      const tasaRes = await fetch(`${process.env.NEXT_PUBLIC_URL || "https://colbisnes-web.vercel.app"}/api/tasa-usdt`);
-      const tasaData = await tasaRes.json();
-      if (tasaData.tasa && !isNaN(tasaData.tasa)) tasaCOP = tasaData.tasa;
-    } catch { /* usar fallback */ }
+    // Antes esto se auto-llamaba por HTTP a NEXT_PUBLIC_URL + "/api/tasa-usdt" (misma ruta frágil
+    // que en /api/checkout/usdt: si esa URL apunta a un dominio caído, falla en silencio y cae al
+    // valor fijo 4200) — con tasa de respaldo desactualizada, el vendedor recibiría de menos.
+    // Ahora se llama la función compartida directamente en el mismo proceso, sin HTTP de por medio.
+    const { tasa: tasaCOP, fuente: fuenteTasa } = await obtenerTasaUSDT();
+    if (fuenteTasa === "fallback") {
+      console.error("POST /api/admin/liberar-pago-auto: enviando pago con tasa de respaldo (4200), no se pudo obtener tasa en vivo. orderId:", orderId);
+    }
 
     const amountUSD = parseFloat((orden.recibeVendedor / tasaCOP).toFixed(2));
 
