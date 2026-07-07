@@ -57,8 +57,17 @@ export async function GET(req: NextRequest) {
 
     const wallet = process.env.NEXT_PUBLIC_USDT_WALLET;
 
+    // paymentExpiresAt vive en el producto (no en la orden). Se devuelve al cliente para
+    // que pueda pintar un contador real hacia atrás, en vez de un texto fijo "10 minutos"
+    // que no reflejaba el tiempo restante verdadero (reportado por el usuario 2026-07-07).
+    const productoPlazo = await prisma.product.findUnique({
+      where: { id: orden.productId },
+      select: { paymentExpiresAt: true },
+    });
+    const paymentExpiresAt = productoPlazo?.paymentExpiresAt ?? null;
+
     if (orden.estado !== "ESPERANDO_PAGO_CRYPTO") {
-      return NextResponse.json({ estado: orden.estado, yaConfirmado: true, wallet });
+      return NextResponse.json({ estado: orden.estado, yaConfirmado: true, wallet, paymentExpiresAt });
     }
 
     const meganodeKey = process.env.MEGANODE_API_KEY;
@@ -109,7 +118,7 @@ export async function GET(req: NextRequest) {
 
     if (data.error) {
       console.error("USDT verificar - error:", data.error.message);
-      return NextResponse.json({ estado: orden.estado, encontrado: false, debug: data.error.message, wallet });
+      return NextResponse.json({ estado: orden.estado, encontrado: false, debug: data.error.message, wallet, paymentExpiresAt });
     }
 
     const logs = data.result || [];
@@ -179,7 +188,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ estado: "PAGADO", encontrado: true, txHash: txEncontrada.transactionHash });
     }
 
-    return NextResponse.json({ estado: orden.estado, encontrado: false, totalLogsRevisados: logs.length, wallet });
+    return NextResponse.json({ estado: orden.estado, encontrado: false, totalLogsRevisados: logs.length, wallet, paymentExpiresAt });
   } catch (err: any) {
     console.error("Error verificando USDT:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });

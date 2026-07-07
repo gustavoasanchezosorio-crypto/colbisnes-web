@@ -15,6 +15,11 @@ export default function USDTPagoContent() {
   const [wallet, setWallet] = useState(params.get("wallet") || "");
   const [copiado, setCopiado] = useState(false);
   const [estado, setEstado] = useState<"esperando" | "verificando" | "pagado">("esperando");
+  // Fecha límite real de pago (viene del servidor), y "ahora" que avanza cada segundo
+  // para pintar el contador hacia atrás. Antes solo había un texto fijo "10 minutos"
+  // que nunca contaba — el comprador no veía cuánto tiempo le quedaba realmente.
+  const [expiraEn, setExpiraEn] = useState<number | null>(null);
+  const [ahora, setAhora] = useState<number>(Date.now());
 
   useEffect(() => {
     if (!orderId) return;
@@ -23,6 +28,7 @@ export default function USDTPagoContent() {
         const res = await fetch("/api/usdt/verificar?orderId=" + orderId);
         const data = await res.json();
         if (data.wallet) setWallet(data.wallet);
+        if (data.paymentExpiresAt) setExpiraEn(new Date(data.paymentExpiresAt).getTime());
         if (data.estado === "PAGADO") {
           setEstado("pagado");
           setTimeout(() => router.push("/?tracking=" + orderId), 2000);
@@ -33,6 +39,20 @@ export default function USDTPagoContent() {
     verificar();
     return () => clearInterval(interval);
   }, [orderId, router]);
+
+  // Reloj local que avanza cada segundo para redibujar el contador.
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const msRestantes = expiraEn !== null ? expiraEn - ahora : null;
+  const expirado = msRestantes !== null && msRestantes <= 0 && estado !== "pagado";
+  const mmss = (() => {
+    if (msRestantes === null || msRestantes <= 0) return "00:00";
+    const s = Math.floor(msRestantes / 1000);
+    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  })();
 
   // Dirección completa visible, resaltando en azul Colbisnes los primeros 6 y
   // los últimos 6 caracteres (sin contar el prefijo "0x"), igual que Binance.
@@ -59,6 +79,19 @@ export default function USDTPagoContent() {
           <div style={{ width: 80, height: 80, background: "linear-gradient(135deg,#22c55e,#16a34a)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 40, boxShadow: "0 10px 30px rgba(34,197,94,0.4)" }}>✓</div>
           <h2 style={{ color: THEME.text, fontWeight: 900, fontSize: 22 }}>Pago detectado</h2>
           <p style={{ color: THEME.muted, fontSize: 14 }}>Redirigiendo a tu pedido...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (expirado) {
+    return (
+      <div style={{ minHeight: "100vh", background: THEME.background, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "-apple-system,sans-serif", padding: "24px" }}>
+        <div style={{ textAlign: "center", maxWidth: 380 }}>
+          <div style={{ width: 80, height: 80, background: "linear-gradient(135deg,#ef4444,#b91c1c)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 38, boxShadow: "0 10px 30px rgba(239,68,68,0.4)" }}>⏰</div>
+          <h2 style={{ color: THEME.text, fontWeight: 900, fontSize: 22, margin: "0 0 8px" }}>Se acabó el tiempo</h2>
+          <p style={{ color: THEME.muted, fontSize: 14, lineHeight: 1.5, margin: "0 0 20px" }}>Pasaron los 10 minutos para completar el pago. El producto quedó disponible de nuevo. Si aún lo quieres, debes hacer una nueva oferta.</p>
+          <button onClick={() => router.push("/")} style={{ padding: "12px 22px", borderRadius: 14, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>Volver al inicio</button>
         </div>
       </div>
     );
@@ -124,7 +157,17 @@ export default function USDTPagoContent() {
           </div>
         </div>
 
-        <p style={{ textAlign: "center", color: THEME.muted, fontSize: 11, marginTop: 18 }}>Tienes 30 minutos para completar el pago</p>
+        <div style={{ textAlign: "center", marginTop: 18 }}>
+          {msRestantes !== null ? (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: msRestantes < 2 * 60 * 1000 ? "rgba(239,68,68,0.10)" : THEME.surfaceAlt, border: `1px solid ${msRestantes < 2 * 60 * 1000 ? "rgba(239,68,68,0.35)" : THEME.border}`, borderRadius: 12, padding: "8px 16px" }}>
+              <span style={{ fontSize: 15 }}>⏳</span>
+              <span style={{ color: THEME.muted, fontSize: 12, fontWeight: 600 }}>Tiempo para pagar:</span>
+              <span style={{ color: msRestantes < 2 * 60 * 1000 ? "#b91c1c" : THEME.primary, fontSize: 16, fontWeight: 900, fontVariantNumeric: "tabular-nums", letterSpacing: "0.5px" }}>{mmss}</span>
+            </div>
+          ) : (
+            <p style={{ color: THEME.muted, fontSize: 11, margin: 0 }}>Tienes 10 minutos para completar el pago</p>
+          )}
+        </div>
       </div>
       <style>{`@keyframes pulso { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
     </div>
