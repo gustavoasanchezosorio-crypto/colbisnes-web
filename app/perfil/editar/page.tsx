@@ -67,6 +67,7 @@ export default function EditarPerfilPage() {
     name: "", phone: "", city: "", image: "",
     nequiNumber: "", brebId: "",
     phoneWhatsapp: "", usdtWallet: "", usdtRed: "BEP20", direccionEnvio: "",
+    antiPhishingCode: "",
   });
 
   const [geoErrorMsg, setGeoErrorMsg] = useState("");
@@ -121,6 +122,7 @@ export default function EditarPerfilPage() {
             nequiNumber: data.nequiNumber || "", brebId: data.brebId || "",
             phoneWhatsapp: data.phoneWhatsapp || "", usdtWallet: data.usdtWallet || "",
             usdtRed: data.usdtRed || "BEP20", direccionEnvio: data.direccionEnvio || "",
+            antiPhishingCode: data.antiPhishingCode || "",
           });
           setLoading(false);
         })
@@ -181,6 +183,7 @@ export default function EditarPerfilPage() {
     if (formData.phone && formData.phone.length < 7) { setErrorMsg("El teléfono debe tener al menos 7 dígitos"); return; }
     if (formData.nequiNumber && formData.nequiNumber.length !== 10) { setErrorMsg("El número Nequi debe tener exactamente 10 dígitos"); return; }
     if (formData.phoneWhatsapp && formData.phoneWhatsapp.length < 7) { setErrorMsg("El WhatsApp debe tener al menos 7 dígitos"); return; }
+    if (formData.antiPhishingCode && (formData.antiPhishingCode.length < 4 || formData.antiPhishingCode.length > 12)) { setErrorMsg("El código anti-phishing debe tener entre 4 y 12 caracteres"); return; }
 
     setSaving(true);
     try {
@@ -368,6 +371,21 @@ export default function EditarPerfilPage() {
                 onChange={e => setFormData({ ...formData, direccionEnvio: e.target.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚüÜñÑ\s\-\.,#]/g, "") })}
                 placeholder="Calle 123 #45-67, Barrio, Ciudad" maxLength={200} />
               <p style={hint}>Letras, números, espacios, guiones y comas</p>
+            </div>
+
+            {/* ── SEGURIDAD ── */}
+            <h3 style={{ color: THEME.gold, fontSize: 14, margin: "24px 0 14px", textTransform: "uppercase", letterSpacing: "0.05em", borderTop: "1px solid " + THEME.border, paddingTop: 20, textAlign: "center" }}>Seguridad</h3>
+
+            <div style={box}>
+              <label style={lbl}>Código anti-phishing</label>
+              <input style={{ ...inp, letterSpacing: "0.1em", fontWeight: 700 }} type="text"
+                value={formData.antiPhishingCode}
+                onChange={e => setFormData({ ...formData, antiPhishingCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) })}
+                placeholder="Ej: COLB2024" maxLength={12} />
+              <p style={hint}>
+                4 a 12 letras y números. Aparecerá en todos los correos que te enviemos.
+                Si recibes un correo que dice ser de Colbisnes y <b>no muestra tu código</b>, desconfía: podría ser phishing.
+              </p>
             </div>
 
             <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem" }}>

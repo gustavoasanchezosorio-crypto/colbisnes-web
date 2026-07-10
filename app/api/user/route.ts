@@ -8,6 +8,7 @@ const SELECT_FIELDS = {
   id: true, name: true, email: true, phone: true, city: true, image: true,
   nequiNumber: true, brebId: true, createdAt: true,
   phoneWhatsapp: true, usdtWallet: true, usdtRed: true, direccionEnvio: true,
+  antiPhishingCode: true,
 };
 
 export async function GET() {
@@ -37,6 +38,18 @@ export async function PATCH(request: Request) {
     const updateData: any = {};
     for (const campo of campos) {
       if (body[campo] !== undefined) updateData[campo] = body[campo];
+    }
+
+    // Código anti-phishing: 4–12 alfanuméricos (se normaliza a mayúsculas), o vacío para borrarlo.
+    if (body.antiPhishingCode !== undefined) {
+      const raw = String(body.antiPhishingCode || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (raw.length === 0) {
+        updateData.antiPhishingCode = null;
+      } else if (raw.length < 4 || raw.length > 12) {
+        return NextResponse.json({ error: "El código anti-phishing debe tener entre 4 y 12 caracteres (letras y números)." }, { status: 400 });
+      } else {
+        updateData.antiPhishingCode = raw;
+      }
     }
 
     // Evita evadir un bloqueo por incumplimiento de envío registrando el mismo número de

@@ -27,6 +27,12 @@ model User {
   resetToken       String?
   resetTokenExpiry DateTime?
 
+  // Código anti-phishing: el usuario lo define y se muestra en todos los correos
+  // legítimos que le enviamos. Un correo sin este código = sospechoso de phishing.
+  // Se guarda en texto plano a propósito (hay que leerlo para incrustarlo en cada
+  // email); no da acceso a nada, así que no es una credencial y no se hashea.
+  antiPhishingCode String?
+
   products         Product[]
   offers           Offer[]
   sessions         Session[]
