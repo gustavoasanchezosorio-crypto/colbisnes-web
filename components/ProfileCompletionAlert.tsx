@@ -27,7 +27,12 @@ export default function ProfileCompletionAlert() {
         if (!vivo || !u) return;
         const c = computeProfileCompletion(u);
         setData(c);
-        if (c.percent < 100) setShowPopup(true);
+        // El popup se muestra una sola vez por sesión (la barra de progreso sí queda siempre).
+        const yaMostrado = typeof window !== "undefined" && sessionStorage.getItem("perfilPopupVisto") === "1";
+        if (c.percent < 100 && !yaMostrado) {
+          setShowPopup(true);
+          try { sessionStorage.setItem("perfilPopupVisto", "1"); } catch {}
+        }
       })
       .catch(() => {});
     return () => { vivo = false; };

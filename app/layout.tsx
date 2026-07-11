@@ -24,13 +24,13 @@ export const metadata: Metadata = {
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
     url: SITE_URL,
     locale: "es_CO",
-    images: [{ url: "/logo-white-email.png", width: 176, height: 60, alt: "Colbisnes" }],
+    images: [{ url: "/logo-google.png", width: 512, height: 512, alt: "Colbisnes" }],
   },
   twitter: {
     card: "summary",
     title: "Colbisnes",
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
-    images: ["/logo-white-email.png"],
+    images: ["/logo-google.png"],
   },
 };
 
@@ -41,7 +41,7 @@ const organizationJsonLd = {
   "@type": "Organization",
   name: "Colbisnes",
   url: SITE_URL,
-  logo: SITE_URL + "/logo-white-email.png",
+  logo: SITE_URL + "/logo-google.png",
   description: "El marketplace colombiano de segunda mano con pagos protegidos.",
 };
 
