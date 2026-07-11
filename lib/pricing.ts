@@ -42,9 +42,10 @@ export interface PricingBreakdown {
   comisionColbisnes: number;
   totalComprador: number;
   costoWompi: number;
-  gmf: number;
+  gmf: number;              // GMF de ENTRADA (lo paga el comprador vía gross-up)
+  gmfSalida: number;        // GMF de SALIDA (4x1000): lo asume el vendedor al recibir la transferencia
   gananciaColbisnes: number;
-  recibeVendedor: number;
+  recibeVendedor: number;   // neto real que recibe el vendedor = precioBase − gmfSalida
   testMode: boolean;
 }
 
@@ -58,7 +59,7 @@ export interface USDTPricing {
 }
 
 export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string | null): PricingBreakdown {
-  if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
+  if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gmfSalida: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
   const comisionColbisnes = Math.round(precioBase * COLBISNES_PCT_ONLINE * multiplicadorPorNivel(nivelVendedor));
 
   // El comprador cubre el costo de Wompi + GMF, además de la comisión de Colbisnes.
@@ -81,14 +82,20 @@ export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string 
   const gmf               = Math.round(totalComprador * GMF_PCT);
   // Neto real para Colbisnes tras pagarle al vendedor: ≈ comisionColbisnes (±redondeo).
   const gananciaColbisnes = totalComprador - costoWompi - gmf - precioBase;
-  return { precioBase, comisionColbisnes, totalComprador, costoWompi, gmf, gananciaColbisnes, recibeVendedor: precioBase, testMode: false };
+  // GMF de SALIDA (4x1000): cuando Colbisnes transfiere el pago al vendedor, la cuenta de
+  // Colbisnes es debitada el 4x1000. Ese costo lo asume el vendedor: se descuenta de su
+  // neto (precioBase − gmfSalida). Se le muestra explícito en la pantalla de la oferta.
+  const gmfSalida         = Math.round(precioBase * GMF_PCT);
+  return { precioBase, comisionColbisnes, totalComprador, costoWompi, gmf, gmfSalida, gananciaColbisnes, recibeVendedor: precioBase - gmfSalida, testMode: false };
 }
 
 export function calcularPrecioContraEntrega(precioBase: number, nivelVendedor?: string | null): PricingBreakdown {
-  if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
+  if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gmfSalida: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
   const comisionColbisnes = Math.round(precioBase * COLBISNES_PCT_CE * multiplicadorPorNivel(nivelVendedor));
   const totalComprador    = precioBase + comisionColbisnes;
-  return { precioBase, comisionColbisnes, totalComprador, costoWompi: 0, gmf: 0, gananciaColbisnes: comisionColbisnes, recibeVendedor: precioBase, testMode: false };
+  // Contra entrega: el comprador paga el producto en efectivo al mensajero, no hay transferencia
+  // de Colbisnes al vendedor, así que no aplica GMF de salida — el vendedor recibe el 100%.
+  return { precioBase, comisionColbisnes, totalComprador, costoWompi: 0, gmf: 0, gmfSalida: 0, gananciaColbisnes: comisionColbisnes, recibeVendedor: precioBase, testMode: false };
 }
 
 // Única comisión de Colbisnes sobre pagos USDT: cargo plano de $5 USD por cada millón

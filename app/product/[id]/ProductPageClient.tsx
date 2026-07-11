@@ -7,6 +7,7 @@ import TrackingOverlay from "@/components/TrackingOverlay";
 import TrustBadge from "@/components/TrustBadge";
 import PagarComisionNequiModal from "@/components/PagarComisionNequiModal";
 import { THEME } from "@/lib/theme";
+import { GMF_PCT } from "@/lib/pricing";
 
 interface Product {
   id: string; title: string; description: string; priceCOP: number;
@@ -763,6 +764,26 @@ export default function ProductPageClient({ productId }: { productId: string }) 
                     {o.user?.name||"Comprador"} — {new Date(o.createdAt).toLocaleDateString("es-CO")}
                   </p>
                   {o.message && <p style={{margin:"0.2rem 0 0",fontStyle:"italic",fontSize:"0.85rem",color:THEME.textSoft}}>"{o.message}"</p>}
+                  {o.status==="PENDING" && (() => {
+                    const gmfSalida = Math.round(o.amountCOP * GMF_PCT);
+                    const neto = o.amountCOP - gmfSalida;
+                    return (
+                      <div style={{marginTop:"0.5rem",padding:"0.5rem 0.65rem",background:"rgba(31,107,255,0.06)",border:`1px solid ${THEME.border}`,borderRadius:"8px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.8rem",color:THEME.textSoft}}>
+                          <span>Precio de la oferta</span><span>${o.amountCOP.toLocaleString("es-CO")}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.8rem",color:"#e53e3e"}}>
+                          <span>4×1000 al transferirte</span><span>−${gmfSalida.toLocaleString("es-CO")}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.9rem",fontWeight:"800",color:THEME.text,marginTop:"0.25rem",paddingTop:"0.25rem",borderTop:`1px solid ${THEME.border}`}}>
+                          <span>Recibes neto</span><span>${neto.toLocaleString("es-CO")}</span>
+                        </div>
+                        <p style={{margin:"0.35rem 0 0",fontSize:"0.72rem",color:THEME.muted,lineHeight:1.3}}>
+                          Aplica solo si el comprador paga online. Si paga en efectivo (contra entrega) o USDT, recibes el monto completo (${o.amountCOP.toLocaleString("es-CO")}).
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div style={{display:"flex",gap:"0.4rem"}}>
                   {o.status==="PENDING" && disponible && <>

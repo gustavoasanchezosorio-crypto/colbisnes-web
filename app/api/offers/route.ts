@@ -9,6 +9,7 @@ import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
+import { GMF_PCT } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -117,10 +118,15 @@ export async function POST(request: NextRequest) {
 
     // Notificar al vendedor con HTML plano
     try {
+      // Neto que recibiría el vendedor si el comprador paga online: se le descuenta el
+      // 4x1000 (GMF de salida) al transferirle. Se lo mostramos explícito para que sepa
+      // exactamente cuánto recibe antes de aceptar.
+      const gmfSalida = Math.round(Number(amountCOP) * GMF_PCT);
+      const netoVendedor = Number(amountCOP) - gmfSalida;
       const html = colbisnesEmailTemplate({
         preheader: "Nueva oferta recibida",
         titulo: "Tienes una nueva oferta 🤝",
-        cuerpo: `Hola ${product.seller.name || 'Vendedor'}, <strong>${session.user.name || 'un comprador'}</strong> ofreció <strong style="color:#1F6BFF;">$${Number(amountCOP).toLocaleString('es-CO')} COP</strong> por tu producto <strong>${product.title}</strong>.<br/><br/>Ingresa a Colbisnes para aceptar o rechazar la oferta.`,
+        cuerpo: `Hola ${product.seller.name || 'Vendedor'}, <strong>${session.user.name || 'un comprador'}</strong> ofreció <strong style="color:#1F6BFF;">$${Number(amountCOP).toLocaleString('es-CO')} COP</strong> por tu producto <strong>${product.title}</strong>.<br/><br/>Si aceptas y el comprador paga online, recibirías <strong style="color:#1F6BFF;">$${netoVendedor.toLocaleString('es-CO')} COP</strong> netos (se descuenta el 4×1000 de ley, −$${gmfSalida.toLocaleString('es-CO')}, al transferirte). Si paga en efectivo o USDT, recibes el monto completo.<br/><br/>Ingresa a Colbisnes para aceptar o rechazar la oferta.`,
         ctaTexto: "Ver oferta",
         ctaUrl: "https://colbisnes.com",
       });
@@ -131,7 +137,7 @@ export async function POST(request: NextRequest) {
       });
       await sendWhatsapp({
         to: (product.seller as any).phoneWhatsapp,
-        body: "🤝 *Colbisnes* - Nueva oferta\n\nHola " + (product.seller.name || 'Vendedor') + ", tienes una oferta de $" + Number(amountCOP).toLocaleString('es-CO') + " COP por *" + product.title + "*.\n\nIngresa a Colbisnes para aceptarla o rechazarla.",
+        body: "🤝 *Colbisnes* - Nueva oferta\n\nHola " + (product.seller.name || 'Vendedor') + ", tienes una oferta de $" + Number(amountCOP).toLocaleString('es-CO') + " COP por *" + product.title + "*.\n\nSi pagan online recibirías $" + netoVendedor.toLocaleString('es-CO') + " netos (se descuenta el 4×1000, −$" + gmfSalida.toLocaleString('es-CO') + "). En efectivo o USDT recibes el monto completo.\n\nIngresa a Colbisnes para aceptarla o rechazarla.",
       });
     } catch (emailError) {
       console.error('Error enviando email de nueva oferta:', emailError);
