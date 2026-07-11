@@ -4,7 +4,64 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
 
-type Seccion = "resumen" | "usuarios" | "productos" | "pagos" | "bloqueos" | "auditoria";
+type Seccion = "resumen" | "usuarios" | "productos" | "pagos" | "bloqueos" | "auditoria" | "urls";
+
+// Enlaces que usamos en Colbisnes, agrupados. Solo URLs públicas de paneles/servicios;
+// nunca credenciales ni secretos.
+const GRUPOS_URLS: { grupo: string; enlaces: { nombre: string; url: string; nota?: string }[] }[] = [
+  {
+    grupo: "🛒 Sitio y panel",
+    enlaces: [
+      { nombre: "Sitio en producción", url: "https://colbisnes.com" },
+      { nombre: "Panel de administración", url: "https://colbisnes.com/admin" },
+    ],
+  },
+  {
+    grupo: "☁️ Infraestructura",
+    enlaces: [
+      { nombre: "Railway (hosting)", url: "https://railway.app/dashboard", nota: "Deploys y variables de entorno" },
+      { nombre: "Neon (base de datos)", url: "https://console.neon.tech", nota: "PostgreSQL de producción" },
+      { nombre: "GitHub (repositorio)", url: "https://github.com/gustavoasanchezosorio-crypto/colbisnes-web" },
+    ],
+  },
+  {
+    grupo: "💰 Pagos",
+    enlaces: [
+      { nombre: "Wompi (comercios)", url: "https://comercios.wompi.co", nota: "Pagos con tarjeta / PSE" },
+      { nombre: "Binance P2P", url: "https://p2p.binance.com", nota: "Referencia de tasa USDT/COP" },
+    ],
+  },
+  {
+    grupo: "✉️ Correo",
+    enlaces: [
+      { nombre: "Resend", url: "https://resend.com/overview", nota: "Envío y logs de correos" },
+    ],
+  },
+  {
+    grupo: "🪪 Identidad y verificación",
+    enlaces: [
+      { nombre: "Didit (KYC)", url: "https://business.didit.me", nota: "Verificación de identidad" },
+    ],
+  },
+  {
+    grupo: "🖼️ Multimedia",
+    enlaces: [
+      { nombre: "Cloudinary", url: "https://console.cloudinary.com", nota: "Imágenes de productos y KYC" },
+    ],
+  },
+  {
+    grupo: "🔑 Autenticación",
+    enlaces: [
+      { nombre: "Google Cloud (OAuth)", url: "https://console.cloud.google.com/apis/credentials", nota: "Credenciales de inicio con Google" },
+    ],
+  },
+  {
+    grupo: "⛓️ Blockchain (USDT)",
+    enlaces: [
+      { nombre: "BscScan — wallet activa", url: "https://bscscan.com/address/0x41d4e118E45835775F3771feDb6fA2e6e4B8a3B1", nota: "Hot wallet de recepción (BEP-20)" },
+    ],
+  },
+];
 
 export default function AdminPanel() {
   const { data: session, status } = useSession();
@@ -27,6 +84,8 @@ export default function AdminPanel() {
     setCargando(true);
     setErrorAdmin("");
     try {
+      // La sección de URLs es estática (no consulta API).
+      if (seccionActual === "urls") { setDatos(null); return; }
       if (seccionActual === "bloqueos") {
         const [resComisiones, resUsuarios] = await Promise.all([
           fetch("/api/admin/confirmar-comision-nequi"),
@@ -216,14 +275,15 @@ export default function AdminPanel() {
       )}
 
       <nav style={{ display: "flex", gap: 8, padding: "16px 24px", borderBottom: `1px solid ${T.border}` }}>
-        {(["resumen", "usuarios", "productos", "pagos", "bloqueos", "auditoria"] as Seccion[]).map(sec => (
+        {(["resumen", "usuarios", "productos", "pagos", "bloqueos", "auditoria", "urls"] as Seccion[]).map(sec => (
           <button key={sec} onClick={() => setSeccion(sec)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: seccion === sec ? T.blue : T.card, color: seccion === sec ? "white" : T.muted }}>
             {sec === "resumen" ? "📊 Resumen"
               : sec === "usuarios" ? `👥 Usuarios${datos?.usuarios ? ` (${datos.usuarios.length})` : ""}`
               : sec === "productos" ? "📦 Productos"
               : sec === "pagos" ? `💰 Pagos${datos?.pagos ? ` (${datos.pagos.length})` : ""}`
               : sec === "bloqueos" ? `🔒 Contraentrega${datos?.comisionesPendientes ? ` (${datos.comisionesPendientes.length + (datos?.usuariosBloqueados?.length || 0)})` : ""}`
-              : "📋 Auditoría"}
+              : sec === "auditoria" ? "📋 Auditoría"
+              : "🔗 URLs"}
           </button>
         ))}
       </nav>
@@ -522,6 +582,27 @@ export default function AdminPanel() {
                     ))}
                   </ul>
                 ) : <p style={{ color: T.muted }}>No hay registros</p>}
+              </div>
+            )}
+
+            {seccion === "urls" && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+                {GRUPOS_URLS.map(({ grupo, enlaces }) => (
+                  <div key={grupo} style={{ background: T.card, borderRadius: 16, padding: 20, border: `1px solid ${T.border}` }}>
+                    <h3 style={{ margin: "0 0 14px", color: T.blue, fontSize: 15 }}>{grupo}</h3>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                      {enlaces.map(({ nombre, url, nota }) => (
+                        <li key={url}>
+                          <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: T.text, textDecoration: "none", fontWeight: 700, fontSize: 14, display: "block" }}>
+                            {nombre} <span style={{ fontSize: 12 }}>↗</span>
+                          </a>
+                          <div style={{ fontSize: 11, color: T.muted, wordBreak: "break-all", marginTop: 2 }}>{url}</div>
+                          {nota && <div style={{ fontSize: 11, color: T.muted, marginTop: 2, fontStyle: "italic" }}>{nota}</div>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             )}
           </>
