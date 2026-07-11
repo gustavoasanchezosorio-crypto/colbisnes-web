@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -36,11 +37,19 @@ export async function PATCH(req: NextRequest) {
             titulo: `Felicidades ${usuario.name || ""}, tu verificación premium fue aprobada ⭐`,
             cuerpo: `Revisamos tus documentos y ya tienes el badge de verificación premium en tu perfil. Esto le da más confianza a tus compradores.`,
             ctaTexto: "Ver mi perfil",
-            ctaUrl: "https://colbisnes-web.vercel.app",
+            ctaUrl: process.env.NEXT_PUBLIC_URL || "https://colbisnes.com",
           }),
         }),
       });
     } catch (e) { console.error("Error enviando email de aprobación premium:", e); }
+
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "APROBAR_PREMIUM",
+      entity: "User",
+      entityId: userId,
+      request: req,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

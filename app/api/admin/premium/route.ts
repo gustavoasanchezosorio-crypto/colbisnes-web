@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -66,11 +67,20 @@ export async function POST(req: NextRequest) {
             titulo: `Hola ${usuario.name || ""}, tu badge premium necesita otra revisión`,
             cuerpo: `${motivo ? `<strong>Motivo:</strong> ${motivo}<br/><br/>` : ""}Puedes volver a intentarlo desde tu perfil con documentos más claros.`,
             ctaTexto: "Ir a mi perfil",
-            ctaUrl: "https://colbisnes-web.vercel.app/perfil/editar",
+            ctaUrl: (process.env.NEXT_PUBLIC_URL || "https://colbisnes.com") + "/perfil/editar",
           }),
         }),
       });
     } catch (e) { console.error("Error enviando email de rechazo premium:", e); }
+
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "RECHAZAR_PREMIUM",
+      entity: "User",
+      entityId: userId,
+      metadata: { motivo: motivo || null },
+      request: req,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -39,9 +40,17 @@ export async function PATCH(req: NextRequest) {
           titulo: `Hola ${usuario.name || ""}, todo listo! ✅`,
           cuerpo: `Verificamos tu identidad correctamente. Ya formas parte oficial de la comunidad Colbisnes.<br/><br/>Ahora puedes publicar productos, hacer ofertas y cerrar tus primeros negocios con total confianza.`,
           ctaTexto: "Ir a Colbisnes",
-          ctaUrl: "https://colbisnes-web.vercel.app",
+          ctaUrl: process.env.NEXT_PUBLIC_URL || "https://colbisnes.com",
         }),
       }),
+    });
+
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "APROBAR_KYC",
+      entity: "User",
+      entityId: userId,
+      request: req,
     });
 
     return NextResponse.json({ success: true, mensaje: "Usuario verificado y notificado" });

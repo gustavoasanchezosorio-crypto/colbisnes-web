@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(session: any) {
   return (
@@ -53,6 +54,15 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[ADMIN] Producto ${productId} cambiado de ${producto.status} a ${nuevoStatus} por ${session.user.email}`);
+
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "CORREGIR_PRODUCTO",
+      entity: "Product",
+      entityId: productId,
+      metadata: { statusAnterior: producto.status, statusNuevo: nuevoStatus },
+      request: req,
+    });
 
     return NextResponse.json({ ok: true, producto: actualizado });
   } catch (err: any) {

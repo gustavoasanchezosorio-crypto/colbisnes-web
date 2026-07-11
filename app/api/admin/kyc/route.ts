@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -88,13 +89,22 @@ export async function POST(req: NextRequest) {
             titulo: `Hola ${usuario.name || ""}, necesitamos tus documentos de nuevo`,
             cuerpo: `Revisamos tu solicitud de verificación y tuvimos problemas para validarla.<br/><br/>${motivo ? `<strong>Motivo:</strong> ${motivo}<br/><br/>` : ""}Por favor intenta de nuevo con fotos más claras y bien iluminadas. Asegúrate de que tu cédula sea legible y tu selfie muestre tu rostro completo.`,
             ctaTexto: "Reintentar verificación",
-            ctaUrl: "https://colbisnes-web.vercel.app/kyc",
+            ctaUrl: (process.env.NEXT_PUBLIC_URL || "https://colbisnes.com") + "/kyc",
           }),
         }),
       });
     } catch (e) {
       console.error("Error enviando email de rechazo KYC:", e);
     }
+
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "RECHAZAR_KYC",
+      entity: "User",
+      entityId: userId,
+      metadata: { motivo: motivo || null },
+      request: req,
+    });
 
     return NextResponse.json({ ok: true, mensaje: "Verificación facial rechazada y usuario notificado" });
   } catch (err: any) {

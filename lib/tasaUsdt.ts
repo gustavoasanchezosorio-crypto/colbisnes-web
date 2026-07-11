@@ -3,6 +3,27 @@
 // = nosotros vendiendo USDT, así que Binance devuelve anuncios de gente comprando.
 // Se promedian los mejores 5 anuncios para no depender de uno solo con rango de
 // monto angosto (posible outlier de un anuncio poco representativo).
+import { sendEmail } from "@/lib/email";
+
+// Evita spamear al admin: máximo una alerta de fallback cada 30 minutos por instancia.
+let ultimaAlertaFallback = 0;
+async function alertarFallbackTasa(): Promise<void> {
+  const admin = process.env.ADMIN_EMAIL;
+  if (!admin) return;
+  const ahora = Date.now();
+  if (ahora - ultimaAlertaFallback < 30 * 60 * 1000) return;
+  ultimaAlertaFallback = ahora;
+  try {
+    await sendEmail({
+      to: admin,
+      subject: "⚠️ Colbisnes: tasa USDT usando valor de respaldo (4200)",
+      html: `<body style="font-family:sans-serif;color:#0a1628;"><p><b>Alerta:</b> las dos fuentes de tasa USDT/COP en vivo (Binance P2P y exchangerate-api) fallaron.</p><p>Las órdenes USDT se están creando con la tasa fija de respaldo <b>4200 COP/USD</b>, que puede estar desactualizada. Revisa las fuentes cuanto antes.</p><p style="color:#64748B;font-size:12px;">Esta alerta se repite como máximo cada 30 minutos.</p></body>`,
+    });
+  } catch (e) {
+    console.error("No se pudo enviar la alerta de fallback de tasa:", e);
+  }
+}
+
 async function tasaBinanceP2P(): Promise<number | null> {
   const res = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
     method: "POST",
@@ -51,5 +72,6 @@ export async function obtenerTasaUSDT(): Promise<TasaUSDT> {
   // para no bloquear el checkout, pero debe quedar visible en logs: si esto se dispara seguido,
   // las órdenes USDT se están creando con una tasa incorrecta sin que nadie se entere.
   console.error("obtenerTasaUSDT: ambas fuentes de tasa en vivo fallaron, usando fallback fijo de 4200 COP/USD");
+  void alertarFallbackTasa();
   return { tasa: 4200, fuente: "fallback" };
 }

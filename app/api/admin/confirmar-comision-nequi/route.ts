@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -57,6 +58,15 @@ export async function POST(req: NextRequest) {
         data: { status: "IN_ESCROW", paidAt: new Date(), paymentExpiresAt: null },
       }),
     ]);
+
+    await registrarAuditoria({
+      userId: session!.user!.id,
+      action: "CONFIRMAR_COMISION_NEQUI",
+      entity: "Order",
+      entityId: orderId,
+      metadata: { productId: orden.productId },
+      request: req,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

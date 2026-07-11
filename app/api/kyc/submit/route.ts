@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
@@ -34,6 +35,15 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
+    // Sube imágenes a Cloudinary: limita para evitar abuso / consumo de cuota (5 por hora por usuario).
+    const rl = rateLimit(`kyc-submit:${session.user.id}`, { limit: 5, windowSeconds: 3600 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Demasiados envíos de verificación. Espera un momento antes de volver a intentar." },
+        { status: 429 }
+      );
     }
 
     const user = await prisma.user.findUnique({

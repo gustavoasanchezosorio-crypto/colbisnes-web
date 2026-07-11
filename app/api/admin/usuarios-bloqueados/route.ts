@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -61,6 +62,14 @@ export async function POST(req: NextRequest) {
         where: { email: user.email, activo: true },
         data: { activo: false, deudaPendienteCOP: 0 },
       });
+      await registrarAuditoria({
+        userId: session!.user!.id,
+        action: "PAGAR_DEUDA",
+        entity: "User",
+        entityId: userId,
+        metadata: { deudaAnteriorCOP: user.deudaPendienteCOP },
+        request: req,
+      });
       return NextResponse.json({ ok: true, mensaje: "Deuda marcada como pagada" });
     }
 
@@ -68,6 +77,14 @@ export async function POST(req: NextRequest) {
       await prisma.user.update({
         where: { id: userId },
         data: { blockedUntil: null, blockedReason: null },
+      });
+      await registrarAuditoria({
+        userId: session!.user!.id,
+        action: "LEVANTAR_BLOQUEO",
+        entity: "User",
+        entityId: userId,
+        metadata: { motivoAnterior: user.blockedReason },
+        request: req,
       });
       return NextResponse.json({ ok: true, mensaje: "Bloqueo por tiempo levantado" });
     }

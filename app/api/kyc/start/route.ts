@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY!;
 const DIDIT_WORKFLOW_ID = process.env.DIDIT_WORKFLOW_ID!;
@@ -14,6 +15,15 @@ export async function POST() {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // Cada sesión Didit cuesta dinero y consume cuota: máximo 5 intentos por hora por usuario.
+    const rl = rateLimit(`kyc-start:${session.user.id}`, { limit: 5, windowSeconds: 3600 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Demasiados intentos de verificación. Espera un momento antes de volver a intentar." },
+        { status: 429 }
+      );
     }
 
     if (!DIDIT_API_KEY || !DIDIT_WORKFLOW_ID) {
@@ -30,7 +40,7 @@ export async function POST() {
       return NextResponse.json({ success: true, status: "approved" });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes-web.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
 
     const res = await fetch(`${DIDIT_BASE_URL}/session/`, {
       method: "POST",

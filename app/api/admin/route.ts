@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -93,6 +94,13 @@ export async function POST(req: NextRequest) {
 
     if (accion === "eliminar_producto") {
       await prisma.product.update({ where: { id }, data: { status: "SOLD" } });
+      await registrarAuditoria({
+        userId: session.user.id,
+        action: "ELIMINAR_PRODUCTO",
+        entity: "Product",
+        entityId: id,
+        request: req,
+      });
       return NextResponse.json({ success: true, mensaje: "Producto desactivado" });
     }
 
