@@ -14,23 +14,28 @@ import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 
 export async function GET(req: NextRequest) {
   try {
+    // Base pública para construir redirects. NO usar req.url: detrás del proxy de Railway
+    // apunta a http://localhost:3000 (host interno), lo que hacía que el navegador fuera
+    // redirigido a localhost → ERR_CONNECTION_REFUSED (parecía que la página se caía).
+    const publicBase = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
+
     const { session, response: kycError } = await requireKyc();
-    if (kycError) return NextResponse.redirect(new URL("/kyc?next=" + encodeURIComponent(req.url), req.url));
+    if (kycError) return NextResponse.redirect(new URL("/kyc", publicBase));
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
 
     // El correo debe estar confirmado antes de pagar.
     const faltaVerif = await requireEmailVerified(session.user.id);
-    if (faltaVerif) return NextResponse.redirect(new URL("/auth/verify", req.url));
+    if (faltaVerif) return NextResponse.redirect(new URL("/auth/verify", publicBase));
 
     // Debe tener su código anti-phishing configurado antes de pagar.
     const faltaAntiPhishing = await requireAntiPhishing(session.user.id);
-    if (faltaAntiPhishing) return NextResponse.redirect(new URL("/perfil/editar", req.url));
+    if (faltaAntiPhishing) return NextResponse.redirect(new URL("/perfil/editar", publicBase));
 
     // El comprador debe tener Nequi + BreB configurados (para reembolsos y para vender después).
     const faltaPago = await requirePayoutInfo(session.user.id);
-    if (faltaPago) return NextResponse.redirect(new URL("/perfil/editar?falta=pago", req.url));
+    if (faltaPago) return NextResponse.redirect(new URL("/perfil/editar?falta=pago", publicBase));
 
     const productoId = req.nextUrl.searchParams.get("productoId");
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });

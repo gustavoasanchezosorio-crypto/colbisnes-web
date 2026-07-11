@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
+import { computeProfileCompletion } from "@/lib/profileCompletion";
 import { THEME } from "@/lib/theme";
 
 type MetodoPago = "online" | "contraentrega" | "usdt";
@@ -18,10 +19,27 @@ export default function CheckoutPage() {
   const [nivelVendedor, setNivelVendedor] = useState<string | null>(null);
   const [proteccionExtendida, setProteccionExtendida] = useState(false);
   const [errorPago, setErrorPago]   = useState<string | null>(null);
+  // Datos de perfil que faltan para poder pagar/recibir (KYC, Nequi, Bre-B, anti-phishing).
+  // Se calculan al entrar para AVISAR en pantalla en vez de dejar que el servidor
+  // redirija bruscamente (antes eso mandaba a un localhost roto → parecía caída).
+  const [perfilFaltantes, setPerfilFaltantes] = useState<{ key: string; label: string }[] | null>(null);
 
   useEffect(() => {
     fetch("/api/tasa-usdt").then(r => r.json()).then(d => { if (d.tasa) setTasa(d.tasa); });
     fetch("/api/products/" + id).then(r => r.json()).then(d => setProducto(d));
+    fetch("/api/user")
+      .then(r => r.json())
+      .then(u => {
+        if (!u || u.error) { setPerfilFaltantes([]); return; }
+        const { faltantesCriticos } = computeProfileCompletion(u);
+        // El código anti-phishing también es obligatorio para pagar (lo exige el servidor).
+        const faltantes = [...faltantesCriticos];
+        if (!u.antiPhishingCode || String(u.antiPhishingCode).trim().length === 0) {
+          faltantes.push({ key: "antiPhishingCode", label: "Código anti-phishing" });
+        }
+        setPerfilFaltantes(faltantes);
+      })
+      .catch(() => setPerfilFaltantes([]));
   }, [id]);
 
   useEffect(() => {
@@ -90,7 +108,14 @@ export default function CheckoutPage() {
     setLoading(false);
   };
 
+  const perfilIncompleto = (perfilFaltantes?.length ?? 0) > 0;
+  // Solo falta KYC → mándalo al flujo de verificación; cualquier otra cosa → editar perfil.
+  const destinoCompletar = perfilFaltantes && perfilFaltantes.length === 1 && perfilFaltantes[0].key === "kycStatus"
+    ? "/kyc"
+    : "/perfil/editar?falta=pago";
+
   const handleContinuar = () => {
+    if (perfilIncompleto) return;
     if (TEST_MODE) {
       setShowPopup(true);
     } else {
@@ -264,10 +289,28 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {metodo && (
-          <button className="cbtn" onClick={handleContinuar} disabled={loading}
-            style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: loading ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 17, fontWeight: 800, cursor: loading ? "default" : "pointer", marginTop: 8, boxShadow: `0 12px 40px ${THEME.primary}44` }}>
-            {loading ? "Procesando..." : "Continuar →"}
+        {metodo && perfilIncompleto && (
+          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: "16px 18px", marginBottom: 14 }}>
+            <p style={{ margin: 0, color: "#9a3412", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🔒</span> No puedes pagar todavía
+            </p>
+            <p style={{ margin: "6px 0 0", color: "#9a3412", fontSize: 13, lineHeight: 1.5 }}>
+              Para proteger tu dinero y poder devolvértelo si algo sale mal, primero completa tu información de pagos:
+            </p>
+            <ul style={{ margin: "8px 0 0", padding: "0 0 0 18px", color: "#9a3412", fontSize: 13, lineHeight: 1.6 }}>
+              {perfilFaltantes!.map(f => <li key={f.key}>{f.label}</li>)}
+            </ul>
+            <a href={destinoCompletar}
+              style={{ display: "block", textAlign: "center", marginTop: 12, padding: "13px", borderRadius: 14, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: `0 8px 24px ${THEME.primary}33` }}>
+              Completar mi información →
+            </a>
+          </div>
+        )}
+
+        {metodo && !perfilIncompleto && (
+          <button className="cbtn" onClick={handleContinuar} disabled={loading || perfilFaltantes === null}
+            style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: (loading || perfilFaltantes === null) ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 17, fontWeight: 800, cursor: (loading || perfilFaltantes === null) ? "default" : "pointer", marginTop: 8, boxShadow: `0 12px 40px ${THEME.primary}44` }}>
+            {loading ? "Procesando..." : perfilFaltantes === null ? "Verificando..." : "Continuar →"}
           </button>
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
