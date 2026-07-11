@@ -7,6 +7,7 @@ import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { calcularFechaLimiteEnvio } from "@/lib/businessHours";
+import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
     if (producto.status !== "AVAILABLE" && producto.status !== "PAYMENT_PENDING") {
       return NextResponse.json({ error: "El producto no está disponible para pago" }, { status: 400 });
     }
+
+    // El comprador cambió a contra entrega: cancela cualquier orden pendiente suya con otro método.
+    await cancelarOrdenPendienteDeOtroMetodo(productoId, session.user.email, "CONTRA_ENTREGA");
 
     // Idempotencia: si ya existe una orden activa para este producto, devolverla o bloquear.
     // Se excluye CANCELADO (además de RECHAZADO/ANULADO/ERROR): una orden cancelada por vencerse

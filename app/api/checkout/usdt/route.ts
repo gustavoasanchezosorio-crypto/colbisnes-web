@@ -7,6 +7,7 @@ import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
+import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,6 +47,9 @@ export async function POST(req: NextRequest) {
     if (producto.status !== "AVAILABLE" && producto.status !== "PAYMENT_PENDING") {
       return NextResponse.json({ error: "El producto no está disponible para pago" }, { status: 400 });
     }
+
+    // El comprador cambió a USDT: cancela cualquier orden pendiente suya con otro método.
+    await cancelarOrdenPendienteDeOtroMetodo(productoId, session.user.email, "USDT_BEP20");
 
     // Idempotencia: si ya existe una orden ACTIVA para este producto (de cualquier método), devolverla.
     // CRÍTICO: hay que excluir también CANCELADO — una orden cancelada (p.ej. por vencerse el plazo

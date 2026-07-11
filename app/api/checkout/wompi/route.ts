@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
+import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 
 export async function GET(req: NextRequest) {
   try {
@@ -91,6 +92,9 @@ export async function GET(req: NextRequest) {
 
       acceptedOfferId = ofertaCreada.id;
     }
+
+    // El comprador cambió a pago online: cancela cualquier orden pendiente suya con otro método.
+    await cancelarOrdenPendienteDeOtroMetodo(productoId, session.user.email, "ONLINE");
 
     // Idempotencia: si ya hay una orden PENDIENTE para este producto y este comprador, reutilizarla
     const ordenExistente = await prisma.order.findFirst({
