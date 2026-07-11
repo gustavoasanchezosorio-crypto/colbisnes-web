@@ -16,7 +16,11 @@ export default function ProfileCompletionAlert() {
   const [data, setData] = useState<ProfileCompletion | null>(null);
   const [showPopup, setShowPopup] = useState(false);
 
-  const enPerfil = pathname?.startsWith("/perfil/editar");
+  // No estorbar en: la edición de perfil (donde ya se completan los datos), el panel
+  // de administración (el admin no compra/vende) ni las pantallas de autenticación.
+  const ocultar = pathname?.startsWith("/perfil/editar")
+    || pathname?.startsWith("/admin")
+    || pathname?.startsWith("/auth");
 
   useEffect(() => {
     if (status !== "authenticated") { setData(null); return; }
@@ -38,7 +42,7 @@ export default function ProfileCompletionAlert() {
     return () => { vivo = false; };
   }, [status, pathname]);
 
-  if (status !== "authenticated" || !data || data.percent >= 100 || enPerfil) return null;
+  if (status !== "authenticated" || !data || data.percent >= 100 || ocultar) return null;
 
   const irAlPerfil = () => { setShowPopup(false); router.push("/perfil/editar?falta=pago"); };
 
