@@ -21,7 +21,7 @@ interface CampoPerfil {
 export const CAMPOS_PERFIL: CampoPerfil[] = [
   { key: "name",            label: "Tu nombre" },
   { key: "nequiNumber",     label: "Número Nequi" },
-  { key: "brebId",          label: "Llave BreB" },
+  { key: "brebId",          label: "Llave Bre-B" },
   { key: "phone",           label: "Teléfono" },
   { key: "phoneWhatsapp",   label: "WhatsApp" },
   { key: "city",            label: "Ciudad" },

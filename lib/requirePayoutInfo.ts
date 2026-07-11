@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 // Marcador para que el frontend redirija al perfil a completar los datos.
 export const PAYOUT_ERROR = {
-  error: "Debes registrar tu Nequi y tu llave BreB en tu perfil antes de comprar o vender. Ve a colbisnes.com/perfil/editar",
+  error: "Debes registrar tu Nequi y tu llave Bre-B en tu perfil antes de comprar o vender. Ve a colbisnes.com/perfil/editar",
   payoutRequired: true,
 };
 
