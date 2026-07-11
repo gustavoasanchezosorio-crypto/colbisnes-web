@@ -82,12 +82,22 @@ export const ProductCard = React.memo(function ProductCard({
   }, [todasLasFotos.length]);
 
   useEffect(() => {
-    if (product.status === 'IN_ESCROW' || product.status === 'SOLD') {
+    if (product.status !== 'IN_ESCROW' && product.status !== 'SOLD' && product.status !== 'PAYMENT_PENDING') return;
+    const traer = () => {
       fetch("/api/orders/por-producto?productId=" + product.id)
         .then(r => r.json())
         .then(d => { if (d.orden) setOrdenActiva(d.orden); })
         .catch(() => {});
-    }
+    };
+    traer();
+    // Polling: mientras el producto esté en custodia/pago pendiente, re-consultar la orden
+    // cada 5s. Antes solo se consultaba una vez al montar, así que cuando el vendedor
+    // registraba la guía (orden → EN_CAMINO) la tarjeta del comprador seguía mostrando
+    // "Esperando envío del vendedor" hasta recargar la página a mano (reporte 2026-07-11).
+    // SOLD ya es estado final: no necesita seguir consultando.
+    if (product.status === 'SOLD') return;
+    const iv = setInterval(traer, 5000);
+    return () => clearInterval(iv);
   }, [product.id, product.status]);
 
   const refrescarOrden = useCallback(() => {
