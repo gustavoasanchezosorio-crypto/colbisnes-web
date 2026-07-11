@@ -72,6 +72,7 @@ export default function EditarPerfilPage() {
 
   const [geoErrorMsg, setGeoErrorMsg] = useState("");
   const [faltaPago, setFaltaPago] = useState(false);
+  const [kycStatus, setKycStatus] = useState<string>("none");
 
   useEffect(() => {
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("falta") === "pago") {
@@ -131,6 +132,7 @@ export default function EditarPerfilPage() {
             usdtRed: data.usdtRed || "BEP20", direccionEnvio: data.direccionEnvio || "",
             antiPhishingCode: data.antiPhishingCode || "",
           });
+          setKycStatus(data.kycStatus || "none");
           setLoading(false);
         })
         .catch(err => { console.error(err); alert("Error al cargar los datos del perfil"); setLoading(false); });
@@ -236,6 +238,29 @@ export default function EditarPerfilPage() {
           {successMsg && <div style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#15803d", fontWeight: 700, fontSize: "0.9rem" }}>✅ {successMsg}</div>}
           {errorMsg  && <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#b91c1c", fontWeight: 700, fontSize: "0.9rem" }}>❌ {errorMsg}</div>}
           {faltaPago && <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.40)", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: "#b45309", fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5 }}>⚠️ Para comprar o vender necesitas registrar tu <b>número Nequi</b> y tu <b>llave Bre-B</b>. Complétalos abajo y guarda tu perfil.</div>}
+
+          {/* Estado de verificación de identidad (KYC): requisito para publicar y recibir pagos */}
+          {(() => {
+            const aprobado = kycStatus === "approved";
+            const enRevision = kycStatus === "pending";
+            const bg = aprobado ? "rgba(34,197,94,0.10)" : enRevision ? "rgba(59,130,246,0.10)" : "rgba(245,158,11,0.10)";
+            const bd = aprobado ? "rgba(34,197,94,0.35)" : enRevision ? "rgba(59,130,246,0.35)" : "rgba(245,158,11,0.40)";
+            const col = aprobado ? "#15803d" : enRevision ? "#1d4ed8" : "#b45309";
+            const icono = aprobado ? "✅" : enRevision ? "⏳" : "🪪";
+            const texto = aprobado
+              ? "Tu identidad está verificada. Puedes vender y recibir pagos."
+              : enRevision
+                ? "Tu verificación de identidad está en revisión. Te avisaremos apenas quede lista."
+                : "Verifica tu identidad para poder publicar productos y recibir tus pagos.";
+            return (
+              <div style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: col, fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <span>{icono} {texto}</span>
+                {!aprobado && !enRevision && (
+                  <a href="/kyc" style={{ padding: "6px 16px", borderRadius: 16, background: THEME.primary, color: "#fff", fontWeight: 800, fontSize: 13, textDecoration: "none", flexShrink: 0 }}>Verificarme →</a>
+                )}
+              </div>
+            );
+          })()}
 
           <form onSubmit={handleSubmit}>
 

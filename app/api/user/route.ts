@@ -9,6 +9,9 @@ const SELECT_FIELDS = {
   nequiNumber: true, brebId: true, createdAt: true,
   phoneWhatsapp: true, usdtWallet: true, usdtRed: true, direccionEnvio: true,
   antiPhishingCode: true,
+  // Necesario para el cálculo de perfil completo y los avisos contextuales:
+  // sin KYC aprobado el usuario no puede publicar ni recibir pagos.
+  kycStatus: true,
 };
 
 export async function GET() {

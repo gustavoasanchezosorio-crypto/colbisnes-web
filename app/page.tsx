@@ -18,6 +18,7 @@ import { OfferModal } from "@/components/OfferModal";
 import { ReviewModal } from "@/components/ReviewModal";
 import { SkeletonGrid } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
+import { computeProfileCompletion } from "@/lib/profileCompletion";
 import TrackingOverlay from "@/components/TrackingOverlay";
 
 const extendedSchema = productSchema.extend({ condition: z.enum(["NUEVO", "USADO"]) });
@@ -270,6 +271,8 @@ function PageInner() {
   const { unreadTotal, nudgeTick } = useNotifications();
   const [unreadByProduct, setUnreadByProduct] = useState<Record<string, number>>({});
   const [kycPendiente, setKycPendiente] = useState(false);
+  // Aviso contextual: qué le falta al usuario (crítico) para poder vender y RECIBIR pagos.
+  const [faltaVender, setFaltaVender] = useState<{ key: string; label: string }[]>([]);
   const [nudgeActive, setNudgeActive] = useState(false);
 
   // El sonido/vibración de notificación ahora se dispara de forma global desde
@@ -286,12 +289,18 @@ function PageInner() {
     return () => clearTimeout(t);
   }, [nudgeTick]);
 
-  // Verificar KYC del usuario logueado
+  // Verificar KYC + datos de cobro del usuario logueado. Con /api/user obtenemos todo
+  // (incluye kycStatus) y calculamos qué le falta CRÍTICO para vender y recibir pagos.
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
-    fetch("/api/kyc/status", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => { if (d.kycStatus && d.kycStatus !== "approved") setKycPendiente(true); })
+    fetch("/api/user", { credentials: "include" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(u => {
+        if (!u) return;
+        setKycPendiente(u.kycStatus !== "approved");
+        const c = computeProfileCompletion(u);
+        setFaltaVender(c.faltantesCriticos);
+      })
       .catch(() => {});
   }, [sessionStatus]);
 
@@ -526,29 +535,31 @@ function PageInner() {
         </div>
       </header>
 
-      {/* Banner KYC pendiente */}
-      {isAuthenticated && kycPendiente && (
+      {/* Aviso contextual: qué falta para vender y RECIBIR pagos (KYC + Nequi + Bre-B) */}
+      {isAuthenticated && faltaVender.length > 0 && (
         <div style={{
           background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
           padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
           flexWrap: "wrap",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            
-            <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>
-              Verifica tu identidad para comprar y vender en Colbisnes
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+            <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>
+              Para vender y recibir tus pagos te falta:
+            </span>
+            <span style={{ color: "#fff", fontSize: 13, fontWeight: 500, opacity: 0.95 }}>
+              {faltaVender.map(f => f.label).join(" · ")}
             </span>
           </div>
           <a
-            href="/kyc"
+            href={kycPendiente ? "/kyc" : "/perfil/editar?falta=pago"}
             style={{
               padding: "8px 20px", borderRadius: 20, background: "#fff", color: THEME.primary,
               fontWeight: 800, fontSize: 13, textDecoration: "none", flexShrink: 0,
               boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             }}
           >
-            Verificarme ahora →
+            {kycPendiente ? "Verificarme ahora →" : "Completar datos →"}
           </a>
         </div>
       )}
