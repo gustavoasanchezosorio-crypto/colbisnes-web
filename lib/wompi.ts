@@ -1,7 +1,12 @@
-const WOMPI_API_URL = process.env.WOMPI_API_URL || "https://sandbox.wompi.co/v1";
-const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY!;
-const WOMPI_PUBLIC_KEY = process.env.WOMPI_PUBLIC_KEY!;
-const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET!;
+// Por defecto apuntamos a PRODUCCIÓN: en Railway no está WOMPI_API_URL, así que antes esto caía
+// silenciosamente al sandbox y ningún cobro Nequi real habría funcionado. Para pruebas se puede
+// definir WOMPI_API_URL=https://sandbox.wompi.co/v1 explícitamente.
+const WOMPI_API_URL = (process.env.WOMPI_API_URL || "https://production.wompi.co/v1").trim();
+const WOMPI_PRIVATE_KEY = (process.env.WOMPI_PRIVATE_KEY || "").trim();
+// La llave pública vive como NEXT_PUBLIC_WOMPI_PUBLIC_KEY en Railway; WOMPI_PUBLIC_KEY es un alias
+// opcional. Aceptamos cualquiera para no depender de una variable que no está configurada.
+const WOMPI_PUBLIC_KEY = (process.env.WOMPI_PUBLIC_KEY || process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || "").trim();
+const WOMPI_INTEGRITY_SECRET = (process.env.WOMPI_INTEGRITY_SECRET || "").trim();
 
 async function generarFirma(reference: string, amountInCents: number, currency: string): Promise<string> {
   const cadena = `${reference}${amountInCents}${currency}${WOMPI_INTEGRITY_SECRET}`;

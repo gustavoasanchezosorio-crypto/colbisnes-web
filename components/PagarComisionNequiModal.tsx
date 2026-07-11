@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { THEME } from "@/lib/theme";
+import NequiPushModal from "@/components/NequiPushModal";
 
 interface Props {
   orderId: string;
@@ -19,6 +20,7 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [showNequiPush, setShowNequiPush] = useState(false);
 
   const fmt = (n: number) => "$" + n.toLocaleString("es-CO", { maximumFractionDigits: 0 });
 
@@ -54,6 +56,18 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
     }
   };
 
+  if (showNequiPush) {
+    return (
+      <NequiPushModal
+        endpoint="/api/checkout/nequi-comision"
+        body={{ orderId }}
+        montoLabel={fmt(comisionCOP)}
+        onClose={() => setShowNequiPush(false)}
+        onApproved={() => { onSuccess(); onClose(); }}
+      />
+    );
+  }
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(10,22,40,0.5)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: THEME.surfaceGradient, backdropFilter: "blur(20px)", borderRadius: 26, padding: "28px 24px", maxWidth: 420, width: "100%", boxShadow: THEME.cardShadow, border: "1.5px solid transparent", maxHeight: "88vh", overflowY: "auto" }}>
@@ -83,15 +97,16 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
               )}
             </div>
 
-            {/* Opción automática: cobro por Wompi (Nequi / Bre-B). Confirma solo, sin esperar al admin. */}
+            {/* Botón exclusivo de Nequi: notificación push directa a la app del comprador. Confirma
+                solo, sin esperar al admin. Como respaldo queda la transferencia manual de abajo. */}
             <button
-              onClick={() => { window.location.href = "/api/checkout/wompi-comision?ordenId=" + orderId; }}
-              style={{ width: "100%", padding: 15, borderRadius: 16, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 8px 24px rgba(14,86,192,0.35)", marginBottom: 8 }}
+              onClick={() => setShowNequiPush(true)}
+              style={{ width: "100%", padding: 15, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#a855f7,#7e22ce)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 8px 24px rgba(126,34,206,0.35)", marginBottom: 8 }}
             >
-              ⚡ Pagar ahora con Nequi o Bre-B
+              💜 Pagar con Nequi (sin salir de la app)
             </button>
             <p style={{ margin: "0 0 16px", fontSize: 11.5, color: THEME.muted, textAlign: "center", lineHeight: 1.4 }}>
-              Se confirma al instante y reserva tu producto automáticamente, sin esperar revisión.
+              Te llega una solicitud a tu app Nequi para aprobar. Se confirma al instante y reserva tu producto automáticamente.
             </p>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 16px" }}>

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
 import { computeProfileCompletion } from "@/lib/profileCompletion";
 import { THEME } from "@/lib/theme";
+import NequiPushModal from "@/components/NequiPushModal";
 
 type MetodoPago = "online" | "contraentrega" | "usdt";
 
@@ -23,6 +24,9 @@ export default function CheckoutPage() {
   // Se calculan al entrar para AVISAR en pantalla en vez de dejar que el servidor
   // redirija bruscamente (antes eso mandaba a un localhost roto → parecía caída).
   const [perfilFaltantes, setPerfilFaltantes] = useState<{ key: string; label: string }[] | null>(null);
+  // Número Nequi del perfil (para precargar el cobro push) y control del modal Nequi del pago online.
+  const [nequiPrefill, setNequiPrefill] = useState<string | null>(null);
+  const [showNequiOnline, setShowNequiOnline] = useState(false);
 
   useEffect(() => {
     fetch("/api/tasa-usdt").then(r => r.json()).then(d => { if (d.tasa) setTasa(d.tasa); });
@@ -31,6 +35,7 @@ export default function CheckoutPage() {
       .then(r => r.json())
       .then(u => {
         if (!u || u.error) { setPerfilFaltantes([]); return; }
+        setNequiPrefill(u.nequiNumber || null);
         const { faltantesCriticos } = computeProfileCompletion(u);
         // El código anti-phishing también es obligatorio para pagar (lo exige el servidor).
         const faltantes = [...faltantesCriticos];
@@ -160,6 +165,18 @@ export default function CheckoutPage() {
         .cbtn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 20px 60px rgba(14,86,192,0.35) !important; }
         .glass { backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); }
       `}</style>
+
+      {/* Cobro Nequi push del pago online */}
+      {showNequiOnline && (
+        <NequiPushModal
+          endpoint="/api/checkout/nequi-online"
+          body={{ productoId: id, proteccionExtendida }}
+          montoLabel={fmt(online.totalComprador + extras.extraTotal)}
+          prefillTelefono={nequiPrefill}
+          onClose={() => setShowNequiOnline(false)}
+          onApproved={(orderId) => { window.location.href = "/checkout/confirmacion?orderId=" + orderId; }}
+        />
+      )}
 
       {/* POPUP MODO PRUEBAS */}
       {showPopup && (
@@ -311,6 +328,14 @@ export default function CheckoutPage() {
           <button className="cbtn" onClick={handleContinuar} disabled={loading || perfilFaltantes === null}
             style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: (loading || perfilFaltantes === null) ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 17, fontWeight: 800, cursor: (loading || perfilFaltantes === null) ? "default" : "pointer", marginTop: 8, boxShadow: `0 12px 40px ${THEME.primary}44` }}>
             {loading ? "Procesando..." : perfilFaltantes === null ? "Verificando..." : "Continuar →"}
+          </button>
+        )}
+
+        {/* Botón exclusivo de Nequi (pago online): notificación push directa a la app del comprador. */}
+        {metodo === "online" && !perfilIncompleto && !TEST_MODE && perfilFaltantes !== null && (
+          <button onClick={() => setShowNequiOnline(true)}
+            style={{ width: "100%", padding: 15, borderRadius: 16, border: "1.5px solid #a855f7", background: "#fff", color: "#7e22ce", fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            💜 Pagar con Nequi (sin salir de la app)
           </button>
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
