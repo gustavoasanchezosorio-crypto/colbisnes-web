@@ -35,7 +35,7 @@ export default function CheckoutPage() {
         // El código anti-phishing también es obligatorio para pagar (lo exige el servidor).
         const faltantes = [...faltantesCriticos];
         if (!u.antiPhishingCode || String(u.antiPhishingCode).trim().length === 0) {
-          faltantes.push({ key: "antiPhishingCode", label: "Código anti-phishing" });
+          faltantes.push({ key: "antiPhishingCode", label: "Código anti fraude" });
         }
         setPerfilFaltantes(faltantes);
       })

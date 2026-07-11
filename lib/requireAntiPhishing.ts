@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const ANTI_PHISHING_ERROR = {
-  error: "Debes crear tu código anti-phishing en tu perfil antes de comprar o vender. Ve a colbisnes.com/perfil/editar",
+  error: "Debes crear tu código anti fraude en tu perfil antes de comprar o vender. Ve a colbisnes.com/perfil/editar",
   antiPhishingRequired: true,
 };
 

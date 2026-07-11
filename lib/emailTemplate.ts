@@ -12,9 +12,9 @@ export function bannerAntiPhishing(code: string): string {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3FF;border:1px solid #C7D9FF;border-radius:14px;">
                 <tr>
                   <td style="padding:12px 16px;text-align:center;">
-                    <span style="display:block;color:#64748B;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;">Tu código anti-phishing</span>
+                    <span style="display:block;color:#64748B;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;">Tu código anti fraude</span>
                     <span style="display:block;color:#1448A3;font-size:19px;font-weight:800;letter-spacing:0.1em;">${safe}</span>
-                    <span style="display:block;color:#94A3B8;font-size:10.5px;line-height:1.45;margin-top:5px;">Si un correo dice ser de Colbisnes y no muestra este código, desconf&iacute;a: podr&iacute;a ser phishing.</span>
+                    <span style="display:block;color:#94A3B8;font-size:10.5px;line-height:1.45;margin-top:5px;">Si un correo dice ser de Colbisnes y no muestra este código, desconf&iacute;a: podr&iacute;a ser un intento de fraude.</span>
                   </td>
                 </tr>
               </table>

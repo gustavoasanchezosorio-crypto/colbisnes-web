@@ -34,7 +34,7 @@ export const CAMPOS_PERFIL: CampoPerfil[] = [
   { key: "city",            label: "Ciudad" },
   { key: "direccionEnvio",  label: "Dirección de envío" },
   { key: "image",           label: "Foto de perfil" },
-  { key: "antiPhishingCode",label: "Código anti-phishing" },
+  { key: "antiPhishingCode",label: "Código anti fraude" },
 ];
 
 const lleno = (v: unknown): boolean =>

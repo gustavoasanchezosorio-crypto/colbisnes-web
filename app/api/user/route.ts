@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { normalizarTelefonoCO } from "@/lib/phone";
+import { sendEmail } from "@/lib/email";
+import { sendWhatsapp } from "@/lib/whatsapp";
+import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 
 const SELECT_FIELDS = {
   id: true, name: true, email: true, phone: true, city: true, image: true,
@@ -72,11 +75,55 @@ export async function PATCH(request: Request) {
       }
     }
 
+    // Estado ANTES de guardar, para detectar qué datos anti fraude / de cobro
+    // se registran por primera vez y confirmarlos al usuario.
+    const prevUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { nequiNumber: true, brebId: true, antiPhishingCode: true },
+    });
+
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
       select: SELECT_FIELDS,
     });
+
+    // ── Confirmación de registro de datos anti fraude / de cobro ──
+    // Antes no se avisaba nada al usuario cuando terminaba de registrar estos datos.
+    // Detectamos transición (vacío → con valor) y le confirmamos por correo y WhatsApp.
+    const lleno = (v: unknown) => typeof v === "string" && v.trim().length > 0;
+    const nuevos: string[] = [];
+    if (!lleno(prevUser?.antiPhishingCode) && lleno(updatedUser.antiPhishingCode)) nuevos.push("Código anti fraude");
+    if (!lleno(prevUser?.nequiNumber) && lleno(updatedUser.nequiNumber)) nuevos.push("Número Nequi");
+    if (!lleno(prevUser?.brebId) && lleno(updatedUser.brebId)) nuevos.push("Llave Bre-B");
+
+    if (nuevos.length > 0) {
+      const nombre = updatedUser.name || "Hola";
+      const lista = nuevos.map((n) => `<li style="margin-bottom:4px;">${n}</li>`).join("");
+      const cuerpo = `<p style="margin:0 0 12px;">${nombre}, confirmamos que registraste correctamente:</p>` +
+        `<ul style="margin:0 0 12px;padding-left:18px;">${lista}</ul>` +
+        `<p style="margin:0;">Con estos datos ya puedes comprar y recibir pagos de forma segura en Colbisnes. Si no fuiste tú quien hizo este cambio, contáctanos de inmediato.</p>`;
+      // No bloqueamos la respuesta si falla el envío.
+      sendEmail({
+        to: updatedUser.email!,
+        subject: "Confirmamos el registro de tus datos en Colbisnes",
+        html: colbisnesEmailTemplate({
+          preheader: "Registramos tus datos anti fraude y de cobro.",
+          titulo: "Datos registrados correctamente ✅",
+          cuerpo,
+          ctaTexto: "Ver mi perfil",
+          ctaUrl: (process.env.NEXT_PUBLIC_URL || "https://colbisnes.com") + "/perfil/editar",
+        }),
+      }).catch((e) => console.error("Error enviando confirmación de registro (email):", e));
+
+      if (lleno(updatedUser.phoneWhatsapp)) {
+        sendWhatsapp({
+          to: updatedUser.phoneWhatsapp!,
+          body: `✅ Colbisnes: confirmamos el registro de tus datos (${nuevos.join(", ")}). Ya puedes comprar y recibir pagos de forma segura. Si no fuiste tú, contáctanos de inmediato.`,
+        }).catch((e) => console.error("Error enviando confirmación de registro (WhatsApp):", e));
+      }
+    }
+
     return NextResponse.json(updatedUser);
   } catch (error) {
     console.error("PATCH /api/user error:", error);

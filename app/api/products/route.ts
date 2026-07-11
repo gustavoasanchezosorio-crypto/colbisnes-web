@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     if (!seller.antiPhishingCode || seller.antiPhishingCode.trim().length === 0) {
       return NextResponse.json(
         {
-          error: "Debes crear tu código anti-phishing en tu perfil antes de publicar. Ve a colbisnes.com/perfil/editar",
+          error: "Debes crear tu código anti fraude en tu perfil antes de publicar. Ve a colbisnes.com/perfil/editar",
           antiPhishingRequired: true,
         },
         { status: 403 }

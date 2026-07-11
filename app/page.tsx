@@ -387,7 +387,7 @@ function PageInner() {
           return;
         }
         if (resp.antiPhishingRequired) {
-          showToast("Crea tu código anti-phishing en tu perfil antes de publicar. Redirigiendo...", "warning");
+          showToast("Crea tu código anti fraude en tu perfil antes de publicar. Redirigiendo...", "warning");
           setTimeout(() => { window.location.href = "/perfil/editar"; }, 1800);
           return;
         }
