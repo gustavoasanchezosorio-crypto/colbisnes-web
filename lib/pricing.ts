@@ -5,7 +5,7 @@ export const GMF_PCT              = 0.004;
 export const COLBISNES_PCT_ONLINE = 0.10; // 10% comisión Colbisnes sobre ventas online (Wompi)
 export const COLBISNES_PCT_CE     = 0.03; // 3%  comisión Colbisnes sobre contra entrega
 export const TEST_MODE            = process.env.NEXT_PUBLIC_TEST_MODE === "true";
-export const TEST_AMOUNT          = 50;
+export const TEST_AMOUNT          = 1500; // mínimo que acepta Nequi para pruebas reales
 
 // Listados destacados: el vendedor paga para que su producto aparezca primero en home/búsqueda
 export const DESTACADO_PRECIO = 8000;   // COP
