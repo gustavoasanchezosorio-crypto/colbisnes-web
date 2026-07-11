@@ -10,6 +10,7 @@ import { calcularFechaLimiteEnvio } from "@/lib/businessHours";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
+import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
 
     const faltaVerif = await requireEmailVerified(session.user.id);
     if (faltaVerif) return faltaVerif;
+
+    const faltaAntiPhishing = await requireAntiPhishing(session.user.id);
+    if (faltaAntiPhishing) return faltaAntiPhishing;
 
     const faltaPago = await requirePayoutInfo(session.user.id);
     if (faltaPago) return faltaPago;

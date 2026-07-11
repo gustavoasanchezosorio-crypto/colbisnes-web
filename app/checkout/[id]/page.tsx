@@ -69,6 +69,8 @@ export default function CheckoutPage() {
         const res  = await fetch("/api/checkout/contra-entrega", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productoId: id, testMode: TEST_MODE, proteccionExtendida }) });
         const data = await res.json();
         if (data.kycRequired) { window.location.href = "/kyc"; return; }
+        if (data.emailVerificationRequired) { window.location.href = "/auth/verify"; return; }
+        if (data.antiPhishingRequired) { window.location.href = "/perfil/editar"; return; }
         if (data.payoutRequired) { window.location.href = "/perfil/editar?falta=pago"; return; }
         if (data.ok) { window.location.href = "/checkout/confirmacion?orderId=" + data.ordenId; return; }
         setErrorPago(data.error || "No se pudo procesar el pago. Intenta de nuevo.");
@@ -76,6 +78,8 @@ export default function CheckoutPage() {
         const res  = await fetch("/api/checkout/usdt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productoId: id, tasaCOP: tasa, testMode: TEST_MODE, proteccionExtendida }) });
         const data = await res.json();
         if (data.kycRequired) { window.location.href = "/kyc"; return; }
+        if (data.emailVerificationRequired) { window.location.href = "/auth/verify"; return; }
+        if (data.antiPhishingRequired) { window.location.href = "/perfil/editar"; return; }
         if (data.payoutRequired) { window.location.href = "/perfil/editar?falta=pago"; return; }
         if (data.ok) { window.location.href = "/checkout/usdt-pago?orderId=" + data.ordenId + "&total=" + data.totalUSDT + "&wallet=" + data.wallet; return; }
         setErrorPago(data.error || "No se pudo procesar el pago. Intenta de nuevo.");

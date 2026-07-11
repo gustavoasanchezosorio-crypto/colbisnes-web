@@ -10,6 +10,7 @@ import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
+import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,6 +23,10 @@ export async function GET(req: NextRequest) {
     // El correo debe estar confirmado antes de pagar.
     const faltaVerif = await requireEmailVerified(session.user.id);
     if (faltaVerif) return NextResponse.redirect(new URL("/auth/verify", req.url));
+
+    // Debe tener su código anti-phishing configurado antes de pagar.
+    const faltaAntiPhishing = await requireAntiPhishing(session.user.id);
+    if (faltaAntiPhishing) return NextResponse.redirect(new URL("/perfil/editar", req.url));
 
     // El comprador debe tener Nequi + BreB configurados (para reembolsos y para vender después).
     const faltaPago = await requirePayoutInfo(session.user.id);
@@ -134,8 +139,10 @@ export async function GET(req: NextRequest) {
     const referencia: string = "colbisnes" + orden.id.replace(/[^a-zA-Z0-9]/g, "") + Date.now();
     const montoEnCentavos: string = String(Math.round(orden.totalPagado * 100));
     const moneda: string = "COP";
-    const secretoIntegridad: string = process.env.WOMPI_INTEGRITY_SECRET!;
-    const publicKey: string = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY!;
+    // .trim() defensivo: si el secreto se pegó en Railway con un salto de línea o espacio
+    // invisible al final, la firma SHA256 sale mal y Wompi responde "La firma es inválida".
+    const secretoIntegridad: string = (process.env.WOMPI_INTEGRITY_SECRET || "").trim();
+    const publicKey: string = (process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || "").trim();
 
     if (!secretoIntegridad) throw new Error("WOMPI_INTEGRITY_SECRET no está configurado");
     if (!publicKey) throw new Error("NEXT_PUBLIC_WOMPI_PUBLIC_KEY no está configurado");
@@ -143,7 +150,7 @@ export async function GET(req: NextRequest) {
     const cadenaConcatenada: string = referencia + montoEnCentavos + moneda + secretoIntegridad;
     const firma: string = crypto.createHash("sha256").update(cadenaConcatenada, "utf8").digest("hex");
 
-    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes-web.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
     const redirectUrl = baseUrl + "/checkout/confirmacion?orderId=" + orden.id;
 
     const wompiUrl =
