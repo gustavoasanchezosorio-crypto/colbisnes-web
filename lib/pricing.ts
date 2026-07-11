@@ -60,11 +60,27 @@ export interface USDTPricing {
 export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string | null): PricingBreakdown {
   if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
   const comisionColbisnes = Math.round(precioBase * COLBISNES_PCT_ONLINE * multiplicadorPorNivel(nivelVendedor));
-  const totalComprador    = precioBase + comisionColbisnes;
+
+  // El comprador cubre el costo de Wompi + GMF, además de la comisión de Colbisnes.
+  // Como el fee de Wompi es un % del propio total, hay que despejar el total (gross-up):
+  //   totalComprador = precioBase + comisión + costoWompi(total) + gmf(total)
+  //   costoWompi = (total·WOMPI_PCT + WOMPI_FIXED)·(1+IVA)
+  //   gmf        = total·GMF_PCT
+  // Resolviendo para total:
+  //   total = (precioBase + comisión + WOMPI_FIXED·(1+IVA)) / (1 − WOMPI_PCT·(1+IVA) − GMF_PCT)
+  // Así, tras descontar Wompi y GMF, a Colbisnes le queda su comisión íntegra y el
+  // vendedor recibe el 100% de su precio. Antes la comisión absorbía el fee de Wompi
+  // y en ventas pequeñas (por el $700 fijo) Colbisnes terminaba en pérdida.
+  const factorWompiVar = WOMPI_PCT * (1 + WOMPI_IVA);
+  const wompiFijoConIva = WOMPI_FIXED * (1 + WOMPI_IVA);
+  const denominador     = 1 - factorWompiVar - GMF_PCT;
+  const totalComprador  = Math.round((precioBase + comisionColbisnes + wompiFijoConIva) / denominador);
+
   const wompiBase         = totalComprador * WOMPI_PCT + WOMPI_FIXED;
   const costoWompi        = Math.round(wompiBase * (1 + WOMPI_IVA));
   const gmf               = Math.round(totalComprador * GMF_PCT);
-  const gananciaColbisnes = comisionColbisnes - costoWompi - gmf;
+  // Neto real para Colbisnes tras pagarle al vendedor: ≈ comisionColbisnes (±redondeo).
+  const gananciaColbisnes = totalComprador - costoWompi - gmf - precioBase;
   return { precioBase, comisionColbisnes, totalComprador, costoWompi, gmf, gananciaColbisnes, recibeVendedor: precioBase, testMode: false };
 }
 
