@@ -9,6 +9,7 @@ import { bloqueoResponse } from "@/lib/accountBlock";
 import { calcularFechaLimiteEnvio } from "@/lib/businessHours";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
+import { requireEmailVerified } from "@/lib/requireEmailVerified";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,6 +18,9 @@ export async function POST(req: NextRequest) {
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
+
+    const faltaVerif = await requireEmailVerified(session.user.id);
+    if (faltaVerif) return faltaVerif;
 
     const faltaPago = await requirePayoutInfo(session.user.id);
     if (faltaPago) return faltaPago;

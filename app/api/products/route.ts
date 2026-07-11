@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
+import { requireEmailVerified } from "@/lib/requireEmailVerified";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +126,10 @@ export async function POST(request: Request) {
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
+
+    // El correo debe estar confirmado antes de publicar.
+    const faltaVerif = await requireEmailVerified(session.user.id);
+    if (faltaVerif) return faltaVerif;
 
     // El vendedor debe tener Nequi + BreB configurados para poder recibir el pago de su venta.
     const faltaPago = await requirePayoutInfo(session.user.id);

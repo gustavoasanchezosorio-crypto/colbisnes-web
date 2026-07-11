@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 import { Resend } from "resend";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,21 +56,37 @@ export async function POST(request: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
+
+    // Token de verificación de correo: guardamos solo el hash (si se filtra la BD, el token
+    // en claro no queda expuesto). El enlace lleva el token en claro y expira en 24 horas.
+    const rawVerifyToken = crypto.randomBytes(32).toString("hex");
+    const hashedVerifyToken = crypto.createHash("sha256").update(rawVerifyToken).digest("hex");
+    const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     const user = await prisma.user.create({
-      data: { email: emailLower, password: hashed, name: name?.trim() || null },
+      data: {
+        email: emailLower,
+        password: hashed,
+        name: name?.trim() || null,
+        emailVerifyToken: hashedVerifyToken,
+        emailVerifyTokenExpiry: verifyExpiry,
+      },
     });
 
-    // Welcome email (non-blocking)
+    const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
+    const verifyUrl = baseUrl + "/auth/verify?token=" + rawVerifyToken;
+
+    // Welcome email (non-blocking). El botón AHORA sí verifica el correo de verdad.
     resend.emails.send({
       from: "Colbisnes <hola@colbisnes.com>",
       to: emailLower,
       subject: "Bienvenido a Colbisnes",
       html: colbisnesEmailTemplate({
-        preheader: "Bienvenido a Colbisnes",
+        preheader: "Confirma tu correo para activar tu cuenta",
         titulo: "Que bien, ya eres parte de Colbisnes! 🎉",
-        cuerpo: `Bienvenido a la comunidad de compra y venta de segunda mano más activa de Colombia.<br/><br/>Confirma tu correo y empieza a cerrar tu primer bisnes.`,
+        cuerpo: `Bienvenido a la comunidad de compra y venta de segunda mano más activa de Colombia.<br/><br/>Solo falta un paso: confirma tu correo para poder comprar y vender. Este enlace expira en <strong>24 horas</strong>.`,
         ctaTexto: "Confirmar mi correo",
-        ctaUrl: "https://colbisnes-web.vercel.app/auth/login",
+        ctaUrl: verifyUrl,
       }),
     }).catch((err) => console.error("Error enviando email de bienvenida:", err));
 

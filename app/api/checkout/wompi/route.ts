@@ -9,6 +9,7 @@ import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
+import { requireEmailVerified } from "@/lib/requireEmailVerified";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +18,10 @@ export async function GET(req: NextRequest) {
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
+
+    // El correo debe estar confirmado antes de pagar.
+    const faltaVerif = await requireEmailVerified(session.user.id);
+    if (faltaVerif) return NextResponse.redirect(new URL("/auth/verify", req.url));
 
     // El comprador debe tener Nequi + BreB configurados (para reembolsos y para vender después).
     const faltaPago = await requirePayoutInfo(session.user.id);

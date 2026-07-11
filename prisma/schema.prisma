@@ -26,6 +26,8 @@ model User {
   direccionEnvio   String?
   resetToken       String?
   resetTokenExpiry DateTime?
+  emailVerifyToken       String?
+  emailVerifyTokenExpiry DateTime?
 
   // Código anti-phishing: el usuario lo define y se muestra en todos los correos
   // legítimos que le enviamos. Un correo sin este código = sospechoso de phishing.
