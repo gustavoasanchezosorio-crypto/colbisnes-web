@@ -29,11 +29,27 @@ export async function GET(req: NextRequest) {
           ...(productId ? { productId } : {}),
         },
         orderBy: { createdAt: "desc" },
-        select: { id: true, createdAt: true },
+        select: {
+          id: true,
+          createdAt: true,
+          productId: true,
+          fromUser: { select: { name: true } },
+          // Producto al que hace referencia el mensaje, para que la notificación
+          // le diga al usuario de qué publicación le están escribiendo.
+          product: { select: { id: true, title: true, images: { take: 1, select: { url: true } } } },
+        },
       }),
     ]);
 
-    return NextResponse.json({ count, latestId: latest?.id ?? null, latestAt: latest?.createdAt ?? null });
+    return NextResponse.json({
+      count,
+      latestId: latest?.id ?? null,
+      latestAt: latest?.createdAt ?? null,
+      latestFrom: latest?.fromUser?.name ?? null,
+      latestProductId: latest?.product?.id ?? null,
+      latestProductTitle: latest?.product?.title ?? null,
+      latestProductImage: latest?.product?.images?.[0]?.url ?? null,
+    });
   } catch {
     return NextResponse.json({ count: 0 });
   }

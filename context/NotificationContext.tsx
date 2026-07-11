@@ -2,6 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { THEME } from '@/lib/theme';
+
+type MsgPopup = { from: string | null; title: string | null; image: string | null; productId: string | null };
 
 type NotificationContextType = {
   unreadTotal: number;
@@ -17,8 +21,12 @@ const POLL_MS = 2500;
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
+  const router = useRouter();
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [nudgeTick, setNudgeTick] = useState(0);
+  // Popup de mensaje nuevo: muestra de qué producto te están escribiendo.
+  const [msgPopup, setMsgPopup] = useState<MsgPopup | null>(null);
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Última fecha de creación de mensaje que ya vimos/notificamos (ISO string, comparable lexicográficamente).
   const lastSeenAtRef = useRef<string | null>(null);
   const firstLoadRef = useRef(true);
@@ -56,7 +64,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             const isNew = !lastSeenAtRef.current || d.latestAt > lastSeenAtRef.current;
             if (isNew) {
               // No sonar en la primera carga (sería un mensaje viejo, no uno nuevo).
-              if (!firstLoadRef.current) fireNudge();
+              if (!firstLoadRef.current) {
+                fireNudge();
+                // Popup enriquecido: quién te escribió y sobre qué producto.
+                setMsgPopup({
+                  from: d.latestFrom ?? null,
+                  title: d.latestProductTitle ?? null,
+                  image: d.latestProductImage ?? null,
+                  productId: d.latestProductId ?? null,
+                });
+                if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+                popupTimerRef.current = setTimeout(() => setMsgPopup(null), 7000);
+              }
               lastSeenAtRef.current = d.latestAt;
             }
           }
@@ -79,9 +98,48 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [status]);
 
+  const abrirProducto = () => {
+    const id = msgPopup?.productId;
+    setMsgPopup(null);
+    if (id) router.push(`/product/${id}`);
+    else router.push('/mensajes');
+  };
+
   return (
     <NotificationContext.Provider value={{ unreadTotal, nudgeTick }}>
       {children}
+      {msgPopup && (
+        <div
+          onClick={abrirProducto}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 9800, cursor: 'pointer', width: 'min(360px, calc(100vw - 32px))',
+            background: '#fff', borderRadius: 16, padding: 12,
+            boxShadow: '0 12px 40px rgba(10,46,107,0.28)', border: `1px solid ${THEME.border}`,
+            display: 'flex', alignItems: 'center', gap: 12, animation: 'slideIn 0.3s',
+          }}
+        >
+          {msgPopup.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={msgPopup.image} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 46, height: 46, borderRadius: 10, background: THEME.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>💬</div>
+          )}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: THEME.text }}>
+              💬 {msgPopup.from || 'Alguien'} te escribió
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 12.5, color: THEME.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {msgPopup.title ? `Sobre: ${msgPopup.title}` : 'Toca para ver el mensaje'}
+            </p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); if (popupTimerRef.current) clearTimeout(popupTimerRef.current); setMsgPopup(null); }}
+            style={{ border: 'none', background: 'transparent', color: THEME.muted, fontSize: 18, fontWeight: 700, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
+            aria-label="Cerrar"
+          >×</button>
+        </div>
+      )}
     </NotificationContext.Provider>
   );
 }

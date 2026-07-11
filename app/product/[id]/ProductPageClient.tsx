@@ -537,7 +537,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               )}
               <div style={{padding:"0.65rem 0.9rem",display:"flex",flexDirection:"column",gap:"0.5rem"}}>
                 {tabEntrega==="ENVIO" && tieneEnvio && <>
-                  <MiniRow icon="🚚" text={product.precioEnvio?`Envío desde $${product.precioEnvio.toLocaleString("es-CO")} COP`:"Envío incluido"} sub="A domicilio"/>
+                  <MiniRow icon="🚚" text={product.precioEnvio?`Envío desde $${product.precioEnvio.toLocaleString("es-CO")} COP`:"Envío a coordinar"} sub={product.precioEnvio?"A domicilio":"Acuerda el costo con el vendedor"}/>
                   <MiniRow icon="🔒" text="Protección Colbisnes" sub="Pago seguro"/>
                 </>}
                 {tabEntrega==="EN_PERSONA" && tienePersona && <>
@@ -802,9 +802,9 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         </div>
       )}
 
-      {/* ══ BARRA FIJA ════════════════════════════════════════════════════════ */}
+      {/* ══ BARRA FIJA (solo móvil — en desktop se ocultan por CSS para no duplicar los CTA) ═ */}
       {disponible && !esVendedor && (
-        <div style={{position:"fixed",bottom:0,left:0,right:0,...glass(0.9,28),
+        <div className="barra-cta-movil" style={{position:"fixed",bottom:0,left:0,right:0,...glass(0.9,28),
           borderTop:"1px solid rgba(0,88,159,0.1)",padding:"0.75rem 1.25rem",
           display:"flex",gap:"0.6rem",zIndex:900}}>
           {session?.user ? (

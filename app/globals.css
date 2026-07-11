@@ -27,3 +27,11 @@ select option {
   background: #ffffff;
   color: #0d1b2a;
 }
+
+/* La barra fija de acción (Hacer oferta / Comprar) es solo para móvil: en pantalla
+   ancha ya se ven los CTA dentro de la tarjeta, así que la ocultamos para no duplicar. */
+@media (min-width: 900px) {
+  .barra-cta-movil {
+    display: none !important;
+  }
+}
