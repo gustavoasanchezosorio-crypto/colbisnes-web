@@ -76,6 +76,36 @@ export async function POST(req: NextRequest) {
     else if (status === "In Review" || status === "In Progress" || status === "Awaiting User" || status === "Resubmitted") kycStatus = "pending";
     else if (status === "Expired" || status === "Abandoned" || status === "Kyc Expired") kycStatus = "rejected";
 
+    // Al aprobar, extraer los datos verificados del documento (cédula, tipo, nombre).
+    // Se guardan para poder dispersar fondos vía Wompi Payouts, que exige tipo+número de
+    // documento del beneficiario. Nunca debe tumbar la actualización del estado si falla.
+    let datosDoc: { docType?: string; docNumber?: string; verifiedName?: string } = {};
+    if (kycStatus === "approved") {
+      try {
+        const sessionId = parsed.session_id;
+        if (sessionId && process.env.DIDIT_API_KEY) {
+          const dRes = await fetch(`https://verification.didit.me/v3/session/${sessionId}/decision/`, {
+            headers: { "x-api-key": process.env.DIDIT_API_KEY },
+          });
+          if (dRes.ok) {
+            const decision = await dRes.json();
+            const idv = Array.isArray(decision?.id_verifications) ? decision.id_verifications[0] : null;
+            if (idv) {
+              datosDoc = {
+                docType: idv.document_type || undefined,
+                docNumber: idv.document_number || undefined,
+                verifiedName: idv.full_name || [idv.first_name, idv.last_name].filter(Boolean).join(" ") || undefined,
+              };
+            }
+          } else {
+            console.error("Didit webhook: no se pudo obtener la decisión", dRes.status);
+          }
+        }
+      } catch (decErr) {
+        console.error("Didit webhook: error extrayendo datos del documento:", decErr);
+      }
+    }
+
     await prisma.user.update({
       where: { id: vendorData },
       data: {
@@ -83,6 +113,9 @@ export async function POST(req: NextRequest) {
         kycLevel: kycStatus === "approved" ? 2 : 0,
         ...(kycStatus === "approved" && { kycApprovedAt: new Date() }),
         ...(kycStatus === "rejected" && { kycRejectedAt: new Date() }),
+        ...(datosDoc.docType && { docType: datosDoc.docType }),
+        ...(datosDoc.docNumber && { docNumber: datosDoc.docNumber }),
+        ...(datosDoc.verifiedName && { verifiedName: datosDoc.verifiedName }),
       },
     });
 

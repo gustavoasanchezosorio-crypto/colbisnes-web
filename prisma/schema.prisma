@@ -54,6 +54,11 @@ model User {
   kycRequestedAt DateTime?
   kycApprovedAt  DateTime?
   kycRejectedAt  DateTime?
+  // Datos verificados por Didit (extraídos de la decisión al aprobar el KYC).
+  // Necesarios para dispersión de fondos vía Wompi Payouts (requiere tipo+número de documento).
+  docType        String?   // p.ej. "Identity Card"
+  docNumber      String?   // cédula / número de documento verificado
+  verifiedName   String?   // nombre completo tal como aparece en el documento
   nequiNumber    String?
   brebId         String?
 
