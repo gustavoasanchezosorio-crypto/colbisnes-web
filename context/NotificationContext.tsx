@@ -46,7 +46,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       // Zumbido más fuerte y notorio: pulsos largos y sostenidos (el patrón anterior
       // era muy corto y casi no se sentía). Duraciones más largas = vibración más marcada.
-      try { navigator.vibrate([450, 120, 450, 120, 600]); } catch {}
+      try { navigator.vibrate([450, 120, 450, 120, 450, 120, 450, 120, 900, 150, 900]); } catch {}
     }
     setNudgeTick((t) => t + 1);
   }, []);
@@ -139,7 +139,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             zIndex: 9800, cursor: 'pointer', width: 'min(360px, calc(100vw - 32px))',
             background: '#fff', borderRadius: 16, padding: 12,
-            boxShadow: '0 12px 40px rgba(10,46,107,0.28)', border: `1px solid ${THEME.border}`,
+            // Borde dorado metálico: anillos superpuestos (oro oscuro → oro claro)
+            // que siguen las esquinas redondeadas y dan aspecto de metal pulido.
+            border: '2px solid transparent',
+            boxShadow: '0 0 0 1px #7a5c12, 0 0 0 3px #d4af37, 0 0 0 4px #f7e79b, 0 0 0 5px #b8860b, 0 14px 44px rgba(10,46,107,0.35)',
             display: 'flex', alignItems: 'center', gap: 12, animation: 'slideIn 0.3s',
           }}
         >
