@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     // Verificar que el vendedor haya completado el KYC
     const seller = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { kycStatus: true },
+      select: { kycStatus: true, antiPhishingCode: true },
     });
     if (!seller || seller.kycStatus !== "approved") {
       return NextResponse.json(
@@ -134,6 +134,18 @@ export async function POST(request: Request) {
     // El vendedor debe tener Nequi + BreB configurados para poder recibir el pago de su venta.
     const faltaPago = await requirePayoutInfo(session.user.id);
     if (faltaPago) return faltaPago;
+
+    // Debe tener configurado su código anti-phishing: así puede distinguir los correos
+    // legítimos de Colbisnes de intentos de suplantación antes de operar en la plataforma.
+    if (!seller.antiPhishingCode || seller.antiPhishingCode.trim().length === 0) {
+      return NextResponse.json(
+        {
+          error: "Debes crear tu código anti-phishing en tu perfil antes de publicar. Ve a colbisnes.com/perfil/editar",
+          antiPhishingRequired: true,
+        },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;

@@ -367,6 +367,16 @@ function PageInner() {
           setTimeout(() => { window.location.href = "/kyc"; }, 1800);
           return;
         }
+        if (resp.antiPhishingRequired) {
+          showToast("Crea tu código anti-phishing en tu perfil antes de publicar. Redirigiendo...", "warning");
+          setTimeout(() => { window.location.href = "/perfil/editar"; }, 1800);
+          return;
+        }
+        if (resp.payoutRequired) {
+          showToast("Registra tu Nequi y tu llave Bre-B antes de publicar. Redirigiendo...", "warning");
+          setTimeout(() => { window.location.href = "/perfil/editar?falta=pago"; }, 1800);
+          return;
+        }
         throw new Error(resp.error || resp.message || `Error ${res.status}`);
       }
       reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); setPrecioDisplay("");
