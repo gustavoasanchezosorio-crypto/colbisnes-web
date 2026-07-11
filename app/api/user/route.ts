@@ -75,11 +75,11 @@ export async function PATCH(request: Request) {
       }
     }
 
-    // Estado ANTES de guardar, para detectar qué datos anti fraude / de cobro
-    // se registran por primera vez y confirmarlos al usuario.
+    // Estado ANTES de guardar, para detectar qué datos sensibles (anti fraude,
+    // cobro y wallet USDT) cambian y confirmárselo al usuario CADA vez que se modifican.
     const prevUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { nequiNumber: true, brebId: true, antiPhishingCode: true },
+      select: { nequiNumber: true, brebId: true, antiPhishingCode: true, usdtWallet: true },
     });
 
     const updatedUser = await prisma.user.update({
@@ -88,39 +88,42 @@ export async function PATCH(request: Request) {
       select: SELECT_FIELDS,
     });
 
-    // ── Confirmación de registro de datos anti fraude / de cobro ──
-    // Antes no se avisaba nada al usuario cuando terminaba de registrar estos datos.
-    // Detectamos transición (vacío → con valor) y le confirmamos por correo y WhatsApp.
-    const lleno = (v: unknown) => typeof v === "string" && v.trim().length > 0;
-    const nuevos: string[] = [];
-    if (!lleno(prevUser?.antiPhishingCode) && lleno(updatedUser.antiPhishingCode)) nuevos.push("Código anti fraude");
-    if (!lleno(prevUser?.nequiNumber) && lleno(updatedUser.nequiNumber)) nuevos.push("Número Nequi");
-    if (!lleno(prevUser?.brebId) && lleno(updatedUser.brebId)) nuevos.push("Llave Bre-B");
+    // ── Confirmación de cambio de datos sensibles ──
+    // Se envía SIEMPRE que uno de estos datos se modifique (no solo la primera vez):
+    // dejar de avisar los cambios posteriores genera desconfianza. Detecta cualquier
+    // diferencia respecto al valor anterior (registro, edición o borrado).
+    const norm = (v: unknown) => (typeof v === "string" ? v.trim() : v ?? "");
+    const cambios: string[] = [];
+    if (norm(prevUser?.antiPhishingCode) !== norm(updatedUser.antiPhishingCode)) cambios.push("Código anti fraude");
+    if (norm(prevUser?.nequiNumber) !== norm(updatedUser.nequiNumber)) cambios.push("Número Nequi");
+    if (norm(prevUser?.brebId) !== norm(updatedUser.brebId)) cambios.push("Llave Bre-B");
+    if (norm(prevUser?.usdtWallet) !== norm(updatedUser.usdtWallet)) cambios.push("Wallet USDT");
 
-    if (nuevos.length > 0) {
+    if (cambios.length > 0) {
       const nombre = updatedUser.name || "Hola";
-      const lista = nuevos.map((n) => `<li style="margin-bottom:4px;">${n}</li>`).join("");
-      const cuerpo = `<p style="margin:0 0 12px;">${nombre}, confirmamos que registraste correctamente:</p>` +
+      const lista = cambios.map((n) => `<li style="margin-bottom:4px;">${n}</li>`).join("");
+      const cuerpo = `<p style="margin:0 0 12px;">${nombre}, confirmamos que se actualizaron estos datos de tu cuenta:</p>` +
         `<ul style="margin:0 0 12px;padding-left:18px;">${lista}</ul>` +
-        `<p style="margin:0;">Con estos datos ya puedes comprar y recibir pagos de forma segura en Colbisnes. Si no fuiste tú quien hizo este cambio, contáctanos de inmediato.</p>`;
+        `<p style="margin:0;"><b>Si no fuiste tú quien hizo este cambio, contáctanos de inmediato</b>: podría tratarse de un intento de fraude sobre tu cuenta.</p>`;
       // No bloqueamos la respuesta si falla el envío.
       sendEmail({
         to: updatedUser.email!,
-        subject: "Confirmamos el registro de tus datos en Colbisnes",
+        subject: "Se modificaron datos sensibles de tu cuenta Colbisnes",
         html: colbisnesEmailTemplate({
-          preheader: "Registramos tus datos anti fraude y de cobro.",
-          titulo: "Datos registrados correctamente ✅",
+          preheader: "Confirmación de cambio en tus datos anti fraude / de cobro.",
+          titulo: "Datos actualizados en tu cuenta 🔒",
           cuerpo,
-          ctaTexto: "Ver mi perfil",
+          ctaTexto: "Revisar mi perfil",
           ctaUrl: (process.env.NEXT_PUBLIC_URL || "https://colbisnes.com") + "/perfil/editar",
         }),
-      }).catch((e) => console.error("Error enviando confirmación de registro (email):", e));
+      }).catch((e) => console.error("Error enviando confirmación de cambio (email):", e));
 
-      if (lleno(updatedUser.phoneWhatsapp)) {
+      const norm2 = (v: unknown) => typeof v === "string" && v.trim().length > 0;
+      if (norm2(updatedUser.phoneWhatsapp)) {
         sendWhatsapp({
           to: updatedUser.phoneWhatsapp!,
-          body: `✅ Colbisnes: confirmamos el registro de tus datos (${nuevos.join(", ")}). Ya puedes comprar y recibir pagos de forma segura. Si no fuiste tú, contáctanos de inmediato.`,
-        }).catch((e) => console.error("Error enviando confirmación de registro (WhatsApp):", e));
+          body: `🔒 Colbisnes: se actualizaron datos sensibles de tu cuenta (${cambios.join(", ")}). Si NO fuiste tú, contáctanos de inmediato: podría ser un intento de fraude.`,
+        }).catch((e) => console.error("Error enviando confirmación de cambio (WhatsApp):", e));
       }
     }
 
