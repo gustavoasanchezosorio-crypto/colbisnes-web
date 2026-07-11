@@ -70,6 +70,14 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.image = dbUser.image ?? token.picture ?? null;
+          // Google ya verificó el correo del usuario: lo marcamos como verificado
+          // para que el gate de correo confirmado no bloquee a quien entra con Google.
+          if (!dbUser.emailVerified) {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { emailVerified: new Date() },
+            });
+          }
         }
       }
       // Mantenemos imagen/nombre/rol sincronizados con la base de datos en cada
