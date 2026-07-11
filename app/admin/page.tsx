@@ -74,6 +74,14 @@ export default function AdminPanel() {
   const [errorAdmin, setErrorAdmin] = useState("");
   const [codigos2FA, setCodigos2FA] = useState<Record<string, string>>({});
   const [enviandoAuto, setEnviandoAuto] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const copiar = async (texto: string, clave: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(clave);
+      setTimeout(() => setCopiado(null), 1500);
+    } catch {}
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth/login"); return; }
@@ -400,14 +408,18 @@ export default function AdminPanel() {
                             <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: T.text }}>{p.productoTitulo}</p>
                             <p style={{ margin: "2px 0 0", color: T.muted, fontSize: 13 }}>Vendedor: {p.vendedorNombre} ({p.vendedorEmail})</p>
                           </div>
-                          <span style={{ padding: "4px 12px", borderRadius: 20, background: "#fff7e6", color: "#92660a", fontSize: 12, fontWeight: 700 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, background: "#fff7e6", color: "#92660a", fontSize: 12, fontWeight: 700 }}>
                             {p.metodoPago === "USDT_BEP20" ? (p.totalUSDT + " USDT") : ("$" + Number(p.recibeVendedor).toLocaleString("es-CO") + " COP")}
+                            <button title="Copiar monto" onClick={() => copiar(p.metodoPago === "USDT_BEP20" ? String(p.totalUSDT) : String(p.recibeVendedor), p.ordenId + "-monto")}
+                              style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 12, padding: 0 }}>
+                              {copiado === p.ordenId + "-monto" ? "✓" : "📋"}
+                            </button>
                           </span>
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 13, color: T.muted, marginBottom: 14 }}>
-                          {p.vendedorUsdtWallet && <p style={{ margin: 0 }}>USDT: {p.vendedorUsdtWallet} ({p.vendedorUsdtRed})</p>}
-                          {p.vendedorNequi && <p style={{ margin: 0 }}>Nequi: {p.vendedorNequi}</p>}
-                          {p.vendedorBreb && <p style={{ margin: 0 }}>Bre-B: {p.vendedorBreb}</p>}
+                          {p.vendedorUsdtWallet && <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>USDT: {p.vendedorUsdtWallet} ({p.vendedorUsdtRed}) <button title="Copiar wallet" onClick={() => copiar(p.vendedorUsdtWallet, p.ordenId + "-usdt")} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 12, padding: 0 }}>{copiado === p.ordenId + "-usdt" ? "✓" : "📋"}</button></p>}
+                          {p.vendedorNequi && <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>Nequi: {p.vendedorNequi} <button title="Copiar Nequi" onClick={() => copiar(p.vendedorNequi, p.ordenId + "-nequi")} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 12, padding: 0 }}>{copiado === p.ordenId + "-nequi" ? "✓" : "📋"}</button></p>}
+                          {p.vendedorBreb && <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>Bre-B: {p.vendedorBreb} <button title="Copiar Bre-B" onClick={() => copiar(p.vendedorBreb, p.ordenId + "-breb")} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 12, padding: 0 }}>{copiado === p.ordenId + "-breb" ? "✓" : "📋"}</button></p>}
                           {p.vendedorWhatsapp && <p style={{ margin: 0 }}>WhatsApp: {p.vendedorWhatsapp}</p>}
                         </div>
                         {p.metodoPago === "USDT_BEP20" && p.vendedorUsdtWallet && (
@@ -433,7 +445,7 @@ export default function AdminPanel() {
                           ✓ Ya envie el pago (manual)
                         </button>
                         <p style={{ margin: "6px 0 0", fontSize: 11, color: "#b91c1c", fontWeight: 600 }}>
-                          ⚠️ Este botón NO transfiere dinero, solo marca la orden como pagada en el sistema. Úsalo únicamente si ya enviaste tú mismo el USDT/dinero al vendedor por fuera de Colbisnes.
+                          ⚠️ Este botón NO transfiere dinero: solo marca la orden como pagada y le avisa al vendedor (correo + WhatsApp) que ya le transferiste. Úsalo únicamente después de haber enviado tú mismo el dinero al Nequi/Bre-B/USDT del vendedor.
                         </p>
                       </div>
                     ))}
