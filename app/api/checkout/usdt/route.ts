@@ -8,6 +8,7 @@ import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
+import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
+
+    const faltaPago = await requirePayoutInfo(session.user.id);
+    if (faltaPago) return faltaPago;
 
     const { productoId, proteccionExtendida } = await req.json();
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });

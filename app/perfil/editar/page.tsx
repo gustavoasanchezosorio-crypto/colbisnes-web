@@ -71,6 +71,13 @@ export default function EditarPerfilPage() {
   });
 
   const [geoErrorMsg, setGeoErrorMsg] = useState("");
+  const [faltaPago, setFaltaPago] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("falta") === "pago") {
+      setFaltaPago(true);
+    }
+  }, []);
 
   const detectarCiudad = () => {
     setGeoErrorMsg("");
@@ -228,6 +235,7 @@ export default function EditarPerfilPage() {
 
           {successMsg && <div style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#15803d", fontWeight: 700, fontSize: "0.9rem" }}>✅ {successMsg}</div>}
           {errorMsg  && <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#b91c1c", fontWeight: 700, fontSize: "0.9rem" }}>❌ {errorMsg}</div>}
+          {faltaPago && <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.40)", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: "#b45309", fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5 }}>⚠️ Para comprar o vender necesitas registrar tu <b>número Nequi</b> y tu <b>llave BreB</b>. Complétalos abajo y guarda tu perfil.</div>}
 
           <form onSubmit={handleSubmit}>
 

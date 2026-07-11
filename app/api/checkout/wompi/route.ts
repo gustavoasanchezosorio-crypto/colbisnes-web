@@ -8,6 +8,7 @@ import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
+import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +17,10 @@ export async function GET(req: NextRequest) {
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
+
+    // El comprador debe tener Nequi + BreB configurados (para reembolsos y para vender después).
+    const faltaPago = await requirePayoutInfo(session.user.id);
+    if (faltaPago) return NextResponse.redirect(new URL("/perfil/editar?falta=pago", req.url));
 
     const productoId = req.nextUrl.searchParams.get("productoId");
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });

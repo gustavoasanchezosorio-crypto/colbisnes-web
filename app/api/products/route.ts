@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
+import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,10 @@ export async function POST(request: Request) {
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
+
+    // El vendedor debe tener Nequi + BreB configurados para poder recibir el pago de su venta.
+    const faltaPago = await requirePayoutInfo(session.user.id);
+    if (faltaPago) return faltaPago;
 
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
