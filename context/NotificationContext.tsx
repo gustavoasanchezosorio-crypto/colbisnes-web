@@ -34,7 +34,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const fireNudge = useCallback(() => {
     try {
       const audio = new Audio('/sounds/mensaje-nuevo.mp3');
-      audio.volume = 0.9;
+      audio.volume = 1.0;
       audio.play().catch((err) => {
         // Antes este error se tragaba en silencio (.catch(() => {})), lo que hacía
         // imposible distinguir un bloqueo de autoplay del navegador de otros fallos.
@@ -44,7 +44,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       console.warn('[notificaciones] Error creando el audio de notificación:', err);
     }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try { navigator.vibrate([160, 60, 160, 60, 260]); } catch {}
+      // Zumbido más fuerte y notorio: pulsos largos y sostenidos (el patrón anterior
+      // era muy corto y casi no se sentía). Duraciones más largas = vibración más marcada.
+      try { navigator.vibrate([450, 120, 450, 120, 600]); } catch {}
     }
     setNudgeTick((t) => t + 1);
   }, []);
@@ -91,8 +93,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                   image: d.latestProductImage ?? null,
                   productId: d.latestProductId ?? null,
                 });
+                // El popup NO se cierra solo: se queda hasta que el usuario lo lea
+                // (toca la tarjeta o la × ). Antes desaparecía a los 7s y se perdía.
                 if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
-                popupTimerRef.current = setTimeout(() => setMsgPopup(null), 7000);
                 // Segundo recordatorio: si la publicación está en el feed actual,
                 // desplázate hasta ella y resáltala (además del popup superior).
                 resaltarPublicacion(d.latestProductId ?? null);
@@ -133,7 +136,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         <div
           onClick={abrirProducto}
           style={{
-            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             zIndex: 9800, cursor: 'pointer', width: 'min(360px, calc(100vw - 32px))',
             background: '#fff', borderRadius: 16, padding: 12,
             boxShadow: '0 12px 40px rgba(10,46,107,0.28)', border: `1px solid ${THEME.border}`,
