@@ -83,6 +83,23 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
               )}
             </div>
 
+            {/* Opción automática: cobro por Wompi (Nequi / Bre-B). Confirma solo, sin esperar al admin. */}
+            <button
+              onClick={() => { window.location.href = "/api/checkout/wompi-comision?ordenId=" + orderId; }}
+              style={{ width: "100%", padding: 15, borderRadius: 16, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 8px 24px rgba(14,86,192,0.35)", marginBottom: 8 }}
+            >
+              ⚡ Pagar ahora con Nequi o Bre-B
+            </button>
+            <p style={{ margin: "0 0 16px", fontSize: 11.5, color: THEME.muted, textAlign: "center", lineHeight: 1.4 }}>
+              Se confirma al instante y reserva tu producto automáticamente, sin esperar revisión.
+            </p>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 16px" }}>
+              <div style={{ flex: 1, height: 1, background: THEME.border }} />
+              <span style={{ fontSize: 11, color: THEME.muted, fontWeight: 700 }}>o transfiere manualmente</span>
+              <div style={{ flex: 1, height: 1, background: THEME.border }} />
+            </div>
+
             <div style={{ background: "rgba(126,34,206,0.06)", border: "1px solid rgba(126,34,206,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
               <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 800, color: "#7e22ce", textTransform: "uppercase", letterSpacing: "0.04em" }}>📋 Condiciones de esta compra</p>
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>

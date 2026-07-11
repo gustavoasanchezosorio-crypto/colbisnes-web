@@ -3,6 +3,77 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { DESTACADO_DIAS } from "@/lib/pricing";
 
+// Pago de la COMISIÓN DE RESERVA de un pedido contra-entrega (referencia con prefijo "comision").
+// Espeja la lógica del admin en /api/admin/confirmar-comision-nequi, pero se dispara solo cuando
+// Wompi confirma el cobro. Al aprobarse: comisión pagada + orden ESPERANDO_ENVIO + producto IN_ESCROW.
+async function procesarWebhookComision(reference: string, status: string, transaction: any) {
+  // Formato: "comision" + orden.id + timestamp (13 dígitos).
+  const sinPrefijo = reference.slice("comision".length);
+  const ordenId = sinPrefijo.slice(0, sinPrefijo.length - 13);
+
+  let orden = await prisma.order.findUnique({ where: { id: ordenId } });
+  if (!orden) {
+    // Fallback por coincidencia parcial entre las órdenes esperando comisión.
+    const candidatos = await prisma.order.findMany({
+      where: { estado: "ESPERANDO_COMISION" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    orden = candidatos.find((o) => reference.includes(o.id)) || null;
+  }
+  if (!orden) {
+    console.error("Orden de comisión no encontrada para referencia:", reference);
+    return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
+  }
+
+  // Idempotencia: si la comisión ya está pagada, ignorar reintentos.
+  if (status === "APPROVED" && orden.comisionReservaPagada) {
+    return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  if (status === "APPROVED") {
+    // Verificación cruzada del monto contra la comisión que esta orden debía cobrar.
+    const montoEsperadoCentavos = Math.round((orden.comisionReservaCOP || 0) * 100);
+    if (typeof transaction.amount_in_cents === "number" && transaction.amount_in_cents !== montoEsperadoCentavos) {
+      console.error(
+        `Webhook comisión rechazado: amount_in_cents (${transaction.amount_in_cents}) no coincide con la comisión esperada de la orden ${orden.id} (${montoEsperadoCentavos})`
+      );
+      return NextResponse.json({ error: "Monto no coincide con la comisión" }, { status: 400 });
+    }
+
+    // El producto debe seguir reservado (PAYMENT_PENDING). Si ya no lo está, no confirmamos a
+    // ciegas — misma protección fail-closed que la confirmación manual del admin.
+    const producto = await prisma.product.findUnique({ where: { id: orden.productId } });
+    if (!producto || producto.status !== "PAYMENT_PENDING") {
+      console.error(
+        `Webhook comisión: el producto ${orden.productId} ya no está en PAYMENT_PENDING (estado: ${producto?.status ?? "no encontrado"}). No se confirma.`
+      );
+      return NextResponse.json({ error: "El producto ya no está reservado" }, { status: 409 });
+    }
+
+    await prisma.$transaction([
+      prisma.order.update({
+        where: { id: orden.id },
+        data: {
+          estado: "ESPERANDO_ENVIO",
+          comisionReservaPagada: true,
+          comisionReservaConfirmadaAt: new Date(),
+        },
+      }),
+      prisma.product.update({
+        where: { id: orden.productId },
+        data: { status: "IN_ESCROW", paidAt: new Date(), paymentExpiresAt: null },
+      }),
+    ]);
+    console.log("Comisión de reserva confirmada por Wompi para orden:", orden.id);
+  }
+  // Para DECLINED/VOIDED/ERROR no tocamos nada: la orden sigue ESPERANDO_COMISION y el comprador
+  // puede reintentar (Wompi) o pagar por el método manual. El producto sigue reservado hasta que
+  // expire por su propio plazo, igual que hoy.
+
+  return NextResponse.json({ ok: true });
+}
+
 async function procesarWebhookDestacado(reference: string, status: string) {
   const featured = await prisma.featuredListing.findUnique({ where: { wompiReference: reference } });
   if (!featured) {
@@ -119,6 +190,11 @@ export async function POST(req: NextRequest) {
     // Pagos de "destacar producto" usan un flujo separado (no son una Order de compra)
     if (reference.startsWith("destacado")) {
       return await procesarWebhookDestacado(reference, status);
+    }
+
+    // Pago de la comisión de reserva de un pedido contra-entrega (flujo separado del pago completo).
+    if (reference.startsWith("comision")) {
+      return await procesarWebhookComision(reference, status, transaction);
     }
 
     // La referencia tiene el formato: "colbisnes" + orden.id (cuid, ~25 caracteres) + timestamp (13 dígitos)
