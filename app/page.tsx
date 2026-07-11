@@ -273,6 +273,8 @@ function PageInner() {
   const [kycPendiente, setKycPendiente] = useState(false);
   // Aviso contextual: qué le falta al usuario (crítico) para poder vender y RECIBIR pagos.
   const [faltaVender, setFaltaVender] = useState<{ key: string; label: string }[]>([]);
+  // Modal emergente para invitar a completar los datos críticos faltantes.
+  const [showFaltaModal, setShowFaltaModal] = useState(false);
   const [nudgeActive, setNudgeActive] = useState(false);
 
   // El sonido/vibración de notificación ahora se dispara de forma global desde
@@ -300,6 +302,14 @@ function PageInner() {
         setKycPendiente(u.kycStatus !== "approved");
         const c = computeProfileCompletion(u);
         setFaltaVender(c.faltantesCriticos);
+        // Mostrar el modal emergente una vez por sesión si le falta algo crítico.
+        if (c.faltantesCriticos.length > 0) {
+          const yaVisto = typeof window !== "undefined" && sessionStorage.getItem("faltaVenderModalVisto") === "1";
+          if (!yaVisto) {
+            setShowFaltaModal(true);
+            try { sessionStorage.setItem("faltaVenderModalVisto", "1"); } catch {}
+          }
+        }
       })
       .catch(() => {});
   }, [sessionStatus]);
@@ -537,12 +547,14 @@ function PageInner() {
 
       {/* Aviso contextual: qué falta para vender y RECIBIR pagos (KYC + Nequi + Bre-B) */}
       {isAuthenticated && faltaVender.length > 0 && (
-        <div style={{
-          background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
-          padding: "12px 20px",
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-          flexWrap: "wrap",
-        }}>
+        <div
+          onClick={() => setShowFaltaModal(true)}
+          style={{
+            background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
+            padding: "12px 20px", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            flexWrap: "wrap",
+          }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
             <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>
               Para vender y recibir tus pagos te falta:
@@ -551,8 +563,7 @@ function PageInner() {
               {faltaVender.map(f => f.label).join(" · ")}
             </span>
           </div>
-          <a
-            href={kycPendiente ? "/kyc" : "/perfil/editar?falta=pago"}
+          <span
             style={{
               padding: "8px 20px", borderRadius: 20, background: "#fff", color: THEME.primary,
               fontWeight: 800, fontSize: 13, textDecoration: "none", flexShrink: 0,
@@ -560,7 +571,50 @@ function PageInner() {
             }}
           >
             {kycPendiente ? "Verificarme ahora →" : "Completar datos →"}
-          </a>
+          </span>
+        </div>
+      )}
+
+      {/* Modal emergente para completar los datos críticos faltantes */}
+      {isAuthenticated && showFaltaModal && faltaVender.length > 0 && (
+        <div
+          onClick={() => setShowFaltaModal(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(13,27,42,0.55)", backdropFilter: "blur(10px)", zIndex: 9600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 26, padding: "30px 26px", maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 20px 70px rgba(10,46,107,0.30)" }}
+          >
+            <div style={{ fontSize: 48, marginBottom: 8 }}>🚀</div>
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800, color: THEME.text }}>Completa tu registro</h2>
+            <p style={{ margin: "0 0 18px", fontSize: 14, color: THEME.muted, lineHeight: 1.5 }}>
+              Te falta poco para poder <b>vender y recibir tus pagos</b>. Completa estos datos y ningún pago quedará sin destino.
+            </p>
+
+            <div style={{ textAlign: "left", background: THEME.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 18, border: `1px solid ${THEME.border}` }}>
+              <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 800, color: THEME.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Te falta:</p>
+              {faltaVender.map((f) => (
+                <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ color: "#f59e0b", fontSize: 13 }}>●</span>
+                  <span style={{ fontSize: 13, color: THEME.text }}>{f.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href={kycPendiente ? "/kyc" : "/perfil/editar?falta=pago"}
+              onClick={() => setShowFaltaModal(false)}
+              style={{ display: "block", width: "100%", padding: 15, borderRadius: 15, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: `0 8px 28px ${THEME.primary}44`, marginBottom: 10, textDecoration: "none", boxSizing: "border-box" }}
+            >
+              {kycPendiente ? "Verificar mi identidad →" : "Completar mis datos →"}
+            </a>
+            <button
+              onClick={() => setShowFaltaModal(false)}
+              style={{ width: "100%", padding: 11, borderRadius: 15, border: `1.5px solid ${THEME.border}`, background: "transparent", color: THEME.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Más tarde
+            </button>
+          </div>
         </div>
       )}
 
