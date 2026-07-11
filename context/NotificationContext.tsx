@@ -49,6 +49,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setNudgeTick((t) => t + 1);
   }, []);
 
+  // Desplaza el feed hasta la publicación de la que te escribieron y la resalta.
+  // Si esa tarjeta no está en la página actual (otra ruta, o aún no cargó en el
+  // scroll infinito), simplemente no hace nada — el popup superior sigue visible.
+  const resaltarPublicacion = useCallback((productId: string | null) => {
+    if (!productId || typeof document === 'undefined') return;
+    // Pequeño retraso para dar tiempo a que el popup se monte y el DOM esté listo.
+    setTimeout(() => {
+      const el = document.getElementById('producto-' + productId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.remove('resaltar-mensaje');
+      // Fuerza el reinicio de la animación si ya estaba aplicada.
+      void el.offsetWidth;
+      el.classList.add('resaltar-mensaje');
+      setTimeout(() => el.classList.remove('resaltar-mensaje'), 2600);
+    }, 150);
+  }, []);
+
   useEffect(() => {
     if (status !== 'authenticated') return;
     let cancelled = false;
@@ -75,6 +93,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 });
                 if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
                 popupTimerRef.current = setTimeout(() => setMsgPopup(null), 7000);
+                // Segundo recordatorio: si la publicación está en el feed actual,
+                // desplázate hasta ella y resáltala (además del popup superior).
+                resaltarPublicacion(d.latestProductId ?? null);
               }
               lastSeenAtRef.current = d.latestAt;
             }

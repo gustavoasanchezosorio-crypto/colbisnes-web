@@ -28,6 +28,20 @@ select option {
   color: #0d1b2a;
 }
 
+/* Resalta la publicación de la que te acaban de escribir: al recibir la notificación
+   de mensaje nuevo, se hace scroll a la tarjeta y esta parpadea con un anillo azul,
+   como segundo recordatorio visual además del popup superior. */
+.resaltar-mensaje {
+  animation: resaltarMensaje 2.4s ease;
+  border-radius: 22px;
+}
+@keyframes resaltarMensaje {
+  0%   { box-shadow: 0 0 0 0 rgba(31, 107, 255, 0); }
+  15%  { box-shadow: 0 0 0 5px rgba(31, 107, 255, 0.55); }
+  55%  { box-shadow: 0 0 0 5px rgba(31, 107, 255, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(31, 107, 255, 0); }
+}
+
 /* La barra fija de acción (Hacer oferta / Comprar) es solo para móvil: en pantalla
    ancha ya se ven los CTA dentro de la tarjeta, así que la ocultamos para no duplicar. */
 @media (min-width: 900px) {

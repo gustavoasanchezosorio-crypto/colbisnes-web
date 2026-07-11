@@ -773,7 +773,12 @@ function PageInner() {
           <InfiniteScroll dataLength={productsCount} next={fetchMore} hasMore={hasMore} loader={<SkeletonGrid count={2} />} endMessage={productsCount > 0 ? <p style={{ textAlign: "center", padding: 20, color: THEME.muted }}>No hay mas productos</p> : null}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
               {products.map(product => (
-                <ProductCard key={product.id} product={product} onSelect={setSelectedProductId} onPaymentRequest={handlePaymentRequest} onConfirmDelivery={handleConfirmDelivery} onReviewClick={setReviewingProduct} isSelected={selectedProductId === product.id} isOwner={session?.user?.id === product.seller?.id} currentUserId={session?.user?.id || null} pendingOffersCount={product._count?.offers || 0} mensajesNoLeidos={unreadByProduct[product.id] || 0} />
+                // Ancla con id para que la notificación de mensaje nuevo pueda hacer
+                // scroll directo a la publicación de la que te están escribiendo.
+                // scrollMarginTop deja espacio para el header fijo al desplazar.
+                <div key={product.id} id={"producto-" + product.id} style={{ scrollMarginTop: 90 }}>
+                  <ProductCard product={product} onSelect={setSelectedProductId} onPaymentRequest={handlePaymentRequest} onConfirmDelivery={handleConfirmDelivery} onReviewClick={setReviewingProduct} isSelected={selectedProductId === product.id} isOwner={session?.user?.id === product.seller?.id} currentUserId={session?.user?.id || null} pendingOffersCount={product._count?.offers || 0} mensajesNoLeidos={unreadByProduct[product.id] || 0} />
+                </div>
               ))}
             </div>
           </InfiniteScroll>
