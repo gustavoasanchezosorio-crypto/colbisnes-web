@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       data: { resetToken: hashedToken, resetTokenExpiry: expiresAt },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes-web.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
     const resetUrl = baseUrl + "/auth/reset-password?token=" + rawToken;
 
     const html = colbisnesEmailTemplate({

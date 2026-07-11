@@ -165,7 +165,7 @@ export async function GET(req: NextRequest) {
             titulo: "¡Recibiste un pago! 💰",
             cuerpo: `Hola ${producto.seller.name || "Vendedor"}, el pago en USDT por <strong>${producto.title}</strong> fue confirmado en blockchain.<br/><br/>El dinero está protegido por Colbisnes mientras se completa el envío y la entrega.`,
             ctaTexto: "Ver mis ventas",
-            ctaUrl: "https://colbisnes-web.vercel.app",
+            ctaUrl: "https://colbisnes.com",
           });
           await sendEmail({ to: producto.seller.email, subject: "Pago recibido - Colbisnes", html: htmlVendedor });
           await sendWhatsapp({
@@ -178,7 +178,7 @@ export async function GET(req: NextRequest) {
           titulo: "¡Tu pago fue confirmado! ✅",
           cuerpo: `Hola, confirmamos tu pago en USDT por <strong>${producto.title}</strong>.<br/><br/>Tu dinero queda protegido por Colbisnes hasta que confirmes que recibiste el producto.`,
           ctaTexto: "Ver mi compra",
-          ctaUrl: "https://colbisnes-web.vercel.app",
+          ctaUrl: "https://colbisnes.com",
         });
         await sendEmail({ to: orden.buyerEmail, subject: "Tu pago fue confirmado - Colbisnes", html: htmlComprador });
       } catch (notifError) {

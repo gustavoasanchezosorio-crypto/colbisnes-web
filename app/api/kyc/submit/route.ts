@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     const adminWa = process.env.ADMIN_WHATSAPP;
     if (adminWa) {
       const msg = encodeURIComponent(
-        `✅ *Nueva verificación facial pendiente* en Colbisnes\n\nUsuario: ${session.user.name || session.user.email}\nID: ${user.id}\n\nRevisar en: https://colbisnes-web.vercel.app/admin/kyc`
+        `✅ *Nueva verificación facial pendiente* en Colbisnes\n\nUsuario: ${session.user.name || session.user.email}\nID: ${user.id}\n\nRevisar en: https://colbisnes.com/admin/kyc`
       );
       // Solo log — envío de WA requiere integración externa
       console.log(`Admin WA alert: https://wa.me/${adminWa}?text=${msg}`);

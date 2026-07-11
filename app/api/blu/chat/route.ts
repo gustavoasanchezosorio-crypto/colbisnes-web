@@ -26,7 +26,7 @@ async function notificarEscalada(params: { conversationId: string; contacto: str
         titulo: "🐾 Chucho Bot escaló una conversación a soporte",
         cuerpo: `Contacto: <strong>${contacto}</strong><br/>Motivo: <strong>${motivo}</strong>${productoTitulo ? `<br/>Producto: <strong>${productoTitulo}</strong>` : ""}<br/><br/>Último mensaje del usuario:<br/><em>"${ultimoMensaje}"</em><br/><br/>ID de conversación: ${conversationId}`,
         ctaTexto: "Ir al panel admin",
-        ctaUrl: "https://colbisnes-web.vercel.app/admin",
+        ctaUrl: "https://colbisnes.com/admin",
       });
       await sendEmail({ to: adminEmail, subject: "🐾 Chucho Bot: nueva conversación escalada", html });
     }

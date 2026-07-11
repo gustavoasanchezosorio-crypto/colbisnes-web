@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         titulo: "Recibiste un pago 💳",
         cuerpo: `Hola ${product.seller.name || "Vendedor"}, el comprador ya realizó el pago de <strong style="color:#1F6BFF;">$${Number(product.priceCOP).toLocaleString("es-CO")} COP</strong> por <strong>${product.title}</strong>.<br/><br/>El dinero está en custodia segura de Colbisnes. Empaca tu producto y registra el envío para que el comprador pueda hacer seguimiento.`,
         ctaTexto: "Registrar envío",
-        ctaUrl: "https://colbisnes-web.vercel.app",
+        ctaUrl: "https://colbisnes.com",
       });
       await sendEmail({
         to: product.seller.email,

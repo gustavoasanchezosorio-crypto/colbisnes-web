@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     const cadenaConcatenada: string = referencia + montoEnCentavos + moneda + secretoIntegridad;
     const firma: string = crypto.createHash("sha256").update(cadenaConcatenada, "utf8").digest("hex");
 
-    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes-web.vercel.app";
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
     const redirectUrl = baseUrl + "/product/" + productoId + "?destacado=ok";
 
     const wompiUrl =

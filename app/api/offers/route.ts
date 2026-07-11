@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/email';
 import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
 import { bloqueoResponse } from "@/lib/accountBlock";
+import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -66,6 +67,11 @@ export async function POST(request: NextRequest) {
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
 
+    // Debe tener su código anti-phishing configurado antes de ofertar: así reconocerá
+    // los correos legítimos de Colbisnes (incluido el de "oferta aceptada") y su banner.
+    const faltaAntiPhishing = await requireAntiPhishing(session.user.id);
+    if (faltaAntiPhishing) return faltaAntiPhishing;
+
     const ip = getIP(request);
     const rl = rateLimit(`offers:${session.user.id}:${ip}`, { limit: 10, windowSeconds: 60 });
     if (!rl.allowed) {
@@ -116,7 +122,7 @@ export async function POST(request: NextRequest) {
         titulo: "Tienes una nueva oferta 🤝",
         cuerpo: `Hola ${product.seller.name || 'Vendedor'}, <strong>${session.user.name || 'un comprador'}</strong> ofreció <strong style="color:#1F6BFF;">$${Number(amountCOP).toLocaleString('es-CO')} COP</strong> por tu producto <strong>${product.title}</strong>.<br/><br/>Ingresa a Colbisnes para aceptar o rechazar la oferta.`,
         ctaTexto: "Ver oferta",
-        ctaUrl: "https://colbisnes-web.vercel.app",
+        ctaUrl: "https://colbisnes.com",
       });
       await sendEmail({
         to: product.seller.email,
@@ -197,7 +203,7 @@ export async function PATCH(request: Request) {
         titulo: "¡Tu oferta fue aceptada! 🎉",
         cuerpo: `Hola ${offer.user.name || 'Comprador'}, el vendedor acepto tu oferta de <strong style="color:#1F6BFF;">$${Number(offer.amountCOP).toLocaleString('es-CO')} COP</strong> por <strong>${offer.product.title}</strong>.<br/><br/>Tienes <strong>10 minutos</strong> para realizar el pago, despues el producto quedara disponible de nuevo para otros compradores.`,
         ctaTexto: "Pagar ahora",
-        ctaUrl: "https://colbisnes-web.vercel.app",
+        ctaUrl: "https://colbisnes.com",
       });
       await sendEmail({
         to: offer.user.email,
