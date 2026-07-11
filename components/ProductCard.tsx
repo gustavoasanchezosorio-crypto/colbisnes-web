@@ -518,8 +518,11 @@ export const ProductCard = React.memo(function ProductCard({
                 </Button>
               )}
               {!isOwner && product.status === 'AVAILABLE' ? (
-                <OutlineButton onClick={handleSelect}>
-                  {isSelected ? "Ofertas abiertas" : "Hacer oferta"}
+                // Va al detalle con el formulario de oferta abierto (flujo correcto con
+                // validación/KYC). Antes abría un modal que mostraba "No hay ofertas aún"
+                // y no dejaba ofertar bien — confuso para el comprador.
+                <OutlineButton onClick={() => { window.location.href = `/product/${product.id}?oferta=1`; }}>
+                  Hacer oferta
                 </OutlineButton>
               ) : (
                 pendingOffersCount > 0 && (

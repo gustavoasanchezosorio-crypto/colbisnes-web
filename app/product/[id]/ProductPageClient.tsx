@@ -103,6 +103,16 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   }, [searchParams]);
 
   const esVendedor  = session?.user?.id === product?.sellerId;
+  // Si llegan desde el feed con ?oferta=1 ("Hacer oferta"), abrimos directamente el
+  // formulario de oferta — pero solo si el usuario puede ofertar (no es el vendedor,
+  // no tiene ya una oferta y el producto está disponible). Así evitamos el modal
+  // confuso "No hay ofertas aún" del feed y usamos el flujo correcto con validación/KYC.
+  useEffect(() => {
+    if (searchParams?.get("oferta") === "1" && product?.status === "AVAILABLE" &&
+        !esVendedor && session?.user && !offers.find(o => o.userId === session?.user?.id)) {
+      setMostrarOferta(true);
+    }
+  }, [searchParams, product?.status, esVendedor, session?.user?.id, offers]);
   const estaDestacado = !!product?.featuredUntil && new Date(product.featuredUntil) > new Date();
   const esComprador = !esVendedor && !!session?.user?.email &&
     (ordenActiva?.buyerEmail?.toLowerCase() === session.user.email.toLowerCase() ||
