@@ -28,6 +28,15 @@ export async function POST(req: NextRequest) {
     if (!comprobante) {
       return NextResponse.json({ error: "Debes adjuntar una foto de la guía o el comprobante de envío" }, { status: 400 });
     }
+    // La foto de la guía debe ser una imagen y no exceder 5MB (mismo criterio que /api/upload).
+    const EXT_IMAGEN = /\.(jpe?g|png|webp|gif|hei[cf]|bmp|tiff?)$/i;
+    const pareceImagen = comprobante.type.startsWith("image/") || (!comprobante.type && EXT_IMAGEN.test(comprobante.name));
+    if (!pareceImagen) {
+      return NextResponse.json({ error: "El comprobante debe ser una imagen" }, { status: 400 });
+    }
+    if (comprobante.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "La imagen no debe superar 5MB" }, { status: 400 });
+    }
 
     const validacion = validarNumeroGuia(transportadora || "Otra", numeroGuia);
     if (!validacion.valido) {

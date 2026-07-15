@@ -27,6 +27,12 @@ export async function POST(req: NextRequest) {
     if (!comprobante) return NextResponse.json({ error: "Debes adjuntar el comprobante de la transferencia Nequi" }, { status: 400 });
     if (referencia.trim().length < 3) return NextResponse.json({ error: "Ingresa el número de referencia de la transferencia" }, { status: 400 });
 
+    // El comprobante debe ser una imagen y no exceder 5MB (mismo criterio que /api/upload).
+    const EXT_IMAGEN = /\.(jpe?g|png|webp|gif|hei[cf]|bmp|tiff?)$/i;
+    const pareceImagen = comprobante.type.startsWith("image/") || (!comprobante.type && EXT_IMAGEN.test(comprobante.name));
+    if (!pareceImagen) return NextResponse.json({ error: "El comprobante debe ser una imagen" }, { status: 400 });
+    if (comprobante.size > 5 * 1024 * 1024) return NextResponse.json({ error: "La imagen no debe superar 5MB" }, { status: 400 });
+
     const orden = await prisma.order.findUnique({ where: { id: orderId } });
     if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
 

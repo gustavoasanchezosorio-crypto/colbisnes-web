@@ -147,6 +147,25 @@ export async function GET(request: Request) {
     const conversationId = searchParams.get("conversationId");
     if (!conversationId) return json({ error: "Falta conversationId" }, 400);
 
+    // Control de propiedad: si la conversación tiene un dueño registrado (userId/userEmail),
+    // solo ese usuario puede leerla. Las conversaciones anónimas (sin dueño) quedan accesibles
+    // por su ID —igual que antes— porque no hay a quién atribuirlas. Evita que un usuario
+    // logueado lea el historial de soporte de otra cuenta adivinando un conversationId.
+    const conversation = await prisma.bluConversation.findUnique({
+      where: { id: conversationId },
+      select: { userId: true, userEmail: true },
+    });
+    if (!conversation) return json({ error: "Conversación no encontrada" }, 404);
+
+    if (conversation.userId || conversation.userEmail) {
+      const session = await getServerSession(authOptions);
+      const esDueno =
+        (!!conversation.userId && conversation.userId === session?.user?.id) ||
+        (!!conversation.userEmail && !!session?.user?.email &&
+          conversation.userEmail.toLowerCase() === session.user.email.toLowerCase());
+      if (!esDueno) return json({ error: "No autorizado" }, 403);
+    }
+
     const mensajes = await prisma.bluMessage.findMany({
       where: { conversationId },
       orderBy: { createdAt: "asc" },
