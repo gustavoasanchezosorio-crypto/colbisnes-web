@@ -55,6 +55,7 @@ export default function EditarPerfilPage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showAntiPhishing, setShowAntiPhishing] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "", phone: "", city: "", image: "",
@@ -377,10 +378,19 @@ export default function EditarPerfilPage() {
 
             <div style={box}>
               <label style={lbl}>Código anti fraude</label>
-              <input style={{ ...inp, letterSpacing: "0.1em", fontWeight: 700 }} type="text"
-                value={formData.antiPhishingCode}
-                onChange={e => setFormData({ ...formData, antiPhishingCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) })}
-                placeholder="Ej: COLB2024" maxLength={12} />
+              <div style={{ position: "relative" }}>
+                <input style={{ ...inp, letterSpacing: "0.1em", fontWeight: 700, paddingRight: "3rem" }}
+                  type={showAntiPhishing ? "text" : "password"}
+                  autoComplete="off"
+                  value={formData.antiPhishingCode}
+                  onChange={e => setFormData({ ...formData, antiPhishingCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) })}
+                  placeholder="Ej: COLB2024" maxLength={12} />
+                <button type="button" onClick={() => setShowAntiPhishing(v => !v)}
+                  aria-label={showAntiPhishing ? "Ocultar código" : "Mostrar código"}
+                  style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: THEME.muted }}>
+                  {showAntiPhishing ? "🙈" : "👁️"}
+                </button>
+              </div>
               <p style={hint}>
                 4 a 12 letras y números. Aparecerá en todos los correos que te enviemos.
                 Si recibes un correo que dice ser de Colbisnes y <b>no muestra tu código</b>, desconfía: podría ser un intento de fraude.
