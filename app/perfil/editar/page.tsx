@@ -56,13 +56,6 @@ export default function EditarPerfilPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Verificación premium (badge, sin cobro)
-  const [premiumStatus, setPremiumStatus] = useState<string>("none");
-  const [premiumCedula, setPremiumCedula] = useState<File | null>(null);
-  const [premiumComprobante, setPremiumComprobante] = useState<File | null>(null);
-  const [premiumEnviando, setPremiumEnviando] = useState(false);
-  const [premiumMsg, setPremiumMsg] = useState("");
-
   const [formData, setFormData] = useState({
     name: "", phone: "", city: "", image: "",
     nequiNumber: "", brebId: "",
@@ -136,35 +129,8 @@ export default function EditarPerfilPage() {
           setLoading(false);
         })
         .catch(err => { console.error(err); alert("Error al cargar los datos del perfil"); setLoading(false); });
-      fetch("/api/premium/solicitar", { credentials: "include" })
-        .then(r => r.json())
-        .then(d => { if (d?.premiumStatus) setPremiumStatus(d.premiumStatus); })
-        .catch(() => {});
     }
   }, [session]);
-
-  const solicitarPremium = async () => {
-    setPremiumMsg("");
-    if (!premiumCedula || !premiumComprobante) {
-      setPremiumMsg("❌ Adjunta la cédula y el comprobante de domicilio");
-      return;
-    }
-    setPremiumEnviando(true);
-    try {
-      const fd = new FormData();
-      fd.append("cedula", premiumCedula);
-      fd.append("comprobante", premiumComprobante);
-      const res = await fetch("/api/premium/solicitar", { method: "POST", credentials: "include", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No se pudo enviar la solicitud");
-      setPremiumStatus("pending");
-      setPremiumMsg("✅ Solicitud enviada. La revisaremos pronto.");
-    } catch (e: any) {
-      setPremiumMsg("❌ " + e.message);
-    } finally {
-      setPremiumEnviando(false);
-    }
-  };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -426,38 +392,6 @@ export default function EditarPerfilPage() {
               <OutlineButton type="button" onClick={() => router.back()}>Cancelar</OutlineButton>
             </div>
           </form>
-
-          {/* ── VERIFICACIÓN PREMIUM (badge, sin cobro) ── */}
-          <h3 style={{ color: THEME.gold, fontSize: 14, margin: "28px 0 14px", textTransform: "uppercase", letterSpacing: "0.05em", borderTop: "1px solid " + THEME.border, paddingTop: 20, textAlign: "center" }}>Verificación premium ⭐</h3>
-
-          {premiumStatus === "approved" && (
-            <p style={{ fontSize: 13, color: "#15803d", fontWeight: 700 }}>✅ Ya tienes el badge de verificación premium en tu perfil.</p>
-          )}
-          {premiumStatus === "pending" && (
-            <p style={{ fontSize: 13, color: THEME.primary, fontWeight: 700 }}>⏳ Tu solicitud está en revisión. Te avisaremos por correo.</p>
-          )}
-          {(premiumStatus === "none" || premiumStatus === "rejected") && (
-            <div>
-              <p style={{ fontSize: 12.5, color: THEME.muted, lineHeight: 1.5, margin: "0 0 14px" }}>
-                Sube tu cédula y un comprobante de domicilio para obtener el badge de verificación premium — le da más confianza a tus compradores. No tiene costo.
-                {premiumStatus === "rejected" && " Tu solicitud anterior no fue aprobada; puedes volver a intentarlo con fotos más claras."}
-              </p>
-              <div style={box}>
-                <label style={lbl}>Foto de la cédula</label>
-                <input type="file" accept="image/*" onChange={e => setPremiumCedula(e.target.files?.[0] || null)}
-                  style={{ padding: "8px", borderRadius: 8, border: "1px solid " + THEME.border, background: "white", fontSize: 13 }} />
-              </div>
-              <div style={box}>
-                <label style={lbl}>Comprobante de domicilio</label>
-                <input type="file" accept="image/*" onChange={e => setPremiumComprobante(e.target.files?.[0] || null)}
-                  style={{ padding: "8px", borderRadius: 8, border: "1px solid " + THEME.border, background: "white", fontSize: 13 }} />
-              </div>
-              {premiumMsg && <p style={{ fontSize: 12.5, fontWeight: 700, color: premiumMsg.startsWith("✅") ? "#15803d" : "#b91c1c", margin: "0 0 10px" }}>{premiumMsg}</p>}
-              <OutlineButton type="button" onClick={solicitarPremium} disabled={premiumEnviando}>
-                {premiumEnviando ? "Enviando..." : "Solicitar verificación premium"}
-              </OutlineButton>
-            </div>
-          )}
         </div>
       </main>
     </div>

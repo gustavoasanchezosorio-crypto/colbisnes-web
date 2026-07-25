@@ -92,9 +92,9 @@ export const BLU_INTENTS: BluIntent[] = [
   {
     id: "destacados_premium",
     quickReply: "¿Qué son los destacados?",
-    keywords: ["destacado", "destacar", "premium", "aparecer primero", "badge premium"],
+    keywords: ["destacado", "destacar", "aparecer primero"],
     respuesta:
-      "Puedes *destacar* tu producto para que aparezca primero en los resultados por $8.000 COP durante 7 dias. Tambien existe la *verificacion premium* (identidad + comprobante de domicilio), un badge gratuito que da mas confianza a los compradores.",
+      "Puedes *destacar* tu producto para que aparezca primero en los resultados por $8.000 COP durante 7 dias.",
   },
   {
     id: "usdt_cripto",

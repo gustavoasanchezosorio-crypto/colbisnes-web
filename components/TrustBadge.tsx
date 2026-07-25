@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { THEME } from "@/lib/theme";
-import PremiumBadge from "./PremiumBadge";
 
 interface TrustScoreData {
   score: number;
@@ -10,7 +9,6 @@ interface TrustScoreData {
   reviewsAvg: number | null;
   reviewsCount: number;
   completedOrdersCount: number;
-  premium?: boolean;
 }
 
 const COLOR_POR_LABEL: Record<string, string> = {
@@ -67,7 +65,6 @@ export default function TrustBadge({ userId, compact = false }: { userId: string
           >
             {data.label} · {data.score}
           </span>
-          {data.premium && <PremiumBadge compact />}
         </span>
       ) : (
         <div
@@ -90,7 +87,6 @@ export default function TrustBadge({ userId, compact = false }: { userId: string
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <p style={{ margin: 0, fontWeight: 800, fontSize: 13, color }}>{data.label}</p>
-              {data.premium && <PremiumBadge compact />}
             </div>
             <p style={{ margin: 0, fontSize: 11, color: THEME.muted }}>
               {data.reviewsCount > 0 ? `⭐ ${data.reviewsAvg?.toFixed(1)} (${data.reviewsCount})` : "Sin calificaciones aún"}

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { computeTrustScore } from "@/lib/trustScore";
-import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,11 +8,8 @@ export const revalidate = 0;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const { userId } = await params;
-    const [result, usuario] = await Promise.all([
-      computeTrustScore(userId),
-      prisma.user.findUnique({ where: { id: userId }, select: { premiumStatus: true } }),
-    ]);
-    return NextResponse.json({ ...result, premium: usuario?.premiumStatus === "approved" });
+    const result = await computeTrustScore(userId);
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("Error calculando trust score:", error);
     return NextResponse.json({ error: "No se pudo calcular el score" }, { status: 500 });
