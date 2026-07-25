@@ -776,7 +776,7 @@ function PageInner() {
                 // Ancla con id para que la notificación de mensaje nuevo pueda hacer
                 // scroll directo a la publicación de la que te están escribiendo.
                 // scrollMarginTop deja espacio para el header fijo al desplazar.
-                <div key={product.id} id={"producto-" + product.id} style={{ scrollMarginTop: 90 }}>
+                <div key={product.id} id={"producto-" + product.id} style={{ scrollMarginTop: 90, display: "flex" }}>
                   <ProductCard product={product} onSelect={setSelectedProductId} onPaymentRequest={handlePaymentRequest} onConfirmDelivery={handleConfirmDelivery} onReviewClick={setReviewingProduct} isSelected={selectedProductId === product.id} isOwner={session?.user?.id === product.seller?.id} currentUserId={session?.user?.id || null} pendingOffersCount={product._count?.offers || 0} mensajesNoLeidos={unreadByProduct[product.id] || 0} />
                 </div>
               ))}

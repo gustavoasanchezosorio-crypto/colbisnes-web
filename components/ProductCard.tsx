@@ -138,6 +138,11 @@ export const ProductCard = React.memo(function ProductCard({
         boxShadow: THEME.cardShadow,
         transition: "all 0.25s",
         overflow: "hidden",
+        // width/height 100%: la celda del grid (envoltorio en flex en page.tsx) estira todas
+        // las celdas al alto de la más alta; esto hace que la tarjeta llene ese alto para que
+        // todas se vean del mismo tamaño, sin importar cuánto contenido tenga cada una.
+        width: "100%",
+        height: "100%",
       }}
     >
       {enTramiteParaOtros && (
