@@ -136,7 +136,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
     }
 
-    const secret = process.env.WOMPI_EVENTS_SECRET;
+    // .trim() defensivo: un espacio/salto de línea invisible pegado al secreto haría que el
+    // checksum calculado aquí nunca coincida con el de Wompi, y TODOS los pagos aprobados serían
+    // rechazados en silencio (el producto nunca pasaría a IN_ESCROW pese al cobro real).
+    const secret = (process.env.WOMPI_EVENTS_SECRET || "").trim();
     if (!secret) {
       // Fail closed: antes, si la env var no estaba configurada, `secret` quedaba literalmente
       // como el string "undefined" y el webhook seguía procesándose (fail open) — auditoría

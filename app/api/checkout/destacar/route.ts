@@ -56,8 +56,12 @@ export async function GET(req: NextRequest) {
     const referencia: string = featured.wompiReference ?? ("destacado" + featured.id.replace(/[^a-zA-Z0-9]/g, "") + Date.now());
     const montoEnCentavos: string = String(DESTACADO_PRECIO * 100);
     const moneda: string = "COP";
-    const secretoIntegridad: string = process.env.WOMPI_INTEGRITY_SECRET!;
-    const publicKey: string = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY!;
+    // .trim() obligatorio: si la variable de entorno trae un espacio o salto de línea invisible
+    // al final (fácil al pegarla en Railway), la firma SHA256 se calcula sobre el secreto+espacio
+    // y Wompi la rechaza con "La firma es inválida". Mismo fix que ya tienen /checkout/wompi y
+    // /checkout/wompi-comision; a este route se le había olvidado.
+    const secretoIntegridad: string = (process.env.WOMPI_INTEGRITY_SECRET || "").trim();
+    const publicKey: string = (process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || "").trim();
 
     if (!secretoIntegridad) throw new Error("WOMPI_INTEGRITY_SECRET no está configurado");
     if (!publicKey) throw new Error("NEXT_PUBLIC_WOMPI_PUBLIC_KEY no está configurado");
