@@ -424,26 +424,41 @@ export const ProductCard = React.memo(function ProductCard({
                   color: THEME.primary,
                   textDecoration: "none",
                   fontSize: "0.9rem",
+                  // flexWrap: si el nombre del vendedor es largo, el badge baja de línea
+                  // intacto en vez de aplastarse (era la causa del badge "moneda" partido).
+                  flexWrap: "wrap",
                 }}
               >
                 <span>Vendedor: {product.seller.name || "Anónimo"}</span>
                 {product.seller.avgRating ? (
                   <span style={{
-                    background: THEME.secondary,
-                    color: "#1a1200",
-                    padding: "4px 8px",
-                    borderRadius: 20,
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    background: "linear-gradient(135deg,#F3D57E,#C79A2E)",
+                    color: "#3a2c05",
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    boxShadow: "0 2px 7px rgba(199,154,46,0.4)",
                   }}>
-                    {product.seller.avgRating} ⭐ ({product.seller.totalReviews})
+                    <span style={{ color: "#fff", fontSize: "0.82rem", lineHeight: 1, filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }}>★</span>
+                    {Number(product.seller.avgRating).toFixed(1)}
+                    <span style={{ opacity: 0.8, fontWeight: 700 }}>({product.seller.totalReviews})</span>
                   </span>
                 ) : (
                   <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
                     background: THEME.surfaceAlt,
                     color: THEME.muted,
-                    padding: "4px 8px",
-                    borderRadius: 20,
+                    padding: "4px 10px",
+                    borderRadius: 999,
                     fontSize: "0.7rem",
                   }}>
                     Nuevo vendedor
