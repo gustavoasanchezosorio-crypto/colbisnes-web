@@ -312,7 +312,14 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         .nav-arrow{opacity:0;transition:opacity 0.2s}
         .img-wrap:hover .nav-arrow{opacity:1}
         .prod-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.5rem;align-items:start}
-        @media(max-width:680px){.prod-grid{grid-template-columns:1fr}}
+        .galeria-col{position:sticky;top:1rem}
+        @media(max-width:680px){
+          .prod-grid{grid-template-columns:1fr}
+          /* En móvil (una sola columna) el sticky hacía que la imagen quedara "pegada"
+             y el bloque de info (vendedor, protección) se encaramara sobre la foto.
+             En columna única no aporta nada, así que se desactiva para evitar el solape. */
+          .galeria-col{position:static;top:auto}
+        }
       `}</style>
 
       <header style={{
@@ -352,8 +359,8 @@ export default function ProductPageClient({ productId }: { productId: string }) 
       <div style={{maxWidth:"960px",margin:"0 auto",padding:"1rem 1rem 4.5rem"}}>
       <div className="prod-grid">
 
-        {/* ══ GALERÍA (sticky) ════════════════════════════════════════════════ */}
-        <div style={{position:"sticky",top:"1rem"}}>
+        {/* ══ GALERÍA (sticky solo en escritorio; en móvil es estática) ═════════ */}
+        <div className="galeria-col">
           <div className="img-wrap" style={{position:"relative",borderRadius:"16px",overflow:"hidden",aspectRatio:"4/3",background:"#eef2f7"}}>
             {product.images?.length > 0 ? (
               <img src={product.images[imagenActual]?.url} alt={product.title}
@@ -574,16 +581,34 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               }}>Comprar</button>
             </div>
           )}
-          {miOferta && disponible && (
-            <div style={{background:"rgba(199,154,46,0.10)",border:`1.5px solid rgba(199,154,46,0.4)`,borderRadius:"12px",padding:"0.75rem 1rem"}}>
-              <p style={{margin:0,fontWeight:"700",color:"#8a6a1f",fontSize:"0.88rem"}}>Tu oferta enviada</p>
-              <p style={{margin:"0.2rem 0 0",color:THEME.textSoft,fontSize:"0.88rem"}}>${miOferta.amountCOP.toLocaleString("es-CO")} COP — {miOferta.status}</p>
-              <button onClick={irACheckout} style={{background:AZUL,color:"white",border:"none",borderRadius:"10px",
-                padding:"0.6rem 1rem",cursor:"pointer",fontWeight:"700",marginTop:"0.6rem",width:"100%",fontSize:"0.9rem"}}>
-                Comprar al precio original
-              </button>
-            </div>
-          )}
+          {miOferta && disponible && (() => {
+            // Etiqueta del estado en español + colores según resultado (antes se
+            // imprimía el enum crudo "REJECTED"/"PENDING", que se veía como un error).
+            const meta =
+              miOferta.status === "REJECTED" ? { titulo:"Tu oferta no fue aceptada", pill:"Rechazada", pillBg:"rgba(239,68,68,0.12)", pillCol:"#b91c1c", bg:"#f8fafc",              bd:THEME.border } :
+              miOferta.status === "ACCEPTED" ? { titulo:"¡Tu oferta fue aceptada!",  pill:"Aceptada",  pillBg:"rgba(34,197,94,0.14)", pillCol:"#15803d", bg:"rgba(34,197,94,0.08)",  bd:"rgba(34,197,94,0.35)" } :
+                                               { titulo:"Tu oferta está pendiente",   pill:"Pendiente", pillBg:"rgba(199,154,46,0.15)",pillCol:"#8a6a1f", bg:"rgba(199,154,46,0.10)", bd:"rgba(199,154,46,0.4)" };
+            return (
+              <div style={{background:meta.bg,border:`1.5px solid ${meta.bd}`,borderRadius:"12px",padding:"0.85rem 1rem"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
+                  <p style={{margin:0,fontWeight:"800",color:THEME.text,fontSize:"0.9rem"}}>{meta.titulo}</p>
+                  <span style={{background:meta.pillBg,color:meta.pillCol,padding:"2px 10px",borderRadius:"20px",fontSize:"0.72rem",fontWeight:"800",whiteSpace:"nowrap",flexShrink:0}}>{meta.pill}</span>
+                </div>
+                <p style={{margin:"0.35rem 0 0",color:THEME.textSoft,fontSize:"0.85rem"}}>
+                  Ofreciste <strong>${miOferta.amountCOP.toLocaleString("es-CO")} COP</strong>
+                </p>
+                {miOferta.status === "REJECTED" && (
+                  <p style={{margin:"0.3rem 0 0",color:THEME.muted,fontSize:"0.78rem",lineHeight:1.5}}>
+                    Puedes comprarlo al precio original ahora mismo.
+                  </p>
+                )}
+                <button onClick={irACheckout} style={{background:AZUL,color:"white",border:"none",borderRadius:"10px",
+                  padding:"0.6rem 1rem",cursor:"pointer",fontWeight:"700",marginTop:"0.6rem",width:"100%",fontSize:"0.9rem"}}>
+                  Comprar al precio original
+                </button>
+              </div>
+            );
+          })()}
           {product.status==="PAYMENT_PENDING" && esComprador && ordenActiva?.estado !== "ESPERANDO_COMISION" && (
             <div style={{background:"rgba(224,123,0,0.10)",border:`1.5px solid rgba(224,123,0,0.35)`,borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:"#b45309",margin:"0 0 0.3rem",fontSize:"0.9rem"}}>Tu oferta fue aceptada</p>
