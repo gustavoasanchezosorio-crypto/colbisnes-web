@@ -72,7 +72,7 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(10,22,40,0.5)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: THEME.surfaceGradient, backdropFilter: "blur(20px)", borderRadius: 26, padding: "28px 24px", maxWidth: 420, width: "100%", boxShadow: THEME.cardShadow, border: "1.5px solid transparent", maxHeight: "88vh", overflowY: "auto" }}>
         <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <h2 style={{ color: THEME.text, fontWeight: 800, fontSize: 19, margin: 0, width: "100%", textAlign: "center" }}>💜 Pagar comisión de reserva</h2>
+          <h2 style={{ color: THEME.text, fontWeight: 800, fontSize: 19, margin: 0, width: "100%", textAlign: "center" }}>💳 Pagar comisión de reserva</h2>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: THEME.surfaceAlt, color: THEME.textSoft, fontSize: 16, cursor: "pointer", position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>×</button>
         </div>
 
@@ -101,9 +101,9 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
                 solo, sin esperar al admin. Como respaldo queda la transferencia manual de abajo. */}
             <button
               onClick={() => setShowNequiPush(true)}
-              style={{ width: "100%", padding: 15, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#a855f7,#7e22ce)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 8px 24px rgba(126,34,206,0.35)", marginBottom: 8 }}
+              style={{ width: "100%", padding: 15, borderRadius: 16, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 8px 24px rgba(14,86,192,0.35)", marginBottom: 8 }}
             >
-              💜 Pagar con Nequi (sin salir de la app)
+              💳 Pagar con Nequi (sin salir de la app)
             </button>
             <p style={{ margin: "0 0 16px", fontSize: 11.5, color: THEME.muted, textAlign: "center", lineHeight: 1.4 }}>
               Te llega una solicitud a tu app Nequi para aprobar. Se confirma al instante y reserva tu producto automáticamente.
@@ -115,8 +115,8 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
               <div style={{ flex: 1, height: 1, background: THEME.border }} />
             </div>
 
-            <div style={{ background: "rgba(126,34,206,0.06)", border: "1px solid rgba(126,34,206,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 800, color: "#7e22ce", textTransform: "uppercase", letterSpacing: "0.04em" }}>📋 Condiciones de esta compra</p>
+            <div style={{ background: "rgba(199,154,46,0.08)", border: "1px solid rgba(199,154,46,0.30)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 800, color: THEME.gold, textTransform: "uppercase", letterSpacing: "0.04em" }}>📋 Condiciones de esta compra</p>
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
                 <li style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 1.45 }}>Esta comisión es una <strong>garantía de reserva</strong> — no es el pago del producto. El producto lo pagas en efectivo, directamente al mensajero, al recibirlo.</li>
                 <li style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 1.45 }}>Un administrador de Colbisnes confirma manualmente cada pago revisando tu comprobante — no es instantáneo, puede tardar un poco.</li>

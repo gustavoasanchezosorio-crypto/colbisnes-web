@@ -682,21 +682,21 @@ export default function ProductPageClient({ productId }: { productId: string }) 
             </div>
           )}
           {product.status==="PAYMENT_PENDING" && ordenActiva?.estado==="ESPERANDO_COMISION" && esComprador && (
-            <div style={{background:"rgba(147,51,234,0.08)",border:"1.5px solid rgba(147,51,234,0.3)",borderRadius:"12px",padding:"0.75rem 1rem"}}>
-              <p style={{fontWeight:"700",color:"#7e22ce",margin:"0 0 0.4rem"}}>💜 Falta pagar la comisión de reserva</p>
+            <div style={{background:"rgba(199,154,46,0.08)",border:"1.5px solid rgba(199,154,46,0.30)",borderRadius:"12px",padding:"0.75rem 1rem"}}>
+              <p style={{fontWeight:"700",color:THEME.gold,margin:"0 0 0.4rem"}}>💳 Falta pagar la comisión de reserva</p>
               <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:"0 0 0.7rem"}}>
                 {ordenActiva?.comisionReservaComprobanteUrl
                   ? "Ya enviaste tu comprobante. Un administrador lo confirmará en breve para que el vendedor pueda despachar."
                   : "Para garantizar tu compra contra entrega, paga por Nequi la comisión de Colbisnes antes de que el vendedor envíe el producto."}
               </p>
               {ordenActiva?.fechaLimiteEnvio && (
-                <p style={{fontSize:"0.76rem",color:"#7e22ce",margin:"0 0 0.7rem",fontWeight:600,lineHeight:1.4}}>
+                <p style={{fontSize:"0.76rem",color:THEME.textSoft,margin:"0 0 0.7rem",fontWeight:600,lineHeight:1.4}}>
                   ⏰ El vendedor tiene hasta el {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} para despachar (24h hábiles desde que se creó tu orden). Ese plazo corre aunque tu pago esté pendiente — si no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión.
                 </p>
               )}
               {!ordenActiva?.comisionReservaComprobanteUrl && (
                 <button onClick={()=>setMostrarPagarComision(true)}
-                  style={{background:"#7e22ce",color:"white",border:"none",borderRadius:"10px",padding:"0.7rem",cursor:"pointer",fontWeight:"800",width:"100%",fontSize:"0.93rem",boxShadow:"0 4px 14px rgba(126,34,206,0.35)"}}>
+                  style={{background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,color:"white",border:"none",borderRadius:"10px",padding:"0.7rem",cursor:"pointer",fontWeight:"800",width:"100%",fontSize:"0.93rem",boxShadow:"0 4px 14px rgba(14,86,192,0.35)"}}>
                   Pagar comisión de reserva
                 </button>
               )}

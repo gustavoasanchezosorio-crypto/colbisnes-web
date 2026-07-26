@@ -95,15 +95,15 @@ export default function NequiPushModal({ endpoint, body, montoLabel, prefillTele
     <div onClick={cerrar} style={{ position: "fixed", inset: 0, zIndex: 2100, background: "rgba(10,22,40,0.5)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "26px 22px", maxWidth: 380, width: "100%", boxShadow: "0 20px 70px rgba(10,46,107,0.3)", textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "#7e22ce" }}>Pagar con Nequi</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: THEME.gold }}>Pagar con Nequi</span>
           <button onClick={cerrar} style={{ border: "none", background: "transparent", color: THEME.muted, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
 
         {estado === "idle" && (
           <>
-            <div style={{ fontSize: 44, marginBottom: 6 }}>💜</div>
+            <div style={{ fontSize: 44, marginBottom: 6 }}>💳</div>
             <p style={{ margin: "0 0 4px", fontSize: 14, color: THEME.textSoft }}>Vas a pagar</p>
-            <p style={{ margin: "0 0 16px", fontSize: 24, fontWeight: 900, color: "#7e22ce" }}>{montoLabel}</p>
+            <p style={{ margin: "0 0 16px", fontSize: 24, fontWeight: 900, color: THEME.gold }}>{montoLabel}</p>
             <label style={{ display: "block", textAlign: "left", fontSize: 12, fontWeight: 700, color: THEME.muted, marginBottom: 6 }}>Tu número Nequi</label>
             <input
               value={telefono}
@@ -113,7 +113,7 @@ export default function NequiPushModal({ endpoint, body, montoLabel, prefillTele
               style={{ width: "100%", padding: "13px 14px", borderRadius: 13, border: `1.5px solid ${THEME.border}`, fontSize: 16, letterSpacing: 1, textAlign: "center", marginBottom: 14, boxSizing: "border-box" }}
             />
             {error && <p style={{ color: "#b91c1c", fontSize: 13, fontWeight: 600, margin: "0 0 12px" }}>⚠️ {error}</p>}
-            <button onClick={iniciar} disabled={iniciando} style={{ width: "100%", padding: 15, borderRadius: 15, border: "none", background: iniciando ? "#e2e8f0" : "linear-gradient(135deg,#a855f7,#7e22ce)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: iniciando ? "default" : "pointer" }}>
+            <button onClick={iniciar} disabled={iniciando} style={{ width: "100%", padding: 15, borderRadius: 15, border: "none", background: iniciando ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: iniciando ? "default" : "pointer", boxShadow: iniciando ? "none" : "0 8px 24px rgba(14,86,192,0.35)" }}>
               {iniciando ? "Enviando..." : "Enviar solicitud a mi Nequi"}
             </button>
             <p style={{ margin: "10px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.4 }}>
@@ -124,7 +124,7 @@ export default function NequiPushModal({ endpoint, body, montoLabel, prefillTele
 
         {estado === "pending" && (
           <div style={{ padding: "10px 0" }}>
-            <div style={{ width: 46, height: 46, border: "4px solid #eee", borderTopColor: "#7e22ce", borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }} />
+            <div style={{ width: 46, height: 46, border: "4px solid #eee", borderTopColor: THEME.primary, borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }} />
             <p style={{ margin: "0 0 6px", fontWeight: 800, fontSize: 16, color: THEME.text }}>Revisa tu app Nequi</p>
             <p style={{ margin: 0, fontSize: 13, color: THEME.muted, lineHeight: 1.5 }}>Te enviamos una solicitud de pago por {montoLabel}. Ábrela y aprueba desde tu celular. No cierres esta ventana.</p>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -144,7 +144,7 @@ export default function NequiPushModal({ endpoint, body, montoLabel, prefillTele
             <div style={{ fontSize: 46, marginBottom: 10 }}>{estado === "declined" ? "❌" : "⏱️"}</div>
             <p style={{ margin: "0 0 6px", fontWeight: 800, fontSize: 16, color: THEME.text }}>{estado === "declined" ? "El pago no se completó" : "Sin respuesta"}</p>
             <p style={{ margin: "0 0 16px", fontSize: 13, color: THEME.muted, lineHeight: 1.5 }}>{error || "La solicitud fue rechazada o cancelada en Nequi. Puedes intentarlo de nuevo."}</p>
-            <button onClick={() => { setEstado("idle"); setError(""); }} style={{ width: "100%", padding: 13, borderRadius: 14, border: "none", background: "linear-gradient(135deg,#a855f7,#7e22ce)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+            <button onClick={() => { setEstado("idle"); setError(""); }} style={{ width: "100%", padding: 13, borderRadius: 14, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
               Intentar de nuevo
             </button>
           </div>

@@ -334,8 +334,8 @@ export default function CheckoutPage() {
         {/* Botón exclusivo de Nequi (pago online): notificación push directa a la app del comprador. */}
         {metodo === "online" && !perfilIncompleto && !TEST_MODE && perfilFaltantes !== null && (
           <button onClick={() => setShowNequiOnline(true)}
-            style={{ width: "100%", padding: 15, borderRadius: 16, border: "1.5px solid #a855f7", background: "#fff", color: "#7e22ce", fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            💜 Pagar con Nequi (sin salir de la app)
+            style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            💳 Pagar con Nequi (sin salir de la app)
           </button>
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
