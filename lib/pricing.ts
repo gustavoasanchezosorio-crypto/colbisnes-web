@@ -5,7 +5,11 @@ export const GMF_PCT              = 0.004;
 export const COLBISNES_PCT_ONLINE = 0.10; // 10% comisión Colbisnes sobre ventas online (Wompi)
 export const COLBISNES_PCT_CE     = 0.03; // 3%  comisión Colbisnes sobre contra entrega
 export const TEST_MODE            = process.env.NEXT_PUBLIC_TEST_MODE === "true";
-export const TEST_AMOUNT          = 1500; // mínimo que acepta Nequi para pruebas reales
+// Wompi/Nequi rechaza cualquier transacción por debajo de este monto ("El monto mínimo de una
+// transacción es $1,500"). Se usa como piso del cobro por Nequi (comisión de reserva) y como
+// monto en modo pruebas. Si la comisión calculada queda por debajo, se sube a este mínimo.
+export const WOMPI_MIN_TX_COP     = 1500;
+export const TEST_AMOUNT          = WOMPI_MIN_TX_COP; // mínimo que acepta Nequi para pruebas reales
 
 // Listados destacados: el vendedor paga para que su producto aparezca primero en home/búsqueda
 export const DESTACADO_PRECIO = 8000;   // COP
@@ -91,7 +95,11 @@ export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string 
 
 export function calcularPrecioContraEntrega(precioBase: number, nivelVendedor?: string | null): PricingBreakdown {
   if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gmfSalida: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
-  const comisionColbisnes = Math.round(precioBase * COLBISNES_PCT_CE * multiplicadorPorNivel(nivelVendedor));
+  // La comisión de reserva se cobra por Nequi (Wompi), que exige un mínimo de $1.500 por transacción.
+  // En productos baratos el 3% queda por debajo y el cobro fallaba con "El monto mínimo es $1,500".
+  // Piso al mínimo de Wompi para que el pago por Nequi funcione siempre; el monto mostrado, el
+  // guardado (comisionReservaCOP) y el cobrado quedan idénticos, así el webhook verifica sin desfase.
+  const comisionColbisnes = Math.max(WOMPI_MIN_TX_COP, Math.round(precioBase * COLBISNES_PCT_CE * multiplicadorPorNivel(nivelVendedor)));
   const totalComprador    = precioBase + comisionColbisnes;
   // Contra entrega: el comprador paga el producto en efectivo al mensajero, no hay transferencia
   // de Colbisnes al vendedor, así que no aplica GMF de salida — el vendedor recibe el 100%.
