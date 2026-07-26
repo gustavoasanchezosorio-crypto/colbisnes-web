@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { crearTransaccionWompi } from "@/lib/wompi";
+import { WOMPI_MIN_TX_COP } from "@/lib/pricing";
 
 // Cobro de la COMISIÓN DE RESERVA (contra-entrega) directo por Nequi (push a la app del comprador).
 // Usa la referencia con prefijo "comision" para que el webhook la enrute a procesarWebhookComision
@@ -44,9 +45,14 @@ export async function POST(req: NextRequest) {
     }
 
     const referencia = "comision" + orden.id.replace(/[^a-zA-Z0-9]/g, "") + Date.now();
-    const amountInCents = Math.round(orden.comisionReservaCOP * 100);
+    // Piso de $1.500: Wompi rechaza cualquier transacción por debajo de ese monto. Las órdenes
+    // creadas antes de aplicarse el piso pueden tener comisionReservaCOP por debajo (ej. 3% de un
+    // producto barato = $120). Se sube al mínimo y se PERSISTE el valor cobrado, porque el webhook
+    // verifica que amount_in_cents === comisionReservaCOP*100 — si no se persiste, rechazaría el pago.
+    const montoCobrar   = Math.max(WOMPI_MIN_TX_COP, orden.comisionReservaCOP);
+    const amountInCents  = Math.round(montoCobrar * 100);
 
-    await prisma.order.update({ where: { id: orden.id }, data: { comisionReservaReferencia: referencia } });
+    await prisma.order.update({ where: { id: orden.id }, data: { comisionReservaReferencia: referencia, comisionReservaCOP: montoCobrar } });
 
     const tx = await crearTransaccionWompi({
       amountInCents,

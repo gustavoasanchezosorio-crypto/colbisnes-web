@@ -7,7 +7,7 @@ import TrackingOverlay from "@/components/TrackingOverlay";
 import TrustBadge from "@/components/TrustBadge";
 import PagarComisionNequiModal from "@/components/PagarComisionNequiModal";
 import { THEME } from "@/lib/theme";
-import { GMF_PCT } from "@/lib/pricing";
+import { GMF_PCT, WOMPI_MIN_TX_COP } from "@/lib/pricing";
 
 interface Product {
   id: string; title: string; description: string; priceCOP: number;
@@ -1150,7 +1150,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
       {mostrarPagarComision && ordenActiva && (
         <PagarComisionNequiModal
           orderId={ordenActiva.id}
-          comisionCOP={ordenActiva.comisionReservaCOP || 0}
+          comisionCOP={ordenActiva.comisionReservaCOP ? Math.max(WOMPI_MIN_TX_COP, ordenActiva.comisionReservaCOP) : 0}
           nequiNumero={ordenActiva.nequiNumero || null}
           fechaLimiteEnvio={ordenActiva.fechaLimiteEnvio || null}
           onClose={() => setMostrarPagarComision(false)}
