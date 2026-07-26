@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
+import { sendWhatsapp } from "@/lib/whatsapp";
+import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
+
+// Hitos de favoritos que disparan una notificación al vendedor. Nunca se notifica
+// por cada favorito (sería spam): solo cuando el producto CRUZA uno de estos números.
+// Ajustable libremente sin tocar el resto de la lógica.
+const HITOS_FAVORITOS = [5, 10, 25, 50, 100, 250, 500];
 
 // GET: saber si el usuario marcó favorito y el total, O listar favoritos del usuario
 export async function GET(req: NextRequest) {
@@ -80,8 +88,54 @@ export async function POST(req: NextRequest) {
       const p = await prisma.product.update({
         where: { id: productId },
         data: { favoritesCount: { increment: 1 } },
-        select: { favoritesCount: true }
+        select: {
+          favoritesCount: true,
+          title: true,
+          seller: { select: { id: true, name: true, email: true, phoneWhatsapp: true } },
+        },
       });
+
+      // Notificar al vendedor solo cuando el producto CRUZA un hito de favoritos.
+      // La deduplicación usa la tabla AuditLog existente (para no migrar el esquema en
+      // producción): una vez registrado HITO_FAVORITOS_<n> para ese producto no se vuelve
+      // a notificar ese hito, aunque el contador baje y vuelva a subir. Todo va dentro de
+      // try/catch: un fallo de notificación jamás debe romper el toggle de favorito.
+      if (HITOS_FAVORITOS.includes(p.favoritesCount) && p.seller) {
+        try {
+          const action = "HITO_FAVORITOS_" + p.favoritesCount;
+          const yaNotificado = await prisma.auditLog.findFirst({
+            where: { entity: "Product", entityId: productId, action },
+            select: { id: true },
+          });
+          if (!yaNotificado) {
+            await prisma.auditLog.create({
+              data: { userId: p.seller.id, action, entity: "Product", entityId: productId },
+            });
+            const nombre = p.seller.name || "Vendedor";
+            const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
+            const urlProducto = baseUrl + "/product/" + productId;
+            const html = colbisnesEmailTemplate({
+              preheader: "Tu producto está llamando la atención",
+              titulo: "Tu producto está gustando 🔥",
+              cuerpo: `Hola ${nombre}, tu producto <strong>${p.title}</strong> ya tiene <strong style="color:#1F6BFF;">${p.favoritesCount} favoritos</strong> en Colbisnes.<br/><br/>Cada favorito es un comprador interesado. Es un buen momento para revisar tu publicación y responder ofertas rápido.`,
+              ctaTexto: "Ver mi producto",
+              ctaUrl: urlProducto,
+            });
+            await sendEmail({
+              to: p.seller.email,
+              subject: `Tu producto ya tiene ${p.favoritesCount} favoritos en Colbisnes`,
+              html,
+            });
+            await sendWhatsapp({
+              to: p.seller.phoneWhatsapp || "",
+              body: "🔥 *Colbisnes* - ¡Tu producto está gustando!\n\nHola " + nombre + ", tu producto *" + p.title + "* ya tiene " + p.favoritesCount + " favoritos.\n\nCada favorito es un comprador interesado. Ingresa a Colbisnes para revisar tu publicación.",
+            });
+          }
+        } catch (notifError) {
+          console.error("Error notificando hito de favoritos:", notifError);
+        }
+      }
+
       return NextResponse.json({ esFavorito: true, count: p.favoritesCount });
     }
   } catch (e: any) {
