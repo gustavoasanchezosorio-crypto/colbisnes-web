@@ -16,7 +16,7 @@ const COLOR_POR_LABEL: Record<string, string> = {
   "Básico": "#F59E0B",
   "Confiable": "#0e56c0",
   "Muy confiable": "#15803d",
-  "Élite": "#7c3aed",
+  "Élite": "#C79A2E",
 };
 
 // Rangos del score de confianza (0-100), en orden — usados en el recuadro explicativo
