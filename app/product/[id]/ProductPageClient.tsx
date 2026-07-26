@@ -866,34 +866,98 @@ export default function ProductPageClient({ productId }: { productId: string }) 
       )}
 
       {/* ══ MODAL OFERTA ══════════════════════════════════════════════════════ */}
-      {mostrarOferta && (
+      {mostrarOferta && (() => {
+        const precio    = product.priceCOP;
+        const montoNum  = Number(montoOferta) || 0;
+        const excede    = montoNum > precio;
+        const pctMenos  = montoNum > 0 && montoNum < precio ? Math.round((1 - montoNum / precio) * 100) : 0;
+        const ahorro    = montoNum > 0 && montoNum < precio ? precio - montoNum : 0;
+        // Sugerencias rápidas: −5 / −10 / −15 % del precio publicado, redondeadas a $100 para que
+        // el monto quede "limpio". Nunca superan el precio ni bajan de 0.
+        const chips     = [5, 10, 15].map(pct => ({ pct, valor: Math.round(precio * (1 - pct / 100) / 100) * 100 }));
+        const fmt       = (n: number) => "$" + n.toLocaleString("es-CO");
+        const aplicar   = (v: number) => { setMontoOferta(String(v)); setMontoOfertaDisplay(v.toLocaleString("es-CO")); };
+        const acento    = excede ? THEME.error : THEME.gold;
+        const flabel: React.CSSProperties = { fontSize:"0.72rem", fontWeight:800, letterSpacing:"0.06em", textTransform:"uppercase", color:THEME.muted };
+        return (
         <div style={overlay} onClick={e=>e.target===e.currentTarget&&setMostrarOferta(false)}>
-          <div style={{...modalBase,height:"auto",padding:"1.75rem"}}>
-            <div style={{position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
-              <h2 style={{margin:0,fontWeight:"800",color:THEME.text,width:"100%",textAlign:"center"}}>Hacer oferta</h2>
-              <button onClick={()=>setMostrarOferta(false)} style={{background:"#f4f7fb",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",fontSize:"1rem",color:THEME.muted,position:"absolute",right:0,top:"50%",transform:"translateY(-50%)"}}>✕</button>
+          <div style={{...modalBase,height:"auto",maxWidth:440,maxHeight:"92vh",overflowY:"auto"}}>
+            {/* Encabezado */}
+            <div style={{position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 22px 0"}}>
+              <h2 style={{margin:0,fontWeight:"800",fontSize:"1.15rem",color:THEME.text}}>Hacer una oferta</h2>
+              <button onClick={()=>setMostrarOferta(false)} style={{background:"#f4f7fb",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",fontSize:"1rem",color:THEME.muted,flexShrink:0}}>✕</button>
             </div>
-            <p style={{color:THEME.muted,margin:"0 0 1rem",fontSize:"0.85rem"}}>{product.title} — ${product.priceCOP.toLocaleString("es-CO")} COP</p>
-            <label style={{fontWeight:"700",fontSize:"0.85rem",color:THEME.text}}>Monto (COP)</label>
-            <input style={inp} type="text" inputMode="numeric" value={montoOfertaDisplay}
-              onChange={e=>{
-                const raw = e.target.value.replace(/\./g,"").replace(/[^0-9]/g,"");
-                setMontoOferta(raw);
-                setMontoOfertaDisplay(raw ? Number(raw).toLocaleString("es-CO") : "");
-              }}
-              placeholder={`Máximo $${product.priceCOP.toLocaleString("es-CO")}`}/>
-            <label style={{fontWeight:"700",fontSize:"0.85rem",marginTop:"0.75rem",display:"block",color:THEME.text}}>Mensaje (opcional)</label>
-            <textarea style={{...inp,height:"75px",resize:"none",marginTop:"0.35rem"}} value={mensajeOferta} onChange={e=>setMensajeOferta(e.target.value)} placeholder="Cuéntale algo al vendedor..." spellCheck lang="es"/>
-            {errorOferta && <p style={{color:"#e53e3e",fontSize:"0.85rem",margin:"0.4rem 0"}}>{errorOferta}</p>}
-            <button disabled={enviandoOferta} onClick={enviarOferta}
-              style={{background:enviandoOferta?"rgba(199,154,46,0.35)":`linear-gradient(135deg,${DORADO},#E6B800)`,color:"#1a1200",border:"none",
-                borderRadius:"12px",padding:"0.85rem",cursor:enviandoOferta?"not-allowed":"pointer",fontWeight:"800",width:"100%",marginTop:"1rem",fontSize:"0.95rem"}}>
-              {enviandoOferta?"Enviando...":"Enviar oferta"}
-            </button>
-            <button style={{background:"none",border:"none",color:THEME.muted,cursor:"pointer",width:"100%",padding:"0.6rem",marginTop:"0.2rem",fontWeight:"600"}} onClick={()=>setMostrarOferta(false)}>Cancelar</button>
+
+            <div style={{padding:"14px 22px 22px"}}>
+              {/* Contexto del producto */}
+              <div style={{display:"flex",gap:12,alignItems:"center",background:THEME.surfaceAlt,border:`1px solid ${THEME.border}`,borderRadius:14,padding:"10px 12px",marginBottom:18}}>
+                {product.images?.[0]?.url ? (
+                  <img src={product.images[0].url} alt={product.title} style={{width:54,height:54,borderRadius:10,objectFit:"cover",flexShrink:0}}/>
+                ) : (
+                  <div style={{width:54,height:54,borderRadius:10,flexShrink:0,background:"linear-gradient(135deg,#c9d6ea,#94aacb)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>📦</div>
+                )}
+                <div style={{minWidth:0}}>
+                  <p style={{fontWeight:700,fontSize:"0.9rem",margin:0,lineHeight:1.25,color:THEME.text,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{product.title}</p>
+                  <p style={{fontSize:"0.76rem",color:THEME.muted,margin:"2px 0 0"}}>Precio publicado: <b style={{color:THEME.textSoft}}>{fmt(precio)}</b></p>
+                </div>
+              </div>
+
+              {/* Monto protagonista */}
+              <p style={{...flabel,margin:"0 0 6px"}}>Tu oferta</p>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,border:`1.5px solid ${acento}`,borderRadius:14,padding:"10px 14px",background:excede?"#fff7f7":"#fffdf7"}}>
+                <span style={{fontSize:"1.5rem",fontWeight:800,color:acento,opacity:0.75}}>$</span>
+                <input type="text" inputMode="numeric" value={montoOfertaDisplay} placeholder="0"
+                  onChange={e=>{
+                    const raw = e.target.value.replace(/\./g,"").replace(/[^0-9]/g,"");
+                    setMontoOferta(raw);
+                    setMontoOfertaDisplay(raw ? Number(raw).toLocaleString("es-CO") : "");
+                  }}
+                  style={{border:"none",outline:"none",background:"transparent",fontSize:"2rem",fontWeight:900,color:acento,width:190,textAlign:"center",fontFamily:"inherit"}}/>
+              </div>
+              {montoNum > 0 && (
+                <p style={{textAlign:"center",fontSize:"0.82rem",margin:"8px 0 0",color:excede?THEME.error:THEME.textSoft}}>
+                  {excede ? "No puede superar el precio publicado"
+                    : montoNum === precio ? "Igual al precio publicado"
+                    : <>{pctMenos}% menos que el precio publicado · <span style={{color:THEME.gold,fontWeight:800}}>ahorras {fmt(ahorro)}</span></>}
+                </p>
+              )}
+
+              {/* Chips de descuento rápido */}
+              <div style={{display:"flex",gap:8,margin:"14px 0 4px"}}>
+                {chips.map(c => {
+                  const activo = montoNum === c.valor;
+                  return (
+                    <button key={c.pct} type="button" onClick={()=>aplicar(c.valor)}
+                      style={{flex:1,textAlign:"center",padding:"9px 4px",borderRadius:12,border:`1.5px solid ${activo?THEME.gold:THEME.border}`,background:activo?"rgba(199,154,46,0.10)":"#fff",cursor:"pointer",fontSize:"0.8rem",fontWeight:700,color:activo?THEME.gold:THEME.textSoft,fontFamily:"inherit",lineHeight:1.2}}>
+                      −{c.pct}%
+                      <small style={{display:"block",fontSize:"0.68rem",color:activo?THEME.gold:THEME.muted,fontWeight:600,marginTop:1,opacity:activo?0.85:1}}>{fmt(c.valor)}</small>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Mensaje */}
+              <p style={{...flabel,margin:"18px 0 6px"}}>Mensaje al vendedor (opcional)</p>
+              <textarea value={mensajeOferta} onChange={e=>setMensajeOferta(e.target.value)} placeholder="Cuéntale por qué te interesa, coordina la entrega, etc." spellCheck lang="es"
+                style={{width:"100%",height:70,resize:"none",padding:"0.7rem 1rem",borderRadius:12,border:`1.5px solid ${THEME.border}`,fontSize:"0.9rem",outline:"none",fontFamily:"inherit",boxSizing:"border-box",color:THEME.text}}/>
+
+              {errorOferta && <p style={{color:THEME.error,fontSize:"0.85rem",margin:"0.5rem 0 0",fontWeight:600}}>{errorOferta}</p>}
+
+              <div style={{display:"flex",gap:7,alignItems:"flex-start",fontSize:"0.76rem",color:THEME.muted,margin:"14px 2px",lineHeight:1.4}}>
+                <span>🔒</span>
+                <span>El vendedor puede aceptar o rechazar tu oferta. Te avisamos apenas responda — sin compromiso de pago hasta que la acepte.</span>
+              </div>
+
+              <button disabled={enviandoOferta} onClick={enviarOferta}
+                style={{width:"100%",padding:15,borderRadius:15,border:"none",color:"#fff",fontWeight:800,fontSize:15,cursor:enviandoOferta?"not-allowed":"pointer",background:enviandoOferta?"#e2e8f0":`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,boxShadow:enviandoOferta?"none":"0 8px 24px rgba(14,86,192,0.35)"}}>
+                {enviandoOferta?"Enviando...":"Enviar oferta"}
+              </button>
+              <button type="button" style={{background:"none",border:"none",color:THEME.muted,cursor:"pointer",width:"100%",padding:"0.7rem",marginTop:4,fontWeight:700,fontSize:"0.9rem"}} onClick={()=>setMostrarOferta(false)}>Cancelar</button>
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ══ PANEL CHAT LIQUID GLASS ════════════════════════════════════════════ */}
       {mostrarChat && (
