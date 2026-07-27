@@ -316,7 +316,7 @@ export const ProductCard = React.memo(function ProductCard({
         </div>
       )}
 
-      <div style={{ position: "relative", zIndex: isSold ? 5 : 2 }}>
+      <div style={{ position: "relative", zIndex: isSold ? 5 : 2, display: "flex", flexDirection: "column", height: "100%" }}>
         {todasLasFotos.length > 0 && (
           <div style={{ position: "relative", marginBottom: "12px", borderRadius: "12px", overflow: "hidden", aspectRatio: "4/3", background: "#eef2f7" }}>
             <img
@@ -494,7 +494,10 @@ export const ProductCard = React.memo(function ProductCard({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 12, marginTop: 20, flexWrap: "wrap" }}>
+        {/* marginTop:auto empuja la fila de acciones al fondo de la tarjeta para que los
+            botones queden alineados entre todas las tarjetas del grid, sin importar cuán
+            larga sea la descripción (reporte 2026-07-27). */}
+        <div style={{ display: "flex", gap: 12, marginTop: "auto", paddingTop: 20, flexWrap: "wrap" }}>
           {!isSold && (
             <>
               {product.status === 'PAYMENT_PENDING' && !isOwner && esCompradorAutorizado && (

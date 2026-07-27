@@ -314,12 +314,18 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         .img-wrap:hover .nav-arrow{opacity:1}
         .prod-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.5rem;align-items:start}
         .galeria-col{position:sticky;top:1rem}
+        /* CTAs sin duplicar: en escritorio manda la columna de info (.cta-inline) y la
+           barra fija inferior se oculta; en móvil es al revés (reporte 2026-07-27). */
         @media(max-width:680px){
           .prod-grid{grid-template-columns:1fr}
           /* En móvil (una sola columna) el sticky hacía que la imagen quedara "pegada"
              y el bloque de info (vendedor, protección) se encaramara sobre la foto.
              En columna única no aporta nada, así que se desactiva para evitar el solape. */
           .galeria-col{position:static;top:auto}
+          .cta-inline{display:none !important}
+        }
+        @media(min-width:681px){
+          .barra-cta-movil{display:none !important}
         }
       `}</style>
 
@@ -566,20 +572,32 @@ export default function ProductPageClient({ productId }: { productId: string }) 
             </div>
           )}
 
-          {/* 4. ACCIÓN — CTAs justo después del precio/vendedor */}
-          {disponible && !esVendedor && session?.user && (
-            <div style={{display:"flex",gap:"0.5rem"}}>
-              {!miOferta && (
-                <button onClick={()=>setMostrarOferta(true)} style={{
-                  flex:1,background:"#ffffff",color:DORADO,border:`2px solid ${DORADO}`,
-                  borderRadius:"12px",padding:"0.8rem",cursor:"pointer",fontWeight:"800",fontSize:"0.93rem",
-                }}>Hacer oferta</button>
+          {/* 4. ACCIÓN — CTAs junto al precio/vendedor. Solo escritorio (.cta-inline): en
+              móvil se ocultan por CSS y se usa la barra fija inferior, para no duplicar los
+              botones (reporte 2026-07-27). Se maneja también el caso sin sesión para que en
+              escritorio no quede sin CTA al ocultar la barra. */}
+          {disponible && !esVendedor && (
+            <div className="cta-inline" style={{display:"flex",gap:"0.5rem"}}>
+              {session?.user ? (
+                <>
+                  {!miOferta && (
+                    <button onClick={()=>setMostrarOferta(true)} style={{
+                      flex:1,background:"#ffffff",color:DORADO,border:`2px solid ${DORADO}`,
+                      borderRadius:"12px",padding:"0.8rem",cursor:"pointer",fontWeight:"800",fontSize:"0.93rem",
+                    }}>Hacer oferta</button>
+                  )}
+                  <button onClick={irACheckout} style={{
+                    flex:2,background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,color:"white",border:"none",
+                    borderRadius:"12px",padding:"0.8rem",cursor:"pointer",fontWeight:"800",fontSize:"0.93rem",
+                    boxShadow:`0 5px 18px ${AZUL}44`,
+                  }}>Comprar</button>
+                </>
+              ) : (
+                <a href="/auth/login" style={{
+                  flex:1,background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,color:"white",
+                  borderRadius:"12px",padding:"0.8rem",textAlign:"center",textDecoration:"none",fontWeight:"800",fontSize:"0.93rem",display:"block",
+                }}>Inicia sesión para comprar</a>
               )}
-              <button onClick={irACheckout} style={{
-                flex:2,background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,color:"white",border:"none",
-                borderRadius:"12px",padding:"0.8rem",cursor:"pointer",fontWeight:"800",fontSize:"0.93rem",
-                boxShadow:`0 5px 18px ${AZUL}44`,
-              }}>Comprar</button>
             </div>
           )}
           {miOferta && disponible && (() => {
