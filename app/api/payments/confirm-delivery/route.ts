@@ -7,6 +7,7 @@ import { sendEmail } from '@/lib/email';
 import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
 import { generarComprobantePDF } from '@/lib/comprobante';
+import { registrarAuditoria } from '@/lib/audit';
 
 export async function POST(request: Request) {
   try {
@@ -85,6 +86,24 @@ export async function POST(request: Request) {
         data: { estado: "COMPLETADO" },
       });
     }
+
+    // Rastro de auditoría: confirmar la entrega libera la custodia (producto SOLD, orden
+    // COMPLETADA) y habilita el pago al vendedor — es la acción de plata más sensible del
+    // comprador y hasta ahora no dejaba registro de quién ni cuándo la ejecutó.
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "CONFIRMAR_ENTREGA",
+      entity: "Order",
+      entityId: orden?.id ?? productId,
+      metadata: {
+        productId,
+        orderId: orden?.id ?? null,
+        metodoPago: orden?.metodoPago ?? null,
+        totalPagado: orden ? Number(orden.totalPagado) : null,
+        recibeVendedor: orden ? Number(orden.recibeVendedor) : null,
+      },
+      request,
+    });
 
     // Aviso en tiempo real: la factura en vivo de ambas partes pasa a "Completado".
     try {

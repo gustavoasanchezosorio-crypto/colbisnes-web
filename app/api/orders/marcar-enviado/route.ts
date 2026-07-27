@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { v2 as cloudinary } from "cloudinary";
 import { validarNumeroGuia } from "@/lib/shippingValidation";
+import { registrarAuditoria } from "@/lib/audit";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -92,6 +93,16 @@ export async function POST(req: NextRequest) {
         comprobanteUrl,
         enviadoAt: new Date(),
       },
+    });
+
+    // Rastro de auditoría del despacho: quién marcó enviado, con qué guía y transportadora.
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "MARCAR_ENVIADO",
+      entity: "Order",
+      entityId: orderId,
+      metadata: { productId: orden.productId, numeroGuia, transportadora: transportadora || null },
+      request: req,
     });
 
     // Aviso en tiempo real para que la factura en vivo de ambas partes pase a "En camino".

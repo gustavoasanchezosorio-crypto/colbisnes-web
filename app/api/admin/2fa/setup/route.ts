@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generarSecretoTOTP, generarOtpauthUri, verificarCodigoTOTP } from "@/lib/totp";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -60,8 +61,12 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({ where: { id: user.id }, data: { totpEnabled: true } });
 
-    await prisma.auditLog.create({
-      data: { userId: user.id, action: "ENABLE_2FA", entity: "User", entityId: user.id },
+    await registrarAuditoria({
+      userId: user.id,
+      action: "ENABLE_2FA",
+      entity: "User",
+      entityId: user.id,
+      request: req,
     });
 
     return NextResponse.json({ ok: true });

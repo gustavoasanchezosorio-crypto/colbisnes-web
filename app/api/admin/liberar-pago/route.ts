@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { sendWhatsapp } from "@/lib/whatsapp";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
+import { getIP } from "@/lib/rateLimit";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
           entity: "Order",
           entityId: orderId,
           metadata: { txHash: txHash || null },
+          ip: getIP(req),
+          userAgent: req.headers.get("user-agent") ?? null,
         },
       }),
     ]);

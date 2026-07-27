@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { registrarAuditoria } from "@/lib/audit";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -77,14 +78,13 @@ export async function PATCH(req: NextRequest) {
     // Si se resuelve a favor del vendedor, se puede liberar el pago manualmente desde el panel de pagos-pendientes.
     // Si se resuelve a favor del comprador, el admin debe procesar el reembolso desde Wompi manualmente (no automatizado por seguridad).
 
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id,
-        action: "RESOLVE_DISPUTE",
-        entity: "Dispute",
-        entityId: disputeId,
-        metadata: { status, adminNotes },
-      },
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "RESOLVE_DISPUTE",
+      entity: "Dispute",
+      entityId: disputeId,
+      metadata: { status, adminNotes },
+      request: req,
     });
 
     return NextResponse.json({ ok: true, dispute });
