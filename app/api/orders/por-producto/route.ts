@@ -59,6 +59,16 @@ export async function GET(req: NextRequest) {
         fechaLimiteEnvio: orden.fechaLimiteEnvio,
         envioPenalizado: orden.envioPenalizado,
         nequiNumero: process.env.COLBISNES_NEQUI_NUMERO || null,
+        // Montos para la factura en vivo (visibles solo a comprador y vendedor).
+        // En contra-entrega: recibeVendedor == precioBase; a entregar al mensajero
+        // (efectivo) = recibeVendedor + envioCobrado (consistente con el checkout).
+        recibeVendedor: orden.recibeVendedor,
+        comision: orden.comision,
+        envioCobrado: orden.envioCobrado,
+        margenEnvio: orden.margenEnvio,
+        proteccionCosto: orden.proteccionCosto,
+        proteccionExtendida: orden.proteccionExtendida,
+        createdAt: orden.createdAt,
       },
     });
   } catch (err: any) {

@@ -94,6 +94,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Aviso en tiempo real para que la factura en vivo de ambas partes pase a "En camino".
+    try {
+      const io = (global as any).io;
+      if (io) io.to(`product-${orden.productId}`).emit("product-status-changed", { productId: orden.productId, status: producto.status });
+    } catch {}
+
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error("Error al marcar envio:", err.message);

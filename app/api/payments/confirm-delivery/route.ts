@@ -6,6 +6,7 @@ import { requireKyc } from "@/lib/requireKyc";
 import { sendEmail } from '@/lib/email';
 import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
+import { generarComprobantePDF } from '@/lib/comprobante';
 
 export async function POST(request: Request) {
   try {
@@ -85,17 +86,57 @@ export async function POST(request: Request) {
       });
     }
 
+    // Aviso en tiempo real: la factura en vivo de ambas partes pasa a "Completado".
+    try {
+      const io = (global as any).io;
+      if (io) io.to(`product-${productId}`).emit("product-status-changed", { productId, status: "SOLD" });
+    } catch {}
+
+    // Comprobante de cierre en PDF, adjunto por correo a comprador y vendedor. Un fallo
+    // aquí NO debe tumbar la confirmación de entrega (ya quedó guardada arriba).
+    let comprobantePdf: Buffer | null = null;
+    let compradorNombre: string | null = null;
+    if (orden) {
+      try {
+        const compradorUser = await prisma.user.findUnique({ where: { email: orden.buyerEmail }, select: { name: true } });
+        compradorNombre = compradorUser?.name ?? null;
+        comprobantePdf = await generarComprobantePDF({
+          ordenId: orden.id,
+          fecha: orden.createdAt,
+          estado: "COMPLETADO",
+          metodoPago: orden.metodoPago,
+          productoTitulo: product.title,
+          compradorEmail: orden.buyerEmail,
+          compradorNombre,
+          vendedorNombre: product.seller?.name,
+          vendedorEmail: product.seller?.email,
+          comision: orden.comision,
+          recibeVendedor: orden.recibeVendedor,
+          envioCobrado: orden.envioCobrado,
+          totalPagado: orden.totalPagado,
+          numeroGuia: orden.numeroGuia,
+          transportadora: orden.transportadora,
+        });
+      } catch (pdfErr) {
+        console.error('Error generando comprobante PDF:', pdfErr);
+      }
+    }
+    const adjuntoComprobante = comprobantePdf
+      ? [{ filename: `comprobante-colbisnes-${(orden?.id || productId).slice(-8)}.pdf`, content: comprobantePdf }]
+      : undefined;
+
+    // Correo al VENDEDOR (con el comprobante adjunto)
     if (product.seller) {
       try {
         const montoVendedor = orden?.recibeVendedor != null ? Number(orden.recibeVendedor) : Number(product.priceCOP);
         const html = colbisnesEmailTemplate({
           preheader: "Tu pago está en proceso de liberación",
           titulo: "¡Entrega confirmada! ⭐",
-          cuerpo: `Hola ${product.seller.name || 'Vendedor'}, el comprador confirmó que recibió <strong>${product.title}</strong> en buen estado.<br/><br/>Tu pago de <strong style="color:#1F6BFF;">$${montoVendedor.toLocaleString('es-CO')} COP</strong> está en proceso de liberación y lo recibirás pronto. ¡Gracias por vender en Colbisnes!`,
+          cuerpo: `Hola ${product.seller.name || 'Vendedor'}, el comprador confirmó que recibió <strong>${product.title}</strong> en buen estado.<br/><br/>Tu pago de <strong style="color:#1F6BFF;">$${montoVendedor.toLocaleString('es-CO')} COP</strong> está en proceso de liberación y lo recibirás pronto.<br/><br/>Adjuntamos el <strong>comprobante de la transacción</strong> en PDF. ¡Gracias por vender en Colbisnes!`,
           ctaTexto: "Ver mis ventas",
           ctaUrl: "https://colbisnes.com",
         });
-        await sendEmail({ to: product.seller.email, subject: 'Entrega confirmada - Colbisnes', html });
+        await sendEmail({ to: product.seller.email, subject: 'Entrega confirmada - Colbisnes', html, attachments: adjuntoComprobante });
         await sendWhatsapp({
           to: (product.seller as any).phoneWhatsapp,
           body: `⭐ *Colbisnes* - Entrega confirmada!\n\nHola ${product.seller.name || 'Vendedor'}, el comprador confirmó la entrega de *${product.title}*.\n\nTu pago de $${montoVendedor.toLocaleString('es-CO')} COP está en proceso de liberación.`,
@@ -105,7 +146,23 @@ export async function POST(request: Request) {
           body: `🔔 *ADMIN* - Pago pendiente de liberar\n\nProducto: ${product.title}\nVendedor: ${product.seller.name || 'Sin nombre'}\nMonto: $${montoVendedor.toLocaleString('es-CO')} COP\n\nIngresa al panel admin para liberar el pago.`,
         });
       } catch (emailError) {
-        console.error('Error enviando notificación de entrega:', emailError);
+        console.error('Error enviando notificación de entrega al vendedor:', emailError);
+      }
+    }
+
+    // Correo al COMPRADOR (con el mismo comprobante) — cierre formal de la transacción
+    if (orden?.buyerEmail) {
+      try {
+        const html = colbisnesEmailTemplate({
+          preheader: "Tu comprobante de compra en Colbisnes",
+          titulo: "¡Compra completada! ✅",
+          cuerpo: `Hola ${compradorNombre || 'Comprador'}, confirmaste la entrega de <strong>${product.title}</strong>. ¡Gracias por comprar en Colbisnes!<br/><br/>Adjuntamos el <strong>comprobante de la transacción</strong> en PDF con el detalle completo de tu compra. Con esto tu transacción queda finalizada.`,
+          ctaTexto: "Ver mis compras",
+          ctaUrl: "https://colbisnes.com",
+        });
+        await sendEmail({ to: orden.buyerEmail, subject: 'Comprobante de tu compra - Colbisnes', html, attachments: adjuntoComprobante });
+      } catch (emailError) {
+        console.error('Error enviando comprobante al comprador:', emailError);
       }
     }
 

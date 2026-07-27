@@ -68,6 +68,13 @@ export async function POST(req: NextRequest) {
       request: req,
     });
 
+    // Aviso en tiempo real: la factura en vivo del comprador y del vendedor pasa de
+    // "Esperando comisión" a "Reservado — pendiente de despacho".
+    try {
+      const io = (global as any).io;
+      if (io) io.to(`product-${orden.productId}`).emit("product-status-changed", { productId: orden.productId, status: "IN_ESCROW" });
+    } catch {}
+
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error("POST /api/admin/confirmar-comision-nequi error:", err.message);

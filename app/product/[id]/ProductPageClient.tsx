@@ -6,6 +6,7 @@ import { useProductSocket } from "@/lib/useSocket";
 import TrackingOverlay from "@/components/TrackingOverlay";
 import TrustBadge from "@/components/TrustBadge";
 import PagarComisionNequiModal from "@/components/PagarComisionNequiModal";
+import FacturaEnVivo from "@/components/FacturaEnVivo";
 import { THEME } from "@/lib/theme";
 import { GMF_PCT, WOMPI_MIN_TX_COP } from "@/lib/pricing";
 
@@ -86,7 +87,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   const [noLeidosTotal, setNoLeidos]    = useState(0);
   const [ultimoMensajeId, setUltimoMsgId] = useState<string | null>(null);
   const [hayMensajeNuevo, setHayNuevo]  = useState(false);
-  const [ordenActiva, setOrdenActiva]   = useState<{id:string;estado:string;buyerEmail:string;metodoPago?:string;numeroGuia?:string;comisionReservaCOP?:number;comisionReservaPagada?:boolean;comisionReservaComprobanteUrl?:string;nequiNumero?:string|null;fechaLimiteEnvio?:string;envioPenalizado?:boolean} | null>(null);
+  const [ordenActiva, setOrdenActiva]   = useState<{id:string;estado:string;buyerEmail:string;metodoPago?:string;numeroGuia?:string;comisionReservaCOP?:number;comisionReservaPagada?:boolean;comisionReservaComprobanteUrl?:string;nequiNumero?:string|null;fechaLimiteEnvio?:string;envioPenalizado?:boolean;recibeVendedor?:number;comision?:number;envioCobrado?:number;totalPagado?:number;transportadora?:string;createdAt?:string} | null>(null);
   const [mostrarPagarComision, setMostrarPagarComision] = useState(false);
   const searchParams = useSearchParams();
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(
@@ -120,7 +121,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   const miOferta    = offers.find(o => o.userId === session?.user?.id);
 
   useProductSocket(productId, useCallback((data: any) => {
-    if (data.productId === productId) { cargarProducto(); cargarOfertas(); }
+    if (data.productId === productId) { cargarProducto(); cargarOfertas(); cargarOrden(); }
   }, [productId]));
 
   useEffect(() => {
@@ -759,6 +760,16 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               borderRadius:"12px",padding:"0.85rem",textAlign:"center",textDecoration:"none",fontWeight:"800",fontSize:"0.95rem"}}>
               Inicia sesión para comprar
             </a>
+          )}
+
+          {/* Factura Colbisnes en vivo — visible para comprador y vendedor, se actualiza en tiempo real */}
+          {ordenActiva?.metodoPago === "CONTRA_ENTREGA" && (esComprador || esVendedor) && (
+            <FacturaEnVivo
+              orden={ordenActiva}
+              productoTitulo={product.title}
+              productoImagen={product.images?.[0]?.url}
+              rol={esVendedor ? "vendedor" : "comprador"}
+            />
           )}
 
           {/* Descripción colapsable */}

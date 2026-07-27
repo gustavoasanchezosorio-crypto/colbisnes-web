@@ -4,10 +4,16 @@ import { ANTIPHISHING_MARKER, bannerAntiPhishing } from '@/lib/emailTemplate';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  attachments?: EmailAttachment[];
 }
 
 // Inserta el banner anti-phishing del destinatario en el HTML del correo.
@@ -38,7 +44,7 @@ async function inyectarAntiPhishing(to: string, html: string): Promise<string> {
   }
 }
 
-export async function sendEmail({ to, subject, html }: EmailOptions) {
+export async function sendEmail({ to, subject, html, attachments }: EmailOptions) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ RESEND_API_KEY no configurada, omitiendo envío de correo');
     return;
@@ -51,6 +57,9 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
       to,
       subject,
       html: htmlFinal,
+      ...(attachments && attachments.length
+        ? { attachments: attachments.map(a => ({ filename: a.filename, content: a.content })) }
+        : {}),
     });
 
     if (error) {
