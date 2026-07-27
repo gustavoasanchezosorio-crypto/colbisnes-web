@@ -80,6 +80,12 @@ export default function CheckoutPage() {
   const fmt    = (n: number) => "$" + n.toLocaleString("es-CO", { maximumFractionDigits: 0 });
   const tieneDescuento = !!nivelVendedor && (nivelVendedor === "Confiable" || nivelVendedor === "Muy confiable" || nivelVendedor === "Élite");
   const notaDescuento = tieneDescuento ? `Vendedor ${nivelVendedor} — comisión reducida por buen historial.` : undefined;
+  // Comisión "sin descuento" (nivel neutro) para mostrarle al comprador cuánto se ahorra por
+  // comprarle a un vendedor de buen nivel. USDT no aplica descuento por nivel, así que no entra.
+  const onlineSinDesc = calcularPrecioOnline(precio, null);
+  const contraSinDesc = calcularPrecioContraEntrega(precio, null);
+  const ahorroOnline  = Math.max(0, onlineSinDesc.comisionColbisnes - online.comisionColbisnes);
+  const ahorroContra  = Math.max(0, contraSinDesc.comisionColbisnes - contra.comisionColbisnes);
 
   const procesarPago = async () => {
     setLoading(true);
@@ -140,15 +146,20 @@ export default function CheckoutPage() {
     ...(extras.envioCobrado > 0 ? [{ label: `Envío (costo + ${Math.round(0.10 * 100)}%)`, val: fmt(extras.envioCobrado) }] : []),
     ...(extras.proteccionCosto > 0 ? [{ label: "Protección extendida", val: fmt(extras.proteccionCosto) }] : []),
   ];
+  // Contra entrega no incluye protección extendida (solo se cobra en pago online/USDT, donde el
+  // cargo es electrónico). Su desglose y totales llevan únicamente el envío.
+  const desgloseExtrasContraCOP = [
+    ...(extras.envioCobrado > 0 ? [{ label: `Envío (costo + ${Math.round(0.10 * 100)}%)`, val: fmt(extras.envioCobrado) }] : []),
+  ];
   const desgloseExtrasUSD = [
     ...(envioUSD > 0 ? [{ label: "Envío (costo + margen)", val: envioUSD + " USDT" }] : []),
     ...(proteccionUSD > 0 ? [{ label: "Protección extendida", val: proteccionUSD + " USDT" }] : []),
   ];
 
   const metodos = [
-    { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes) }, ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
-    { id: "contraentrega" as MetodoPago, icon: "📦", titulo: "Contra entrega", sub: "Efectivo al recibir + reserva por Nequi", badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes) }, ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total al mensajero", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para despachar el producto.", "Mensajería entrega el producto — lo revisas al recibir.", "Confirmas la entrega en la app para liberar el pago al vendedor.", "Si el vendedor no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."], nota: ["La comisión de reserva se paga aparte por Nequi, antes del envío.", notaDescuento].filter(Boolean).join(" — ") },
-    { id: "usdt" as MetodoPago, icon: "🪙", titulo: "Pagar con USDT", sub: "BNB Chain BEP20 · Sin bancos", badge: fmtPct(pctUsdt), total: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", desglose: [{ label: "Precio producto", val: fmt(precio) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctUsdt)})`, val: TEST_MODE ? "0.01 USDT" : usdt.comisionUSD + " USDT" }, ...(TEST_MODE ? [] : desgloseExtrasUSD)], totalLabel: "Total USDT", totalVal: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", nota: ["Tasa: 1 USD = " + fmt(tasa) + " COP", notaDescuento].filter(Boolean).join(" · ") },
+    { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelVendedor}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
+    { id: "contraentrega" as MetodoPago, icon: "📦", titulo: "Contra entrega", sub: "Efectivo al recibir + reserva por Nequi", badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelVendedor}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: "Total al mensajero", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para despachar el producto.", "Mensajería entrega el producto — lo revisas al recibir.", "Confirmas la entrega en la app para liberar el pago al vendedor.", "Si el vendedor no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."], nota: ["La comisión de reserva se paga aparte por Nequi, antes del envío.", notaDescuento].filter(Boolean).join(" — ") },
+    { id: "usdt" as MetodoPago, icon: "🪙", titulo: "Pagar con USDT", sub: "BNB Chain BEP20 · Sin bancos", badge: fmtPct(pctUsdt), total: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", desglose: [{ label: "Precio producto", val: fmt(precio) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctUsdt)})`, val: TEST_MODE ? "0.01 USDT" : usdt.comisionUSD + " USDT" }, ...(TEST_MODE ? [] : desgloseExtrasUSD)], totalLabel: "Total USDT", totalVal: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", nota: "Tasa: 1 USD = " + fmt(tasa) + " COP" },
   ];
 
   return (
@@ -249,8 +260,12 @@ export default function CheckoutPage() {
               {active && (
                 <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${THEME.border}`, animation: "fadeUp 0.25s ease" }}>
                   {m.desglose.map(d => (
-                    <div key={d.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: THEME.muted, marginBottom: 8 }}>
-                      <span>{d.label}</span><span style={{ color: THEME.textSoft, fontWeight: 600 }}>{d.val}</span>
+                    <div key={d.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: (d as any).highlight ? THEME.success : THEME.muted, marginBottom: 8 }}>
+                      <span>{d.label}</span>
+                      <span style={{ color: (d as any).highlight ? THEME.success : THEME.textSoft, fontWeight: (d as any).highlight ? 800 : 600 }}>
+                        {(d as any).was && <span style={{ textDecoration: "line-through", color: THEME.muted, fontWeight: 400, marginRight: 6 }}>{(d as any).was}</span>}
+                        {d.val}
+                      </span>
                     </div>
                   ))}
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, borderTop: `1px solid ${THEME.border}`, paddingTop: 10, marginTop: 4 }}>
@@ -275,7 +290,7 @@ export default function CheckoutPage() {
           );
         })}
 
-        {metodo && !TEST_MODE && (
+        {metodo && metodo !== "contraentrega" && !TEST_MODE && (
           <div
             onClick={() => setProteccionExtendida(p => !p)}
             className="glass"

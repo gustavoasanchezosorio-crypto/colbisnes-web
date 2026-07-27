@@ -478,7 +478,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
                   )}
                 </div>
                 <a href={`/user/${product.sellerId}`} style={{color:THEME.primary,fontSize:"0.74rem",textDecoration:"none",fontWeight:"500"}}>Ver perfil</a>
-                <div style={{marginTop:3}}><TrustBadge userId={product.sellerId} compact /></div>
+                <div style={{marginTop:3}}><TrustBadge userId={product.sellerId} compact showDiscountHint={!esVendedor} /></div>
               </div>
             </div>
             {!esVendedor && session?.user && (

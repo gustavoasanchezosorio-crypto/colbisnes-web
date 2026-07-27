@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { THEME } from "@/lib/theme";
+import { DESCUENTO_COMISION_POR_NIVEL } from "@/lib/pricing";
 
 interface TrustScoreData {
   score: number;
@@ -30,7 +31,7 @@ const RANGOS: Array<{ label: string; min: number; max: number; desc: string }> =
 
 // Badge compacto de score de confianza — se usa en perfil público y en la ficha de producto.
 // Al tocarlo, muestra un recuadro explicando qué significa cada rango de puntaje.
-export default function TrustBadge({ userId, compact = false }: { userId: string; compact?: boolean }) {
+export default function TrustBadge({ userId, compact = false, showDiscountHint = false }: { userId: string; compact?: boolean; showDiscountHint?: boolean }) {
   const [data, setData] = useState<TrustScoreData | null>(null);
   const [showInfo, setShowInfo] = useState(false);
 
@@ -46,6 +47,10 @@ export default function TrustBadge({ userId, compact = false }: { userId: string
   if (!data) return null;
 
   const color = COLOR_POR_LABEL[data.label] || THEME.primary;
+  // Descuento sobre la comisión de Colbisnes por el buen nivel del vendedor. Como la comisión
+  // la paga el comprador, un nivel alto hace que a él le cueste menos comprarle a este vendedor.
+  const descuentoNivel = DESCUENTO_COMISION_POR_NIVEL[data.label] ?? 0;
+  const pctDescuento   = Math.round(descuentoNivel * 100);
 
   return (
     <>
@@ -65,6 +70,19 @@ export default function TrustBadge({ userId, compact = false }: { userId: string
           >
             {data.label} · {data.score}
           </span>
+          {showDiscountHint && descuentoNivel > 0 && (
+            <span
+              title={`Por el buen historial de este vendedor, la comisión de Colbisnes baja ${pctDescuento}% — a ti te cuesta menos comprarle.`}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 3,
+                fontSize: 10.5, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
+                background: `${THEME.success}1a`, color: THEME.success, border: `1px solid ${THEME.success}44`,
+                whiteSpace: "nowrap",
+              }}
+            >
+              💸 −{pctDescuento}% comisión para ti
+            </span>
+          )}
         </span>
       ) : (
         <div

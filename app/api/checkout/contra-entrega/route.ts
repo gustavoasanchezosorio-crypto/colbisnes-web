@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const faltaPago = await requirePayoutInfo(session.user.id);
     if (faltaPago) return faltaPago;
 
-    const { productoId, proteccionExtendida } = await req.json();
+    const { productoId } = await req.json();
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });
 
     const producto = await prisma.product.findUnique({ where: { id: productoId } });
@@ -96,7 +96,11 @@ export async function POST(req: NextRequest) {
 
     const trust = await computeTrustScore(producto.sellerId);
     const pricing = calcularPrecioContraEntrega(precioBase, trust.label);
-    const extras = calcularExtrasCheckout(producto, !!proteccionExtendida);
+    // Contra entrega NO ofrece protección extendida: el único cargo electrónico aquí es la
+    // comisión de reserva por Nequi y el efectivo al mensajero es solo precio + envío, así que
+    // la protección no tendría por dónde cobrarse (antes se sumaba a totalPagado sin cobrarse
+    // nunca). Se fuerza a false aunque el cliente la mande. Sí se mantiene en pago online/USDT.
+    const extras = calcularExtrasCheckout(producto, false);
     const codigoSecreto = Math.floor(100000 + Math.random() * 900000).toString();
     const ahora = new Date();
 
