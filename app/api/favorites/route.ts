@@ -71,35 +71,48 @@ export async function POST(req: NextRequest) {
     const { productId } = await req.json();
     if (!productId) return NextResponse.json({ error: "Falta productId" }, { status: 400 });
 
+    const userId = session.user.id;
     const existe = await prisma.favorite.findUnique({
-      where: { userId_productId: { userId: session.user.id, productId } }
+      where: { userId_productId: { userId, productId } },
+      select: { id: true },
     });
 
+    // ─────────────── QUITAR favorito ───────────────
+    // El borrado del favorito y la actualización del contador van en UNA sola transacción, y
+    // el contador se fija al conteo REAL de filas (no un decrement a ciegas): así nunca queda
+    // desfasado aunque haya toggles concurrentes, y se autocorrige si venía torcido de antes.
+    // `deleteMany` es idempotente — si otra petición ya borró la fila, elimina 0 sin lanzar.
     if (existe) {
-      await prisma.favorite.delete({ where: { id: existe.id } });
-      const p = await prisma.product.update({
-        where: { id: productId },
-        data: { favoritesCount: { decrement: 1 } },
-        select: { favoritesCount: true }
+      const count = await prisma.$transaction(async (tx) => {
+        await tx.favorite.deleteMany({ where: { userId, productId } });
+        const c = await tx.favorite.count({ where: { productId } });
+        await tx.product.update({ where: { id: productId }, data: { favoritesCount: c } });
+        return c;
       });
-      return NextResponse.json({ esFavorito: false, count: Math.max(0, p.favoritesCount) });
-    } else {
-      await prisma.favorite.create({ data: { userId: session.user.id, productId } });
-      const p = await prisma.product.update({
-        where: { id: productId },
-        data: { favoritesCount: { increment: 1 } },
-        select: {
-          favoritesCount: true,
-          title: true,
-          seller: { select: { id: true, name: true, email: true, phoneWhatsapp: true } },
-        },
+      return NextResponse.json({ esFavorito: false, count });
+    }
+
+    // ─────────────── AGREGAR favorito ───────────────
+    try {
+      const p = await prisma.$transaction(async (tx) => {
+        await tx.favorite.create({ data: { userId, productId } });
+        const c = await tx.favorite.count({ where: { productId } });
+        return tx.product.update({
+          where: { id: productId },
+          data: { favoritesCount: c },
+          select: {
+            favoritesCount: true,
+            title: true,
+            seller: { select: { id: true, name: true, email: true, phoneWhatsapp: true } },
+          },
+        });
       });
 
-      // Notificar al vendedor solo cuando el producto CRUZA un hito de favoritos.
-      // La deduplicación usa la tabla AuditLog existente (para no migrar el esquema en
-      // producción): una vez registrado HITO_FAVORITOS_<n> para ese producto no se vuelve
-      // a notificar ese hito, aunque el contador baje y vuelva a subir. Todo va dentro de
-      // try/catch: un fallo de notificación jamás debe romper el toggle de favorito.
+      // Notificar al vendedor solo cuando el producto CRUZA un hito de favoritos. Va DESPUÉS de
+      // la transacción (nunca I/O de red dentro de una txn) y en su propio try/catch: un fallo de
+      // notificación jamás debe romper el toggle. La deduplicación usa la tabla AuditLog existente
+      // (para no migrar el esquema en producción): una vez registrado HITO_FAVORITOS_<n> para ese
+      // producto no se vuelve a notificar ese hito, aunque el contador baje y vuelva a subir.
       if (HITOS_FAVORITOS.includes(p.favoritesCount) && p.seller) {
         try {
           const action = "HITO_FAVORITOS_" + p.favoritesCount;
@@ -137,6 +150,20 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ esFavorito: true, count: p.favoritesCount });
+    } catch (e: any) {
+      // P2002 = otra petición concurrente (doble-tap, dos pestañas) ya creó el mismo favorito.
+      // Para el usuario NO es un error: el favorito quedó puesto. Sincronizamos el contador con el
+      // conteo real y devolvemos estado consistente en vez de un 500. La notificación de hito la
+      // dispara la petición ganadora, no esta. Cualquier otro error sí sube al catch externo.
+      if (e?.code === "P2002") {
+        const count = await prisma.$transaction(async (tx) => {
+          const c = await tx.favorite.count({ where: { productId } });
+          await tx.product.update({ where: { id: productId }, data: { favoritesCount: c } });
+          return c;
+        });
+        return NextResponse.json({ esFavorito: true, count });
+      }
+      throw e;
     }
   } catch (e: any) {
     console.error("POST /api/favorites error:", e);
