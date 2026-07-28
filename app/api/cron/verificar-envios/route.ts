@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { computeTrustScore } from "@/lib/trustScore";
 import { normalizarTelefonoCO } from "@/lib/phone";
+import { verificarCronSecret } from "@/lib/cronAuth";
 
 export const dynamic = "force-dynamic";
 
 const DIAS_BLOQUEO = 3;
-
-function verificarCronSecret(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return false;
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${cronSecret}`;
-}
 
 // Revisa órdenes de contraentrega en ESPERANDO_ENVIO cuyo plazo de 24 horas hábiles (8am-8pm)
 // ya venció sin que el vendedor haya registrado el envío (numeroGuia). Penaliza al vendedor:

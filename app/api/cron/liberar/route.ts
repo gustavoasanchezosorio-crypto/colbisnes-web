@@ -2,15 +2,9 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
+import { verificarCronSecret } from "@/lib/cronAuth";
 
 export const dynamic = "force-dynamic";
-
-function verificarCronSecret(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return false; // Sin secret configurado, bloquear
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${cronSecret}`;
-}
 
 export async function POST(req: NextRequest) {
   if (!verificarCronSecret(req)) {

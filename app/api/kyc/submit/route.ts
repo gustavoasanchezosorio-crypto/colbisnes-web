@@ -55,14 +55,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, status: "approved" });
     }
 
+    // Rechazo temprano por tamaño: en App Router el body no tiene límite por defecto, así que
+    // sin este guard un payload gigante se bufferizaría entero en memoria antes de parsearlo.
+    // 25MB cubre 2 imágenes base64 + el overhead del JSON con holgura.
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    if (contentLength > 25 * 1024 * 1024) {
+      return NextResponse.json({ error: "El envío es demasiado grande." }, { status: 413 });
+    }
+
     const body = await req.json();
     const { selfieBase64, cedulaBase64 } = body;
 
     if (!selfieBase64 || !cedulaBase64) {
       return NextResponse.json({ error: "Debes enviar la selfie y la foto de tu cédula" }, { status: 400 });
     }
-    if (!selfieBase64.startsWith("data:image/") || !cedulaBase64.startsWith("data:image/")) {
+    if (
+      typeof selfieBase64 !== "string" ||
+      typeof cedulaBase64 !== "string" ||
+      !selfieBase64.startsWith("data:image/") ||
+      !cedulaBase64.startsWith("data:image/")
+    ) {
       return NextResponse.json({ error: "Formato de imagen inválido" }, { status: 400 });
+    }
+    // Tope por imagen: una imagen en base64 pesa ~33% más que el binario. Cortamos cada una en
+    // ~10MB de texto base64 (~7MB de imagen real) para no saturar memoria ni la subida a
+    // Cloudinary. (/api/upload usa 5MB sobre el binario; acá el equivalente con holgura.)
+    const MAX_BASE64_LEN = 10 * 1024 * 1024; // ~10MB de caracteres base64
+    if (selfieBase64.length > MAX_BASE64_LEN || cedulaBase64.length > MAX_BASE64_LEN) {
+      return NextResponse.json(
+        { error: "Cada imagen debe pesar menos de ~7MB. Toma la foto con menor resolución e inténtalo de nuevo." },
+        { status: 413 }
+      );
     }
 
     const ts = Date.now();
