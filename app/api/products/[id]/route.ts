@@ -3,9 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
+import { registrarAuditoria } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const VALID_CONDITIONS = ["NUEVO", "USADO", "REACONDICIONADO"] as const;
 
 export async function GET(
   req: NextRequest,
@@ -53,6 +56,100 @@ export async function GET(
     return NextResponse.json({ ...product, offers });
   } catch (error: any) {
     console.error("GET /api/products/[id] error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// Editar una publicación. Solo el DUEÑO y solo mientras esté DISPONIBLE: apenas hay una
+// oferta aceptada / pago / custodia, el precio y la descripción quedan congelados, porque
+// cambiar lo que la otra parte ya pactó o pagó sería un problema de plata. Valida igual que
+// al crear (POST /api/products) y reemplaza las fotos de forma atómica.
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+
+    if (product.sellerId !== session.user.id) {
+      return NextResponse.json({ error: "No puedes editar una publicación que no es tuya" }, { status: 403 });
+    }
+    if (product.status !== "AVAILABLE") {
+      return NextResponse.json(
+        { error: "Solo puedes editar la publicación mientras esté disponible. Ya tiene una venta en curso." },
+        { status: 409 }
+      );
+    }
+
+    const body = await req.json();
+    const { title, description, priceCOP, city, condition, category, images } = body;
+
+    if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
+      return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
+    }
+    if (!description || typeof description !== "string" || description.trim().length < 10 || description.length > 5000) {
+      return NextResponse.json({ error: "Descripción inválida (10-5000 caracteres)" }, { status: 400 });
+    }
+    if (typeof priceCOP !== "number" || priceCOP < 1000 || priceCOP > 1_000_000_000) {
+      return NextResponse.json({ error: "Precio inválido (mínimo $1.000 COP)" }, { status: 400 });
+    }
+    if (!city || typeof city !== "string" || city.length > 100) {
+      return NextResponse.json({ error: "Ciudad inválida" }, { status: 400 });
+    }
+    if (images && (!Array.isArray(images) || images.length > 10)) {
+      return NextResponse.json({ error: "Máximo 10 imágenes" }, { status: 400 });
+    }
+    const validImageUrls = (images as string[] | undefined)?.filter(
+      (url) => typeof url === "string" && url.startsWith("https://res.cloudinary.com/")
+    ) ?? [];
+
+    const finalCondition = (VALID_CONDITIONS as readonly string[]).includes(condition)
+      ? condition
+      : product.condition;
+
+    // Borra las fotos viejas y crea las nuevas en la MISMA transacción del update, para
+    // no dejar el producto sin imágenes si algo falla a mitad de camino.
+    const [, actualizado] = await prisma.$transaction([
+      prisma.productImage.deleteMany({ where: { productId: id } }),
+      prisma.product.update({
+        where: { id },
+        data: {
+          title: title.trim(),
+          description: description.trim(),
+          priceCOP,
+          city: city.trim(),
+          condition: finalCondition,
+          category: (typeof category === "string" && category.length <= 100) ? category : product.category,
+          images: validImageUrls.length
+            ? { create: validImageUrls.map((url) => ({ url })) }
+            : undefined,
+        },
+        include: { images: true },
+      }),
+    ]);
+
+    await registrarAuditoria({
+      userId: session.user.id,
+      action: "EDITAR_PRODUCTO",
+      entity: "Product",
+      entityId: id,
+      metadata: {
+        antes: { title: product.title, priceCOP: product.priceCOP, city: product.city, condition: product.condition, category: product.category },
+        despues: { title: title.trim(), priceCOP, city: city.trim(), condition: finalCondition, category },
+      },
+      request: req,
+    });
+
+    return NextResponse.json({ ok: true, producto: actualizado });
+  } catch (error: any) {
+    console.error("PATCH /api/products/[id] error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

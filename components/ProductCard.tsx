@@ -554,6 +554,13 @@ export const ProductCard = React.memo(function ProductCard({
                   </OutlineButton>
                 )
               )}
+              {/* Editar: solo el dueño y solo mientras esté DISPONIBLE (una vez hay
+                  oferta aceptada/pago/custodia, el backend bloquea la edición). */}
+              {isOwner && product.status === 'AVAILABLE' && (
+                <OutlineButton onClick={() => { window.location.href = `/product/${product.id}/editar`; }}>
+                  ✏️ Editar
+                </OutlineButton>
+              )}
             </>
           )}
           {isSold && (isOwner || esCompradorAutorizado) && (

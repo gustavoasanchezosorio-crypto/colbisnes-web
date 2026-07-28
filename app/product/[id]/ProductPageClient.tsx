@@ -524,6 +524,20 @@ export default function ProductPageClient({ productId }: { productId: string }) 
             </div>
           )}
 
+          {/* Editar: solo el vendedor y solo mientras esté DISPONIBLE. Una vez hay oferta
+              aceptada / pago / custodia, el backend congela la edición (sería plata en juego). */}
+          {esVendedor && disponible && (
+            <a href={`/product/${productId}/editar`} style={{textDecoration:"none"}}>
+              <div style={{background:"#f4f7fb",border:`1.5px solid ${THEME.border}`,borderRadius:"12px",padding:"0.7rem 0.9rem",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                <span style={{fontSize:18}}>✏️</span>
+                <div style={{flex:1}}>
+                  <p style={{margin:0,fontSize:"0.85rem",color:THEME.primary,fontWeight:800}}>Editar publicación</p>
+                  <p style={{margin:0,fontSize:"0.75rem",color:THEME.muted}}>Corrige el título, precio, descripción o fotos.</p>
+                </div>
+              </div>
+            </a>
+          )}
+
           {esVendedor && (
             estaDestacado ? (
               <div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.14),rgba(217,119,6,0.08))",border:"1px solid rgba(217,119,6,0.35)",borderRadius:"12px",padding:"0.7rem 0.9rem",display:"flex",alignItems:"center",gap:8}}>
