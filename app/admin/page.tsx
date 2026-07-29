@@ -148,13 +148,19 @@ export default function AdminPanel() {
   };
 
   const handleLiberarPago = async (ordenId: string, nombre: string) => {
+    // Step-up 2FA: la liberación manual ahora exige el código TOTP igual que la automática.
+    const code = codigos2FA[ordenId];
+    if (!code || code.length < 6) {
+      alert("Ingresa el código de 6 dígitos de tu app autenticadora");
+      return;
+    }
     if (!confirm("Confirmas que YA enviaste el pago a " + nombre + "?")) return;
     try {
       const res = await fetch("/api/admin/liberar-pago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ orderId: ordenId }),
+        body: JSON.stringify({ orderId: ordenId, code }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -422,28 +428,28 @@ export default function AdminPanel() {
                           {p.vendedorBreb && <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>Bre-B: {p.vendedorBreb} <button title="Copiar Bre-B" onClick={() => copiar(p.vendedorBreb, p.ordenId + "-breb")} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 12, padding: 0 }}>{copiado === p.ordenId + "-breb" ? "✓" : "📋"}</button></p>}
                           {p.vendedorWhatsapp && <p style={{ margin: 0 }}>WhatsApp: {p.vendedorWhatsapp}</p>}
                         </div>
-                        {p.metodoPago === "USDT_BEP20" && p.vendedorUsdtWallet && (
-                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={6}
-                              placeholder="Código 2FA"
-                              value={codigos2FA[p.ordenId] || ""}
-                              onChange={e => setCodigos2FA(prev => ({ ...prev, [p.ordenId]: e.target.value.replace(/\D/g, "") }))}
-                              style={{ width: 110, padding: "8px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13 }}
-                            />
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Código 2FA"
+                            value={codigos2FA[p.ordenId] || ""}
+                            onChange={e => setCodigos2FA(prev => ({ ...prev, [p.ordenId]: e.target.value.replace(/\D/g, "") }))}
+                            style={{ width: 110, padding: "8px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13 }}
+                          />
+                          {p.metodoPago === "USDT_BEP20" && p.vendedorUsdtWallet && (
                             <button onClick={() => handleLiberarPagoAuto(p.ordenId, p.vendedorNombre)}
                               disabled={enviandoAuto === p.ordenId}
                               style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: T.blue, color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: enviandoAuto === p.ordenId ? 0.6 : 1 }}>
                               {enviandoAuto === p.ordenId ? "Enviando..." : "🤖 Aprobar y enviar automático"}
                             </button>
-                          </div>
-                        )}
-                        <button onClick={() => handleLiberarPago(p.ordenId, p.vendedorNombre)}
-                          style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                          ✓ Ya envie el pago (manual)
-                        </button>
+                          )}
+                          <button onClick={() => handleLiberarPago(p.ordenId, p.vendedorNombre)}
+                            style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                            ✓ Ya envie el pago (manual)
+                          </button>
+                        </div>
                         <p style={{ margin: "6px 0 0", fontSize: 11, color: "#b91c1c", fontWeight: 600 }}>
                           ⚠️ Este botón NO transfiere dinero: solo marca la orden como pagada y le avisa al vendedor (correo + WhatsApp) que ya le transferiste. Úsalo únicamente después de haber enviado tú mismo el dinero al Nequi/Bre-B/USDT del vendedor.
                         </p>
