@@ -14,8 +14,24 @@ function ResetForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
   const [done, setDone]     = useState(false);
+  const [verClave, setVerClave] = useState(false);
 
   const inp = { width: "100%", padding: "11px 15px", borderRadius: 14, border: `1.5px solid ${THEME.border}`, background: "#ffffff", fontSize: 14, color: THEME.text, outline: "none", boxSizing: "border-box" as const };
+
+  // Botón "ojito": alterna la visibilidad de AMBAS contraseñas a la vez, para
+  // poder comparar de un vistazo que la nueva y la confirmación coinciden.
+  const ojoBtn = (
+    <button type="button" onClick={() => setVerClave(v => !v)} tabIndex={-1}
+      aria-label={verClave ? "Ocultar contrasena" : "Mostrar contrasena"}
+      title={verClave ? "Ocultar contrasena" : "Mostrar contrasena"}
+      style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 6, display: "flex", alignItems: "center", justifyContent: "center", color: THEME.muted, lineHeight: 0 }}>
+      {verClave ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      )}
+    </button>
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +70,21 @@ function ResetForm() {
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: THEME.textSoft, textTransform: "uppercase" as const, marginBottom: 7 }}>Nueva contrasena *</label>
-              <input type="password" placeholder="Minimo 6 caracteres" value={pass} onChange={e => setPass(e.target.value)} required style={inp}
-                onFocus={e => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14,86,192,0.15)"; }}
-                onBlur={e => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = "none"; }} />
+              <div style={{ position: "relative" }}>
+                <input type={verClave ? "text" : "password"} placeholder="Minimo 6 caracteres" value={pass} onChange={e => setPass(e.target.value)} required style={{ ...inp, paddingRight: 46 }}
+                  onFocus={e => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14,86,192,0.15)"; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = "none"; }} />
+                {ojoBtn}
+              </div>
             </div>
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: THEME.textSoft, textTransform: "uppercase" as const, marginBottom: 7 }}>Confirmar contrasena *</label>
-              <input type="password" placeholder="Repite la contrasena" value={confirm} onChange={e => setConfirm(e.target.value)} required style={inp}
-                onFocus={e => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14,86,192,0.15)"; }}
-                onBlur={e => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = "none"; }} />
+              <div style={{ position: "relative" }}>
+                <input type={verClave ? "text" : "password"} placeholder="Repite la contrasena" value={confirm} onChange={e => setConfirm(e.target.value)} required style={{ ...inp, paddingRight: 46 }}
+                  onFocus={e => { e.currentTarget.style.borderColor = THEME.primary; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(14,86,192,0.15)"; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = THEME.border; e.currentTarget.style.boxShadow = "none"; }} />
+                {ojoBtn}
+              </div>
             </div>
             {error && <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)", color: "#b91c1c", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>⚠️ {error}</div>}
             <button type="submit" disabled={loading} style={{ width: "100%", padding: "13px", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 14px ${THEME.primary}44` }}>
