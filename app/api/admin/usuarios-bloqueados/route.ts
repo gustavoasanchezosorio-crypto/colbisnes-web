@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
+import { verificarCodigoTOTP } from "@/lib/totp";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -43,12 +44,23 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email)) {
+    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const { userId, accion } = await req.json();
+    const { userId, accion, code } = await req.json();
     if (!userId || !accion) return NextResponse.json({ error: "userId y accion requeridos" }, { status: 400 });
+    if (!code) return NextResponse.json({ error: "Falta el código 2FA" }, { status: 400 });
+
+    // Step-up 2FA: marcar una deuda como pagada o levantar un bloqueo son acciones sensibles
+    // (afectan cobros y sanciones), así que exigen un código TOTP vigente igual que liberar-pago.
+    const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!admin?.totpEnabled || !admin.totpSecret) {
+      return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
+    }
+    if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
+      return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });

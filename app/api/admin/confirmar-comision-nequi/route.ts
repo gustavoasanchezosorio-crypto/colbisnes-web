@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
+import { verificarCodigoTOTP } from "@/lib/totp";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -13,12 +14,23 @@ function esAdmin(email?: string | null) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email)) {
+    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const { orderId } = await req.json();
+    const { orderId, code } = await req.json();
     if (!orderId) return NextResponse.json({ error: "orderId requerido" }, { status: 400 });
+    if (!code) return NextResponse.json({ error: "Falta el código 2FA" }, { status: 400 });
+
+    // Step-up 2FA: confirmar la comisión libera el flujo (el producto entra a IN_ESCROW y el
+    // vendedor puede despachar), así que exige un código TOTP vigente igual que liberar-pago.
+    const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!admin?.totpEnabled || !admin.totpSecret) {
+      return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
+    }
+    if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
+      return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
+    }
 
     const orden = await prisma.order.findUnique({ where: { id: orderId } });
     if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });

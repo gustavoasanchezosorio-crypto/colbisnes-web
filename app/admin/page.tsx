@@ -206,13 +206,18 @@ export default function AdminPanel() {
   };
 
   const handleConfirmarComision = async (orderId: string, productoTitulo: string) => {
+    const code = codigos2FA[orderId];
+    if (!code || code.length < 6) {
+      alert("Ingresa el código de 6 dígitos de tu app autenticadora");
+      return;
+    }
     if (!confirm(`¿Confirmas que viste el pago de la comisión de reserva para "${productoTitulo}" en la cuenta Nequi de Colbisnes?`)) return;
     try {
       const res = await fetch("/api/admin/confirmar-comision-nequi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId, code }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -228,6 +233,11 @@ export default function AdminPanel() {
   };
 
   const handleAccionBloqueo = async (userId: string, nombre: string, accion: "pagar-deuda" | "levantar-bloqueo") => {
+    const code = codigos2FA[userId];
+    if (!code || code.length < 6) {
+      alert("Ingresa el código de 6 dígitos de tu app autenticadora");
+      return;
+    }
     const confirmText = accion === "pagar-deuda"
       ? `¿Confirmas que ${nombre} ya pagó su deuda pendiente con Colbisnes?`
       : `¿Levantar el bloqueo por tiempo de ${nombre}? (Esto NO borra la deuda pendiente si la tiene)`;
@@ -237,7 +247,7 @@ export default function AdminPanel() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ userId, accion }),
+        body: JSON.stringify({ userId, accion, code }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -522,10 +532,18 @@ export default function AdminPanel() {
                             </a>
                           )}
                           <p style={{ margin: "0 0 10px", color: T.muted, fontSize: 11.5 }}>Subido: {new Date(o.createdAt).toLocaleString("es-CO")}</p>
-                          <button onClick={() => handleConfirmarComision(o.id, o.productoTitulo)}
-                            style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                            ✓ Confirmar pago recibido
-                          </button>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
+                            <input
+                              type="text" inputMode="numeric" maxLength={6} placeholder="Código 2FA"
+                              value={codigos2FA[o.id] || ""}
+                              onChange={e => setCodigos2FA(prev => ({ ...prev, [o.id]: e.target.value.replace(/\D/g, "") }))}
+                              style={{ width: 110, padding: "8px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13 }}
+                            />
+                            <button onClick={() => handleConfirmarComision(o.id, o.productoTitulo)}
+                              style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                              ✓ Confirmar pago recibido
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -565,7 +583,15 @@ export default function AdminPanel() {
                             {bloqueadoPorTiempo && (
                               <p style={{ margin: "0 0 10px", color: T.muted, fontSize: 12.5 }}>⏰ Bloqueado hasta: {new Date(u.blockedUntil).toLocaleString("es-CO")}</p>
                             )}
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
+                              {(u.deudaPendienteCOP > 0 || bloqueadoPorTiempo) && (
+                                <input
+                                  type="text" inputMode="numeric" maxLength={6} placeholder="Código 2FA"
+                                  value={codigos2FA[u.id] || ""}
+                                  onChange={e => setCodigos2FA(prev => ({ ...prev, [u.id]: e.target.value.replace(/\D/g, "") }))}
+                                  style={{ width: 110, padding: "8px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13 }}
+                                />
+                              )}
                               {u.deudaPendienteCOP > 0 && (
                                 <button onClick={() => handleAccionBloqueo(u.id, u.name || u.email, "pagar-deuda")}
                                   style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
