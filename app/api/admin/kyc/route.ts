@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { registrarAuditoria } from "@/lib/audit";
+import { verificarCodigoTOTP } from "@/lib/totp";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -56,12 +57,23 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !esAdmin(session.user.email)) {
+    if (!session?.user?.email || !session.user.id || !esAdmin(session.user.email)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const { userId, motivo } = await req.json();
+    const { userId, motivo, code } = await req.json();
     if (!userId) return NextResponse.json({ error: "userId requerido" }, { status: 400 });
+    if (!code) return NextResponse.json({ error: "Falta el código 2FA" }, { status: 400 });
+
+    // Step-up 2FA: rechazar una verificación KYC es una decisión sensible sobre la identidad
+    // del usuario, así que exige un código TOTP vigente igual que las demás acciones admin.
+    const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!admin?.totpEnabled || !admin.totpSecret) {
+      return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
+    }
+    if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
+      return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
+    }
 
     const usuario = await prisma.user.update({
       where: { id: userId },

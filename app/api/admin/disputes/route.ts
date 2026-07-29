@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
+import { verificarCodigoTOTP } from "@/lib/totp";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -58,11 +59,22 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { disputeId, status, adminNotes } = body;
+    const { disputeId, status, adminNotes, code } = body;
 
     const ESTADOS_VALIDOS = ["UNDER_REVIEW", "RESOLVED_BUYER", "RESOLVED_SELLER", "CANCELLED"];
     if (!disputeId || !ESTADOS_VALIDOS.includes(status)) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+    }
+    if (!code) return NextResponse.json({ error: "Falta el código 2FA" }, { status: 400 });
+
+    // Step-up 2FA: resolver una disputa mueve dinero (libera al vendedor o abre el reembolso
+    // al comprador), así que exige un código TOTP vigente igual que liberar-pago.
+    const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!admin?.totpEnabled || !admin.totpSecret) {
+      return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
+    }
+    if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
+      return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
     }
 
     const dispute = await prisma.dispute.update({

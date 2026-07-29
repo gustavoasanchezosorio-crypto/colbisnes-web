@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria } from "@/lib/audit";
+import { verificarCodigoTOTP } from "@/lib/totp";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -86,11 +87,22 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !esAdmin(session.user.email)) {
+    if (!session?.user?.email || !session.user.id || !esAdmin(session.user.email)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const { accion, id } = await req.json();
+    const { accion, id, code } = await req.json();
+    if (!code) return NextResponse.json({ error: "Falta el código 2FA" }, { status: 400 });
+
+    // Step-up 2FA: eliminar (desactivar) un producto es una acción destructiva de admin,
+    // así que exige un código TOTP vigente igual que las demás acciones sensibles.
+    const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!admin?.totpEnabled || !admin.totpSecret) {
+      return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
+    }
+    if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
+      return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
+    }
 
     if (accion === "eliminar_producto") {
       await prisma.product.update({ where: { id }, data: { status: "SOLD" } });

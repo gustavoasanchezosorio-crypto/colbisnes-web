@@ -37,6 +37,7 @@ export default function AdminDisputasPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notaPorId, setNotaPorId] = useState<Record<string, string>>({});
+  const [codigos2FA, setCodigos2FA] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -53,13 +54,15 @@ export default function AdminDisputasPage() {
   }, [session, filtro]);
 
   async function resolver(disputeId: string, nuevoStatus: string) {
+    const code = codigos2FA[disputeId];
+    if (!code || code.length < 6) { setMsg("❌ Ingresa el código de 6 dígitos de tu app autenticadora"); return; }
     setBusyId(disputeId);
     setMsg("");
     try {
       const r = await fetch("/api/admin/disputes", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ disputeId, status: nuevoStatus, adminNotes: notaPorId[disputeId] || undefined }),
+        body: JSON.stringify({ disputeId, status: nuevoStatus, adminNotes: notaPorId[disputeId] || undefined, code }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Error al resolver");
@@ -172,6 +175,15 @@ export default function AdminDisputasPage() {
                       rows={2}
                       style={{ width: "100%", padding: 10, borderRadius: 10, border: `1px solid ${THEME.border}`, fontSize: 13, marginBottom: 10, boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }}
                     />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                      <input
+                        type="text" inputMode="numeric" maxLength={6} placeholder="Código 2FA"
+                        value={codigos2FA[d.id] || ""}
+                        onChange={e => setCodigos2FA(prev => ({ ...prev, [d.id]: e.target.value.replace(/\D/g, "") }))}
+                        style={{ width: 120, padding: "8px 10px", borderRadius: 10, border: `1px solid ${THEME.border}`, fontSize: 13 }}
+                      />
+                      <span style={{ fontSize: 11.5, color: THEME.muted }}>Requerido para resolver</span>
+                    </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {d.status === "OPEN" && (
                         <button onClick={() => resolver(d.id, "UNDER_REVIEW")} disabled={busyId === d.id} style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: THEME.surfaceAlt, color: THEME.textSoft, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>

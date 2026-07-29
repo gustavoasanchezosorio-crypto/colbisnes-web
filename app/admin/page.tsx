@@ -126,13 +126,18 @@ export default function AdminPanel() {
   };
 
   const handleApproveKyc = async (userId: string, nombre: string) => {
+    const code = codigos2FA["kyc-" + userId];
+    if (!code || code.length < 6) {
+      alert("Ingresa el código de 6 dígitos de tu app autenticadora");
+      return;
+    }
     if (!confirm(`Aprobar verificación facial para ${nombre}?`)) return;
     try {
       const res = await fetch("/api/kyc/approve", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, code }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -362,10 +367,18 @@ export default function AdminPanel() {
                           <td style={{ padding: "12px 16px" }}>
                             <div style={{ display: "flex", gap: 6 }}>
                               {u.kycStatus !== "approved" && (
-                                <button onClick={() => handleApproveKyc(u.id, u.name || u.email)}
-                                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                                  ✓ Aprobar verificación facial
-                                </button>
+                                <>
+                                  <input
+                                    type="text" inputMode="numeric" maxLength={6} placeholder="2FA"
+                                    value={codigos2FA["kyc-" + u.id] || ""}
+                                    onChange={e => setCodigos2FA(prev => ({ ...prev, ["kyc-" + u.id]: e.target.value.replace(/\D/g, "") }))}
+                                    style={{ width: 66, padding: "6px 8px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 12 }}
+                                  />
+                                  <button onClick={() => handleApproveKyc(u.id, u.name || u.email)}
+                                    style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: T.green, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                    ✓ Aprobar verificación facial
+                                  </button>
+                                </>
                               )}
                               <a href={`/user/${u.id}`} target="_blank"
                                 style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontSize: 12, textDecoration: "none", display: "inline-block" }}>

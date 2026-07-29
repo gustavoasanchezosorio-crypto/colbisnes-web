@@ -24,6 +24,7 @@ export default function AdminKycPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [codigos2FA, setCodigos2FA] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/login");
@@ -39,12 +40,14 @@ export default function AdminKycPage() {
   }, [session, filtro]);
 
   async function aprobar(userId: string) {
+    const code = codigos2FA[userId];
+    if (!code || code.length < 6) { setMsg("❌ Ingresa el código de 6 dígitos de tu app autenticadora"); return; }
     setActionLoading(userId + "_ok");
     setMsg("");
     const r = await fetch("/api/kyc/approve", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ userId, code }),
     });
     const d = await r.json();
     setActionLoading(null);
@@ -57,13 +60,15 @@ export default function AdminKycPage() {
   }
 
   async function rechazar(userId: string) {
+    const code = codigos2FA[userId];
+    if (!code || code.length < 6) { setMsg("❌ Ingresa el código de 6 dígitos de tu app autenticadora"); return; }
     const motivo = prompt("Motivo del rechazo (opcional):");
     setActionLoading(userId + "_no");
     setMsg("");
     const r = await fetch("/api/admin/kyc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, motivo }),
+      body: JSON.stringify({ userId, motivo, code }),
     });
     const d = await r.json();
     setActionLoading(null);
@@ -128,7 +133,13 @@ export default function AdminKycPage() {
                     </p>
                   </div>
                   {filtro === "pending" && (
-                    <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <input
+                        type="text" inputMode="numeric" maxLength={6} placeholder="Código 2FA"
+                        value={codigos2FA[u.id] || ""}
+                        onChange={e => setCodigos2FA(prev => ({ ...prev, [u.id]: e.target.value.replace(/\D/g, "") }))}
+                        style={{ width: 104, padding: "10px 10px", borderRadius: 12, border: `1px solid ${THEME.border}`, fontSize: 13 }}
+                      />
                       <button
                         onClick={() => aprobar(u.id)}
                         disabled={!!actionLoading}
