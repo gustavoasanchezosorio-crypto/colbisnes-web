@@ -12,12 +12,23 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const ALLOWED_ORIGINS = [
+  // 2026-07-30: el dominio de producción faltaba en esta lista. Funcionaba de
+  // pura carambola: el navegador no manda cabecera `Origin` en peticiones
+  // same-origin, así que caía en el `if (!origin) return true` de abajo. Bastaba
+  // con que algo cambiara —un subdominio, una petición cross-origin legítima,
+  // un cliente que sí mande Origin— para que el chat en vivo dejara de conectar
+  // sin ninguna razón aparente. Ahora está explícito.
+  'https://colbisnes.com',
+  'https://www.colbisnes.com',
   'http://localhost:3006',
   'http://localhost:3000',
   'https://colbisnes-web.vercel.app',
 ];
 
 function isAllowedOrigin(origin) {
+  // Se conserva a propósito: las peticiones same-origin del propio sitio llegan
+  // sin cabecera `Origin`. Ya no es lo que sostiene a colbisnes.com —ese dominio
+  // está explícito arriba—, pero quitarlo rompería otros clientes legítimos.
   if (!origin) return true;
   if (ALLOWED_ORIGINS.includes(origin)) return true;
   // Railway assigns *.up.railway.app subdomains for previews/production
