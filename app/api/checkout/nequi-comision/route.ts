@@ -4,12 +4,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { crearTransaccionWompi } from "@/lib/wompi";
 import { WOMPI_MIN_TX_COP } from "@/lib/pricing";
+import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 // Cobro de la COMISIÓN DE RESERVA (contra-entrega) directo por Nequi (push a la app del comprador).
 // Usa la referencia con prefijo "comision" para que el webhook la enrute a procesarWebhookComision
 // (comisión pagada + producto IN_ESCROW), con la misma verificación cruzada de monto.
 export async function POST(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): esto dispara un cobro push REAL a la app Nequi
+    // del comprador. Bloqueado.
+    if (enModoPrueba(req)) return bloqueadoPorModoPrueba(MENSAJE_PAGO_BLOQUEADO);
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 

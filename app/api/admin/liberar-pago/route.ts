@@ -7,6 +7,7 @@ import { sendWhatsapp } from "@/lib/whatsapp";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { getIP } from "@/lib/rateLimit";
 import { verificarCodigoTOTP } from "@/lib/totp";
+import { enModoPrueba, bloqueadoPorModoPrueba } from "@/lib/modoPrueba";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -20,6 +21,21 @@ function esAdmin(email: string) {
 // confirmada, rechaza si ya se había liberado, y deja un AuditLog igual que liberar-pago-auto.
 export async function POST(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): marcar un pago como liberado significa que el
+    // admin ya transfirió plata de verdad por fuera. Si esta petición viene de un
+    // navegador con el link secreto de probador, se rechaza — no se distingue
+    // "admin" de "probador" a propósito: en un camino de dinero es preferible
+    // bloquear de más.
+    //
+    // Si el propio admin quedó atrapado por haber abierto alguna vez el link de
+    // probador, la salida es entrar a https://colbisnes.com/?acceso=salir, que
+    // borra la cookie de bypass (ver middleware.ts).
+    if (enModoPrueba(req)) {
+      return bloqueadoPorModoPrueba(
+        "Modo prueba: los desembolsos están deshabilitados. Si eres el admin, sal del modo prueba con /?acceso=salir y vuelve a intentarlo."
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || !esAdmin(session.user.email || "")) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });

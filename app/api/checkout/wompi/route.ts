@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prepararOrdenOnline } from "@/lib/checkoutOnline";
+import { enModoPrueba, bloqueadoPorModoPruebaHtml, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 export async function GET(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): Wompi solo tiene configuradas las llaves de
+    // PRODUCCIÓN (NEXT_PUBLIC_WOMPI_PUBLIC_KEY + WOMPI_INTEGRITY_SECRET). No hay
+    // par de llaves de sandbox en el proyecto, y usar las de producción contra
+    // sandbox.wompi.co devuelve "La firma es inválida" — así que no existe un
+    // destino de pruebas al que redirigir. Mientras no lo haya, el pago real
+    // queda deshabilitado para los probadores.
+    if (enModoPrueba(req)) return bloqueadoPorModoPruebaHtml(MENSAJE_PAGO_BLOQUEADO);
+
     // Base pública para construir redirects. NO usar req.url: detrás del proxy de Railway
     // apunta a http://localhost:3000 (host interno), lo que hacía que el navegador fuera
     // redirigido a localhost → ERR_CONNECTION_REFUSED (parecía que la página se caía).

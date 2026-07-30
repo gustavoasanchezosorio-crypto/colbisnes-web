@@ -9,6 +9,7 @@ import PagarComisionNequiModal from "@/components/PagarComisionNequiModal";
 import FacturaEnVivo from "@/components/FacturaEnVivo";
 import { THEME } from "@/lib/theme";
 import { GMF_PCT, WOMPI_MIN_TX_COP } from "@/lib/pricing";
+import { useModoPrueba } from "@/lib/useModoPrueba";
 
 interface Product {
   id: string; title: string; description: string; priceCOP: number;
@@ -51,6 +52,10 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   const { data: session } = useSession();
   const router = useRouter();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  // Modo prueba del prelanzamiento (link secreto ?acceso=CÓDIGO). El servidor ya
+  // bloquea confirmar la entrega con un 403; esto evita que el probador se quede
+  // pulsando un botón que no hace nada, porque este handler ignora los errores.
+  const modoPrueba = useModoPrueba();
 
   const [product, setProduct]     = useState<Product | null>(null);
   const [offers, setOffers]       = useState<Offer[]>([]);
@@ -769,6 +774,12 @@ export default function ProductPageClient({ productId }: { productId: string }) 
                   ? "Recuerda: pagas el producto en efectivo directo al mensajero al recibirlo. Confirma aquí una vez lo tengas en tus manos."
                   : "Confirma la entrega para liberar el pago al vendedor."}
               </p>
+              {modoPrueba ? (
+                <button disabled title="Modo prueba: confirmar la entrega liberaría un pago real"
+                  style={{background:"#e2e8f0",color:"#64748b",border:"none",borderRadius:"10px",padding:"0.7rem",cursor:"not-allowed",fontWeight:"800",width:"100%",fontSize:"0.93rem"}}>
+                  Deshabilitado en modo prueba
+                </button>
+              ) : (
               <button onClick={async()=>{
                 const r=await fetch("/api/payments/confirm-delivery",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId})});
                 if(r.ok){cargarProducto();cargarOrden();}
@@ -777,6 +788,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
                   boxShadow:`0 4px 14px ${VERDE}44`}}>
                 {ordenActiva?.metodoPago === "CONTRA_ENTREGA" ? "Confirmar entrega" : "Confirmar entrega y liberar pago"}
               </button>
+              )}
             </div>
           )}
           {product.status==="IN_ESCROW" && !esVendedor && !esComprador && session?.user && (

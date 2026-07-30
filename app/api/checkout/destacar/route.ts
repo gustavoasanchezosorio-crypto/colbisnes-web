@@ -4,10 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import crypto from "crypto";
 import { DESTACADO_PRECIO, DESTACADO_DIAS } from "@/lib/pricing";
+import { enModoPrueba, bloqueadoPorModoPruebaHtml, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 // GET /api/checkout/destacar?productoId=X — el vendedor paga para destacar su producto
 export async function GET(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): cobro real por Wompi. Ver /api/checkout/wompi.
+    if (enModoPrueba(req)) return bloqueadoPorModoPruebaHtml(MENSAJE_PAGO_BLOQUEADO);
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.redirect(new URL("/auth/login?next=" + encodeURIComponent(req.url), req.url));

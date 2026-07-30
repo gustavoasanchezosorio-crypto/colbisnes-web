@@ -11,9 +11,14 @@ import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
+import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 export async function POST(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): contra-entrega crea una orden que exige una
+    // comisión de reserva pagada de verdad por Nequi. No es un flujo simulable.
+    if (enModoPrueba(req)) return bloqueadoPorModoPrueba(MENSAJE_PAGO_BLOQUEADO);
+
     const { session, response: kycError } = await requireKyc();
     if (kycError) return kycError;
 

@@ -8,9 +8,27 @@ import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
 import { generarComprobantePDF } from '@/lib/comprobante';
 import { registrarAuditoria } from '@/lib/audit';
+import { enModoPrueba, bloqueadoPorModoPrueba } from '@/lib/modoPrueba';
 
 export async function POST(request: Request) {
   try {
+    // MODO PRUEBA (prelanzamiento): confirmar la entrega es el gatillo que libera
+    // la custodia — marca el producto SOLD, cierra la orden y habilita el pago al
+    // vendedor. Un probador NO puede dispararlo, aunque su navegador tenga el link
+    // secreto. Se corta aquí, antes que nada, para que el mensaje que reciba sea
+    // este y no un error de KYC que no le dice nada.
+    //
+    // Se eligió bloquear en vez de ofrecer un botón "Simular entrega": simular
+    // implicaría escribir estados falsos de venta en la base de datos de
+    // PRODUCCIÓN (producto vendido, orden completada, correos y comprobantes en
+    // PDF saliendo de verdad hacia gente real). Es más superficie y más riesgo
+    // que beneficio en el camino del dinero.
+    if (enModoPrueba(request)) {
+      return bloqueadoPorModoPrueba(
+        "Modo prueba: no se puede confirmar la entrega porque eso liberaría un pago real. Esta acción está deshabilitada hasta el lanzamiento."
+      );
+    }
+
     const { session, response: kycError } = await requireKyc();
     if (kycError) return kycError;
 

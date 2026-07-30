@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { prepararOrdenOnline } from "@/lib/checkoutOnline";
 import { crearTransaccionWompi } from "@/lib/wompi";
+import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 // Cobro del pago ONLINE completo directo por Nequi (push a la app del comprador), sin pasar por
 // el checkout web. Usa la MISMA lógica de orden/precios que /api/checkout/wompi (helper compartido)
@@ -9,6 +10,10 @@ import { crearTransaccionWompi } from "@/lib/wompi";
 // y pasa el producto a IN_ESCROW con la verificación cruzada de monto ya establecida.
 export async function POST(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): esto dispara un cobro push REAL a la app Nequi
+    // del comprador. Bloqueado.
+    if (enModoPrueba(req)) return bloqueadoPorModoPrueba(MENSAJE_PAGO_BLOQUEADO);
+
     const body = await req.json().catch(() => ({}));
     const productoId: string = body.productoId || "";
     const proteccionExtendida: boolean = body.proteccionExtendida === true;

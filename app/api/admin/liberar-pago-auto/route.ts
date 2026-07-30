@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { enviarUSDT, esDireccionValida } from "@/lib/hotWallet";
 import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
+import { enModoPrueba, bloqueadoPorModoPrueba } from "@/lib/modoPrueba";
 
 function esAdmin(email?: string | null) {
   return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -18,6 +19,17 @@ const CAP_DIARIO_USD = parseFloat(process.env.HOT_WALLET_DAILY_CAP_USD || "500")
 // (/api/admin/liberar-pago), que sigue disponible como respaldo.
 export async function POST(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): esta es la ruta más peligrosa de la app —
+    // firma y difunde una transacción REAL en BSC desde la billetera caliente.
+    // Ninguna petición que traiga la cookie del link de probador la toca.
+    // Se comprueba antes de la sesión y del TOTP para que ni siquiera se llegue a
+    // consultar la billetera. Salida para el admin: /?acceso=salir.
+    if (enModoPrueba(req)) {
+      return bloqueadoPorModoPrueba(
+        "Modo prueba: los desembolsos automáticos desde la billetera están deshabilitados. Si eres el admin, sal del modo prueba con /?acceso=salir y vuelve a intentarlo."
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!esAdmin(session?.user?.email) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });

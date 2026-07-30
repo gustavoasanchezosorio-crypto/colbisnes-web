@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import crypto from "crypto";
+import { enModoPrueba, bloqueadoPorModoPruebaHtml, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 // Pago de la COMISIÓN DE RESERVA de un pedido contra-entrega usando el checkout web de Wompi
 // (Nequi / Bre-B / etc., según lo que tenga habilitado la cuenta de comercio). Es la alternativa
@@ -11,6 +12,9 @@ import crypto from "crypto";
 // y, al aprobarse, marca la comisión como pagada y pasa el producto a IN_ESCROW.
 export async function GET(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): cobro real por Wompi. Ver /api/checkout/wompi.
+    if (enModoPrueba(req)) return bloqueadoPorModoPruebaHtml(MENSAJE_PAGO_BLOQUEADO);
+
     const publicBase = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
 
     const session = await getServerSession(authOptions);

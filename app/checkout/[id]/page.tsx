@@ -6,6 +6,8 @@ import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, 
 import { computeProfileCompletion } from "@/lib/profileCompletion";
 import { THEME } from "@/lib/theme";
 import NequiPushModal from "@/components/NequiPushModal";
+import { useModoPrueba } from "@/lib/useModoPrueba";
+import { MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 type MetodoPago = "online" | "contraentrega" | "usdt";
 
@@ -27,6 +29,10 @@ export default function CheckoutPage() {
   // Número Nequi del perfil (para precargar el cobro push) y control del modal Nequi del pago online.
   const [nequiPrefill, setNequiPrefill] = useState<string | null>(null);
   const [showNequiOnline, setShowNequiOnline] = useState(false);
+  // Modo prueba del prelanzamiento: quien entró con el link secreto puede recorrer
+  // todo el checkout y ver los precios, pero no puede pagar. El servidor bloquea
+  // igual (ver lib/modoPrueba.ts); esto es para que no llegue a intentarlo.
+  const modoPrueba = useModoPrueba();
 
   useEffect(() => {
     fetch("/api/tasa-usdt").then(r => r.json()).then(d => { if (d.tasa) setTasa(d.tasa); });
@@ -127,6 +133,7 @@ export default function CheckoutPage() {
 
   const handleContinuar = () => {
     if (perfilIncompleto) return;
+    if (modoPrueba) return; // el botón ya está deshabilitado; esto es el cinturón
     if (TEST_MODE) {
       setShowPopup(true);
     } else {
@@ -321,7 +328,9 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {metodo && perfilIncompleto && (
+        {/* En modo prueba no tiene sentido pedirle que complete el perfil "para poder
+            pagar": no va a poder pagar de todas formas. Gana el aviso de modo prueba. */}
+        {metodo && perfilIncompleto && !modoPrueba && (
           <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: "16px 18px", marginBottom: 14 }}>
             <p style={{ margin: 0, color: "#9a3412", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 18 }}>🔒</span> No puedes pagar todavía
@@ -339,7 +348,29 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {metodo && !perfilIncompleto && (
+        {/* MODO PRUEBA: el pago queda deshabilitado. No hay llaves de sandbox de
+            Wompi en el proyecto (solo las de producción), así que no existe un
+            destino de pruebas al que mandar al comprador — la única alternativa
+            honesta es no dejar pagar y decirlo con claridad. */}
+        {metodo && modoPrueba && (
+          <>
+            <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 16, padding: "16px 18px", marginBottom: 12 }}>
+              <p style={{ margin: 0, color: "#92400e", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>⚠️</span> {MENSAJE_PAGO_BLOQUEADO}
+              </p>
+              <p style={{ margin: "6px 0 0", color: "#92400e", fontSize: 13, lineHeight: 1.5 }}>
+                Estás navegando con el acceso de probador. Puedes revisar precios, comisiones y todo el flujo,
+                pero los cobros están bloqueados para que nadie mueva dinero de verdad antes del lanzamiento.
+              </p>
+            </div>
+            <button disabled
+              style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: "#e2e8f0", color: "#64748b", fontSize: 17, fontWeight: 800, cursor: "not-allowed", marginTop: 0 }}>
+              Pago deshabilitado en modo prueba
+            </button>
+          </>
+        )}
+
+        {metodo && !perfilIncompleto && !modoPrueba && (
           <button className="cbtn" onClick={handleContinuar} disabled={loading || perfilFaltantes === null}
             style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: (loading || perfilFaltantes === null) ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 17, fontWeight: 800, cursor: (loading || perfilFaltantes === null) ? "default" : "pointer", marginTop: 8, boxShadow: `0 12px 40px ${THEME.primary}44` }}>
             {loading ? "Procesando..." : perfilFaltantes === null ? "Verificando..." : "Continuar →"}
@@ -347,7 +378,7 @@ export default function CheckoutPage() {
         )}
 
         {/* Botón exclusivo de Nequi (pago online): notificación push directa a la app del comprador. */}
-        {metodo === "online" && !perfilIncompleto && !TEST_MODE && perfilFaltantes !== null && (
+        {metodo === "online" && !perfilIncompleto && !TEST_MODE && !modoPrueba && perfilFaltantes !== null && (
           <button onClick={() => setShowNequiOnline(true)}
             style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             💳 Pagar con Nequi (sin salir de la app)

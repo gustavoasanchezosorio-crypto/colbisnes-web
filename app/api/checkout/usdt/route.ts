@@ -11,9 +11,14 @@ import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
+import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 export async function POST(req: NextRequest) {
   try {
+    // MODO PRUEBA (prelanzamiento): el pago en USDT le pide al comprador una
+    // transferencia real en BEP20 a la billetera de Colbisnes. Irreversible.
+    if (enModoPrueba(req)) return bloqueadoPorModoPrueba(MENSAJE_PAGO_BLOQUEADO);
+
     const { session, response: kycError } = await requireKyc();
     if (kycError) return kycError;
 
