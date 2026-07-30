@@ -7,6 +7,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { ToastProvider } from '@/components/Toast';
 import BluWidget from '@/components/BluWidget';
 import ProfileCompletionAlert from '@/components/ProfileCompletionAlert';
+import BannerModoPrueba from '@/components/BannerModoPrueba';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -59,6 +60,10 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
+        {/* Aviso de MODO PRUEBA. Va fuera de los providers a propósito: no depende
+            de sesión ni de contexto, y así se pinta aunque algo más falle. Solo se
+            ve si el navegador entró con el link secreto de prelanzamiento. */}
+        <BannerModoPrueba />
         <Providers>
           <AppProvider>
             <ToastProvider>
