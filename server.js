@@ -22,7 +22,10 @@ const ALLOWED_ORIGINS = [
   'https://www.colbisnes.com',
   'http://localhost:3006',
   'http://localhost:3000',
-  'https://colbisnes-web.vercel.app',
+  // 2026-07-30: se quitó 'https://colbisnes-web.vercel.app'. El proyecto de Vercel se
+  // eliminó por completo el 2026-07-06, así que ese origen ya no existe: dejarlo en la
+  // lista blanca solo servía para que, si alguien registrara ese subdominio libre en
+  // Vercel, pudiera abrir un socket con credenciales contra producción.
 ];
 
 function isAllowedOrigin(origin) {

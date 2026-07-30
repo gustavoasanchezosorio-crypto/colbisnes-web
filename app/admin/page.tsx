@@ -8,18 +8,28 @@ type Seccion = "resumen" | "usuarios" | "productos" | "pagos" | "bloqueos" | "au
 
 // Enlaces que usamos en Colbisnes, agrupados. Solo URLs públicas de paneles/servicios;
 // nunca credenciales ni secretos.
+//
+// Revisados uno por uno el 2026-07-30 con peticiones HTTP reales. Se corrigieron tres que
+// ya no llevaban a donde decían (Railway cambió de dominio a railway.com; Resend movió
+// /overview a /metrics; console.cloudinary.com a secas rebotaba a la página comercial en
+// vez de a la consola) y se añadieron Cloudflare y Twilio, que faltaban aunque son
+// justamente donde se rompen las cosas: el DNS del dominio y las notificaciones.
+// Si vuelves a tocar esta lista, comprueba cada URL de verdad antes de darla por buena.
 const GRUPOS_URLS: { grupo: string; enlaces: { nombre: string; url: string; nota?: string }[] }[] = [
   {
     grupo: "🛒 Sitio y panel",
     enlaces: [
       { nombre: "Sitio en producción", url: "https://colbisnes.com" },
       { nombre: "Panel de administración", url: "https://colbisnes.com/admin" },
+      { nombre: "Estado del servidor", url: "https://colbisnes.com/api/health", nota: "Debe responder {\"status\":\"ok\"}; consulta la base de datos de verdad" },
+      { nombre: "Salir del modo prueba", url: "https://colbisnes.com/?acceso=salir", nota: "⚠️ Si abriste el enlace de probador, los desembolsos te dan 403. Esto lo arregla." },
     ],
   },
   {
     grupo: "☁️ Infraestructura",
     enlaces: [
-      { nombre: "Railway (hosting)", url: "https://railway.app/dashboard", nota: "Deploys y variables de entorno" },
+      { nombre: "Railway — proyecto Colbisnes", url: "https://railway.com/project/dca4dfdc-04b9-4106-8905-fbd74e28ecac", nota: "Deploys, variables y logs (enlace directo al proyecto)" },
+      { nombre: "Cloudflare (DNS)", url: "https://dash.cloudflare.com", nota: "DNS de colbisnes.com y redirección de www" },
       { nombre: "Neon (base de datos)", url: "https://console.neon.tech", nota: "PostgreSQL de producción" },
       { nombre: "GitHub (repositorio)", url: "https://github.com/gustavoasanchezosorio-crypto/colbisnes-web" },
     ],
@@ -27,14 +37,16 @@ const GRUPOS_URLS: { grupo: string; enlaces: { nombre: string; url: string; nota
   {
     grupo: "💰 Pagos",
     enlaces: [
-      { nombre: "Wompi (comercios)", url: "https://comercios.wompi.co", nota: "Pagos con tarjeta / PSE" },
+      { nombre: "Wompi (comercios)", url: "https://comercios.wompi.co", nota: "Pagos con tarjeta / PSE · webhook y llaves de producción" },
       { nombre: "Binance P2P", url: "https://p2p.binance.com", nota: "Referencia de tasa USDT/COP" },
     ],
   },
   {
-    grupo: "✉️ Correo",
+    grupo: "✉️ Correo y notificaciones",
     enlaces: [
-      { nombre: "Resend", url: "https://resend.com/overview", nota: "Envío y logs de correos" },
+      { nombre: "Resend — métricas", url: "https://resend.com/metrics", nota: "Envíos y logs de correo" },
+      { nombre: "Resend — dominios", url: "https://resend.com/domains", nota: "Registros SPF/DKIM/DMARC de colbisnes.com" },
+      { nombre: "Twilio (WhatsApp)", url: "https://console.twilio.com", nota: "⚠️ Aún en sandbox: solo entrega a números que se unieron a mano" },
     ],
   },
   {
@@ -46,7 +58,7 @@ const GRUPOS_URLS: { grupo: string; enlaces: { nombre: string; url: string; nota
   {
     grupo: "🖼️ Multimedia",
     enlaces: [
-      { nombre: "Cloudinary", url: "https://console.cloudinary.com", nota: "Imágenes de productos y KYC" },
+      { nombre: "Cloudinary", url: "https://console.cloudinary.com/console/", nota: "Imágenes de productos y KYC · revisar cuota" },
     ],
   },
   {
@@ -59,6 +71,7 @@ const GRUPOS_URLS: { grupo: string; enlaces: { nombre: string; url: string; nota
     grupo: "⛓️ Blockchain (USDT)",
     enlaces: [
       { nombre: "BscScan — wallet activa", url: "https://bscscan.com/address/0x41d4e118E45835775F3771feDb6fA2e6e4B8a3B1", nota: "Hot wallet de recepción (BEP-20)" },
+      { nombre: "BscScan — contrato USDT", url: "https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955", nota: "Token BSC-USDT que verifica /api/usdt/verificar" },
     ],
   },
 ];
@@ -288,6 +301,9 @@ export default function AdminPanel() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <a href="/admin/kyc" style={{ color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "7px 14px", borderRadius: 20 }}>🪪 Verificación facial</a>
           <a href="/admin/disputas" style={{ color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "7px 14px", borderRadius: 20 }}>⚖️ Disputas</a>
+          {/* 2FA estaba solo enlazado desde dentro de la sección de pagos: si no pasabas por ahí,
+              no había forma de llegar. Ahora las tres subpáginas del admin están en la barra. */}
+          <a href="/admin/2fa" style={{ color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "7px 14px", borderRadius: 20 }}>🔐 2FA</a>
           <a href="/" style={{ color: "white", textDecoration: "none", fontSize: 14 }}>← Volver al sitio</a>
         </div>
       </header>

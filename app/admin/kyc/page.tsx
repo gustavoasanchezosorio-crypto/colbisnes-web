@@ -89,7 +89,10 @@ export default function AdminKycPage() {
           <img src="/logo-white.svg?v=2" alt="Colbisnes" style={{ height: 38, width: "auto" }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "3px 10px", borderRadius: 20 }}>Verificación facial</span>
         </div>
-        <button onClick={() => router.push("/")} style={{ padding: "7px 16px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>← Inicio</button>
+        {/* Vuelve al PANEL, no a la tienda. Antes mandaba a "/" y te sacaba del admin: había
+            que volver a escribir /admin a mano. Las otras dos subpáginas (disputas y 2fa) ya
+            se comportaban así; esta era la única desalineada. */}
+        <button onClick={() => router.push("/admin")} style={{ padding: "7px 16px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>← Admin</button>
       </header>
 
       <main style={{ maxWidth: 900, margin: "32px auto", padding: "0 20px 80px" }}>
