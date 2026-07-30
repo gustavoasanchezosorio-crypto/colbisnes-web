@@ -13,6 +13,7 @@
     "@anthropic-ai/sdk": "^0.110.0",
     "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^5.2.2",
+    "@node-rs/bcrypt": "^1.10.7",
     "@prisma/client": "^6.19.3",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",

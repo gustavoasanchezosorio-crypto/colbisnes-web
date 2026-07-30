@@ -3,7 +3,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+// bcrypt en Rust con binario precompilado. Frente a bcryptjs (JavaScript puro)
+// la diferencia clave no es la velocidad sino DÓNDE corre: bcryptjs bloquea el
+// event loop ~200 ms en cada login, y durante ese rato el servidor entero no
+// atiende a nadie más. Esta versión trabaja en un hilo aparte, así que el sitio
+// sigue respondiendo. El formato del hash es el estándar de bcrypt, idéntico al
+// anterior: las contraseñas ya guardadas se verifican sin que nadie las cambie.
+import * as bcrypt from "@node-rs/bcrypt";
 import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
 import { rateLimit } from "@/lib/rateLimit";

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rateLimit";
-import bcrypt from "bcryptjs";
+// Ver la nota en lib/auth.ts: mismo formato de hash, pero fuera del event loop.
+import * as bcrypt from "@node-rs/bcrypt";
 import crypto from "crypto";
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;

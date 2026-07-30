@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 import { Resend } from "resend";
-import bcrypt from "bcryptjs";
+// Ver la nota en lib/auth.ts: mismo formato de hash, pero fuera del event loop.
+import * as bcrypt from "@node-rs/bcrypt";
 import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
