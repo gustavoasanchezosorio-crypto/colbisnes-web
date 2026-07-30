@@ -1,0 +1,24 @@
+<!-- Firma de Gustavo en dorado metálico, para fondos oscuros / azul corporativo.
+     Mismos trazos que firma.svg (que es azul, pensada para fondo blanco). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1410 358" fill="none">
+  <defs>
+    <linearGradient id="oroFirma" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#C9971F"/>
+      <stop offset="18%" stop-color="#F7E08A"/>
+      <stop offset="42%" stop-color="#D4AF37"/>
+      <stop offset="66%" stop-color="#F9E9A6"/>
+      <stop offset="88%" stop-color="#D9B441"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#oroFirma)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Trazo largo ascendente -->
+    <path d="M 35 292 C 300 250 850 150 1210 78"/>
+    <!-- Trazo corto que cruza (como una t) -->
+    <path d="M 492 278 C 520 230 560 180 590 148"/>
+    <!-- Swoosh inferior con joroba y aplanado final -->
+    <path d="M 675 256 C 800 220 980 195 1070 178 C 1110 170 1180 138 1290 122"/>
+    <!-- Punto final -->
+    <circle cx="1388" cy="113" r="12" fill="url(#oroFirma)" stroke="none"/>
+  </g>
+</svg>

@@ -20,7 +20,8 @@ export default function ProfileCompletionAlert() {
   // de administración (el admin no compra/vende) ni las pantallas de autenticación.
   const ocultar = pathname?.startsWith("/perfil/editar")
     || pathname?.startsWith("/admin")
-    || pathname?.startsWith("/auth");
+    || pathname?.startsWith("/auth")
+    || pathname?.startsWith("/coming-soon");
 
   useEffect(() => {
     if (status !== "authenticated") { setData(null); return; }

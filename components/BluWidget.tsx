@@ -76,6 +76,11 @@ export default function BluWidget() {
     }
   }, [conversationId, productId, enviando]);
 
+  // En la pantalla "Próximamente" (previa al lanzamiento) ocultamos el chat de soporte
+  // para que el candado se vea limpio. Todos los hooks ya se ejecutaron arriba, así que
+  // este return condicional no rompe las reglas de hooks.
+  if (pathname === "/coming-soon") return null;
+
   return (
     <>
       {!abierto && (
