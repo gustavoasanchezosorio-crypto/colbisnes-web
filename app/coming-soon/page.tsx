@@ -179,7 +179,7 @@ export default function ComingSoonPage() {
         src="/firma-dorada.svg"
         alt="Firma de Gustavo Osorio, fundador de Colbisnes"
         style={{
-          width: "min(220px, 58%)",
+          width: "min(285px, 72%)",
           height: "auto",
           marginTop: 46,
           opacity: 0.95,
