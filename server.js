@@ -214,6 +214,41 @@ app.prepare().then(() => {
     }
   }
 
-  cron.schedule('0 0 * * *', () => runCron('/api/cron/liberar'), { timezone: 'UTC' });
-  cron.schedule('5 1 * * *', () => runCron('/api/cron/verificar-envios'), { timezone: 'UTC' });
+  // -------------------------------------------------------------------------
+  // 2026-07-30 — Interruptor para migrar a Railway Cron Jobs sin tocar código.
+  //
+  // Los dos endpoints de abajo YA aceptan llamadas externas: solo exigen la
+  // cabecera `Authorization: Bearer <CRON_SECRET>` (ver lib/cronAuth.ts, que
+  // compara en tiempo constante y falla cerrado). No hay filtro por IP, ni por
+  // origen, ni restricción a localhost. Es decir, un programador externo como
+  // Railway Cron Jobs puede dispararlos tal cual están hoy.
+  //
+  // El peligro al hacer esa migración es el solapamiento: si se configura el
+  // cron en Railway y ADEMÁS sigue activo el node-cron de aquí dentro, la tarea
+  // corre DOS VECES. Y una de las dos es /api/cron/liberar, que libera plata de
+  // escrow hacia los vendedores. Doble ejecución en un camino de dinero no es un
+  // log feo: es un problema contable.
+  //
+  // Por eso el apagado se hace por variable de entorno y no editando código: el
+  // día que se active el cron en Railway, basta con poner
+  // DISABLE_INTERNAL_CRON=true en el panel y reiniciar. Si la variable no existe
+  // —que es el caso hoy— el comportamiento es exactamente el de siempre.
+  //
+  // Recordatorio relacionado: numReplicas debe seguir en 1. Con dos réplicas
+  // estos cron internos también se duplicarían, por la misma razón.
+  // -------------------------------------------------------------------------
+  const cronInternoDesactivado = process.env.DISABLE_INTERNAL_CRON === 'true';
+
+  if (cronInternoDesactivado) {
+    console.log(
+      '⏸️  Cron interno DESACTIVADO por DISABLE_INTERNAL_CRON=true. ' +
+        'Se asume que un programador externo (Railway Cron Jobs) está llamando ' +
+        '/api/cron/liberar y /api/cron/verificar-envios. Si no es así, la ' +
+        'liberación de escrow NO se está ejecutando.'
+    );
+  } else {
+    cron.schedule('0 0 * * *', () => runCron('/api/cron/liberar'), { timezone: 'UTC' });
+    cron.schedule('5 1 * * *', () => runCron('/api/cron/verificar-envios'), { timezone: 'UTC' });
+    console.log('⏰ Cron interno ACTIVO: liberar 00:00 UTC, verificar-envios 01:05 UTC.');
+  }
 });
