@@ -184,14 +184,20 @@ export default function ComingSoonPage() {
           la despega del fondo azul y otra amplia que aporta profundidad—. El ?v=2
           fuerza a los navegadores a bajar la versión nueva pese al mismo nombre. */}
       <img
-        src="/firma-gustavo.png?v=2"
+        src="/firma-gustavo.png?v=3"
         alt="Firma de Gustavo Osorio, fundador de Colbisnes"
         style={{
           width: "min(340px, 78%)",
           height: "auto",
           marginTop: 46,
+          // Sombras más separadas y difusas: la firma levanta más del fondo.
+          // A propósito NO se usa image-rendering: crisp-edges. Esa propiedad
+          // apaga el remuestreo del navegador (pasa a vecino más cercano), y el
+          // remuestreo es justamente lo que hace que un PNG de 1200 px se vea
+          // limpio dentro de 340 px. Con crisp-edges los trazos finos y las
+          // diagonales salen con escaleritas.
           filter:
-            "drop-shadow(0 2px 3px rgba(2,14,38,0.45)) drop-shadow(0 8px 18px rgba(2,14,38,0.35))",
+            "drop-shadow(0 4px 6px rgba(2,14,38,0.45)) drop-shadow(0 12px 24px rgba(2,14,38,0.35))",
         }}
       />
 
