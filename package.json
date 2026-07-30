@@ -37,6 +37,8 @@
     "pdf-lib": "^1.17.1",
     "prisma": "^6.19.2",
     "qrcode": "^1.5.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "react-hook-form": "^7.71.2",
     "react-infinite-scroll-component": "^6.1.1",
     "resend": "^6.9.3",
