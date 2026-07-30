@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
-    "@auth/prisma-adapter": "^2.11.1",
+    "@auth/prisma-adapter": "^2.11.3",
     "@hookform/resolvers": "^5.2.2",
     "@node-rs/bcrypt": "^1.10.7",
     "@prisma/client": "^6.19.3",
@@ -31,7 +31,7 @@
     "heic-convert": "^2.1.0",
     "heic2any": "^0.0.4",
     "next": "^16.1.6",
-    "next-auth": "^4.24.13",
+    "next-auth": "^4.24.15",
     "node-cron": "^4.6.0",
     "otplib": "^13.4.1",
     "pdf-lib": "^1.17.1",
@@ -45,6 +45,9 @@
     "styled-jsx": "^5.1.7",
     "twilio": "^6.0.2",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "@auth/core": "0.41.3"
   },
   "devDependencies": {
     "@types/formidable": "^3.5.0",

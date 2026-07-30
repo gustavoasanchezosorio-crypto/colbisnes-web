@@ -64,20 +64,77 @@ app.prepare().then(() => {
   // sigue permitido a propósito, porque ver el estado de un producto es
   // información pública — pero un socket anónimo no puede enviar mensajes ni
   // suplantar a otro usuario (ver "send-message" más abajo).
+  // -------------------------------------------------------------------------
+  // 2026-07-30 — Endurecimiento de la verificación de sesión del socket.
+  //
+  // Motivo: GHSA-xmf8-cvqr-rfgj, "getToken() throws an uncaught exception on
+  // malformed Bearer authorization headers". La vulnerabilidad en sí ya quedó
+  // corregida al subir next-auth 4.24.14 -> 4.24.15, pero esta defensa se deja
+  // puesta a propósito, por dos razones:
+  //
+  //   1. Las cabeceras que se le entregan a getToken() vienen ENTERAS del
+  //      cliente en el handshake. Es entrada no confiable por definición.
+  //   2. Este proceso no solo sirve el sitio: también hospeda los dos cron de
+  //      node-cron (liberación de escrow y verificación de envíos). Una
+  //      excepción no controlada aquí no tumba "el chat": tumba el proceso que
+  //      mueve la plata de la gente.
+  // -------------------------------------------------------------------------
+
+  // Solo se acepta una cabecera Authorization con la forma exacta
+  // "Bearer <token>" y únicamente con caracteres ASCII del alfabeto base64url.
+  // Cualquier otra cosa (bytes no ASCII, cabecera partida, basura) se descarta
+  // ANTES de entregársela a la librería de autenticación.
+  const AUTHORIZATION_VALIDA = /^Bearer [A-Za-z0-9._~+/-]+=*$/;
+  const AUTHORIZATION_MAX_LARGO = 4096;
+
+  function sanearAuthorization(headers) {
+    const limpias = { ...headers };
+    const valor = limpias.authorization ?? limpias.Authorization;
+    if (valor === undefined) return limpias;
+    const invalida =
+      typeof valor !== 'string' ||
+      valor.length > AUTHORIZATION_MAX_LARGO ||
+      !AUTHORIZATION_VALIDA.test(valor);
+    if (invalida) {
+      delete limpias.authorization;
+      delete limpias.Authorization;
+    }
+    return limpias;
+  }
+
   io.use(async (socket, next) => {
+    const headers = socket.handshake.headers || {};
+
+    // El parseo de cookies es tolerante a propósito y va FUERA del try que
+    // decide el rechazo: una cookie de terceros malformada no debería costarle
+    // la conexión a un visitante legítimo que solo viene a mirar un producto.
+    let parsedCookies = {};
     try {
-      const cookieHeader = socket.handshake.headers?.cookie;
-      const parsedCookies = cookieHeader ? cookie.parse(cookieHeader) : {};
+      parsedCookies = headers.cookie ? cookie.parse(headers.cookie) : {};
+    } catch {
+      parsedCookies = {};
+    }
+
+    try {
       const verifiedToken = await getToken({
-        req: { cookies: parsedCookies, headers: socket.handshake.headers },
+        req: { cookies: parsedCookies, headers: sanearAuthorization(headers) },
         secret: process.env.NEXTAUTH_SECRET,
       });
+      // Ojo con esta distinción, que es la parte delicada: "no hay sesión"
+      // (getToken devuelve null) SIGUE permitido y sigue siendo anónimo, porque
+      // ver el estado de un producto es información pública. Lo que ya no se
+      // tolera es el caso de abajo.
       socket.data.userId = verifiedToken?.id || null;
+      next();
     } catch (err) {
-      console.error('Error verificando sesión en socket (se trata como anónimo):', err);
-      socket.data.userId = null;
+      // Fail-closed: si la verificación lanzó excepción, no sabemos quién es
+      // este socket — y "no sé quién es" no puede tratarse como "es anónimo".
+      console.error(
+        'Socket rechazado: la verificación de sesión lanzó excepción:',
+        err?.message || err
+      );
+      next(new Error('unauthorized'));
     }
-    next();
   });
 
   io.on('connection', (socket) => {
