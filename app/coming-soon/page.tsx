@@ -102,8 +102,9 @@ export default function ComingSoonPage() {
           lineHeight: 1.5,
         }}
       >
-        El marketplace colombiano donde compras y vendes con el dinero protegido en
-        custodia. Nos lanzamos muy pronto.
+        El marketplace colombiano para vender eso que ya no usas en casa —sin que
+        nadie te tumbe. La plata queda protegida en custodia hasta que el trato se
+        cumpla.
       </p>
 
       {/* Reloj regresivo */}
@@ -176,15 +177,21 @@ export default function ComingSoonPage() {
       {/* Firma del fundador, en su azul original. Se saca de la imagen escaneada
           recortando la silueta por inundación desde los bordes: así los brillos
           claros que caen DENTRO de un trazo no quedan como huecos transparentes.
-          No se le toca el color, solo se le quita el fondo blanco. */}
+          No se le toca el color, solo se le quita el fondo blanco.
+
+          Va sin reducción de paleta: con 96 colores el degradado metálico se cortaba
+          en bandas y parecía pixelada. Las dos sombras dan el relieve —una corta que
+          la despega del fondo azul y otra amplia que aporta profundidad—. El ?v=2
+          fuerza a los navegadores a bajar la versión nueva pese al mismo nombre. */}
       <img
-        src="/firma-gustavo.png"
+        src="/firma-gustavo.png?v=2"
         alt="Firma de Gustavo Osorio, fundador de Colbisnes"
         style={{
-          width: "min(285px, 72%)",
+          width: "min(340px, 78%)",
           height: "auto",
           marginTop: 46,
-          opacity: 0.95,
+          filter:
+            "drop-shadow(0 2px 3px rgba(2,14,38,0.45)) drop-shadow(0 8px 18px rgba(2,14,38,0.35))",
         }}
       />
 
