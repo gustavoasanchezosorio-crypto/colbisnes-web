@@ -1,7 +1,34 @@
 /**
- * Simple in-memory rate limiter using sliding window.
- * Works per serverless instance — good enough for basic abuse prevention.
- * For distributed rate limiting across instances, use Upstash Redis.
+ * Limitador de peticiones en memoria, con ventana deslizante.
+ *
+ * ---------------------------------------------------------------------------
+ * LIMITACIONES CONOCIDAS — revisado el 2026-07-30
+ *
+ * (El comentario anterior decía "per serverless instance". Quedó obsoleto: la
+ * app ya no es serverless, corre como servidor persistente en Railway.)
+ *
+ * El estado vive en un Map dentro de la memoria del proceso. Eso implica dos
+ * cosas que hay que tener presentes antes de crecer:
+ *
+ *  1. SE PIERDE AL REINICIAR. Cada despliegue, cada reinicio y cada caída
+ *     vacían todos los contadores. En la práctica, alguien a quien estemos
+ *     frenando por intentos fallidos de login queda libre en el momento en que
+ *     publicamos una versión nueva. Hoy es asumible porque desplegamos poco,
+ *     pero es un agujero real, no teórico.
+ *
+ *  2. NO SIRVE CON MÁS DE UNA INSTANCIA. Con N réplicas, cada una lleva su
+ *     propia cuenta y el límite efectivo pasa a ser N veces el configurado.
+ *     Hoy no nos afecta porque numReplicas está en 1 —y debe seguir así, pero
+ *     por otro motivo: los dos cron de node-cron viven dentro de server.js y
+ *     con dos réplicas se ejecutarían dos veces, incluida la liberación de
+ *     escrow—. Es decir: hay DOS cosas distintas atando esta app a una sola
+ *     instancia, y ambas hay que resolverlas antes de escalar en horizontal.
+ *
+ * MIGRACIÓN RECOMENDADA: mover el contador a Redis (Upstash o el add-on de
+ * Railway) con el patrón INCR + EXPIRE, que además sobrevive a los reinicios.
+ * A 2026-07-30 NO hay Redis aprovisionado —no existe REDIS_URL en las variables
+ * del proyecto—, así que esta migración queda pendiente y no se hace a ciegas.
+ * ---------------------------------------------------------------------------
  */
 
 interface RateLimitRecord {
