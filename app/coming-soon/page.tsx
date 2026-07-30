@@ -173,12 +173,12 @@ export default function ComingSoonPage() {
         </span>
       </div>
 
-      {/* Firma del fundador. Se genera a partir de la firma original (azul brillante
-          sobre blanco) recortando la silueta exacta y mapeando su luminosidad a una
-          rampa dorada, para que resalte sobre el degradado azul del fondo sin perder
-          el relieve metálico. */}
+      {/* Firma del fundador, en su azul original. Se saca de la imagen escaneada
+          recortando la silueta por inundación desde los bordes: así los brillos
+          claros que caen DENTRO de un trazo no quedan como huecos transparentes.
+          No se le toca el color, solo se le quita el fondo blanco. */}
       <img
-        src="/firma-dorada.png"
+        src="/firma-gustavo.png"
         alt="Firma de Gustavo Osorio, fundador de Colbisnes"
         style={{
           width: "min(285px, 72%)",
