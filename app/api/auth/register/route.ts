@@ -11,6 +11,69 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
+// ---------------------------------------------------------------------------
+// Reintentos del correo de verificación (2026-07-30).
+//
+// Antes esto era `resend.emails.send({...}).catch(console.error)`, y tenía dos
+// agujeros:
+//
+//   1. El SDK de Resend NO lanza excepción cuando la API responde con error:
+//      devuelve `{ data, error }` (se ve en lib/email.ts, que sí lo maneja).
+//      Ese `.catch()` solo atrapaba fallos de red, así que un "cuota diaria
+//      agotada" —el plan gratuito son 100 correos al día— se descartaba en
+//      silencio absoluto: ni una línea en los logs. El usuario se quedaba sin
+//      poder activar su cuenta y nosotros sin enterarnos.
+//   2. Sin reintentos, un hipo momentáneo de Resend tenía el mismo efecto
+//      definitivo que una caída total.
+//
+// El registro NUNCA falla por culpa del correo: la cuenta ya quedó creada y el
+// usuario puede pedir un reenvío. Pero si se agotan los intentos, ahora queda
+// una línea inequívoca y buscable en los logs.
+// ---------------------------------------------------------------------------
+
+const REINTENTOS_CORREO = 3;
+// Retroceso exponencial entre intentos. Con 3 intentos se usan los dos primeros
+// valores (hay 2 huecos entre 3 intentos); el tercero queda listo por si algún
+// día se sube el número.
+const ESPERAS_MS = [1000, 2000, 4000];
+
+type PayloadCorreo = Parameters<typeof resend.emails.send>[0];
+
+async function enviarVerificacionConReintentos(destinatario: string, payload: PayloadCorreo) {
+  for (let intento = 1; intento <= REINTENTOS_CORREO; intento++) {
+    let permanente = false;
+
+    try {
+      const { error } = await resend.emails.send(payload);
+      if (!error) return; // enviado, no hay nada más que hacer
+
+      // Un 4xx que no sea 429 es permanente (correo inválido, dominio no
+      // verificado, clave revocada...). Reintentarlo es quemar cuota para nada.
+      const status = (error as { statusCode?: number }).statusCode;
+      permanente = typeof status === "number" && status >= 400 && status < 500 && status !== 429;
+
+      console.error(
+        `Correo de verificación, intento ${intento}/${REINTENTOS_CORREO} falló` +
+          (permanente ? " (error permanente, no se reintenta)" : "") + ":",
+        error
+      );
+    } catch (err) {
+      // Aquí sí caen los fallos de red / DNS / timeout.
+      console.error(
+        `Correo de verificación, intento ${intento}/${REINTENTOS_CORREO} falló (error de red):`,
+        err
+      );
+    }
+
+    if (permanente) break;
+    if (intento < REINTENTOS_CORREO) {
+      await new Promise((resolver) => setTimeout(resolver, ESPERAS_MS[intento - 1]));
+    }
+  }
+
+  console.error(`[VERIFICATION EMAIL FAILED] para ${destinatario}`);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const ip = getIP(request);
@@ -78,7 +141,10 @@ export async function POST(request: NextRequest) {
     const verifyUrl = baseUrl + "/auth/verify?token=" + rawVerifyToken;
 
     // Welcome email (non-blocking). El botón AHORA sí verifica el correo de verdad.
-    resend.emails.send({
+    // Sigue siendo deliberadamente "dispara y olvida": el usuario no debe esperar
+    // a que Resend conteste para que su registro termine. La diferencia es que
+    // ahora reintenta y, si aun así falla, deja rastro (ver arriba).
+    void enviarVerificacionConReintentos(emailLower, {
       from: "Colbisnes <hola@colbisnes.com>",
       to: emailLower,
       subject: "Bienvenido a Colbisnes",
@@ -89,7 +155,7 @@ export async function POST(request: NextRequest) {
         ctaTexto: "Confirmar mi correo",
         ctaUrl: verifyUrl,
       }),
-    }).catch((err) => console.error("Error enviando email de bienvenida:", err));
+    });
 
     return NextResponse.json({ success: true, user: { id: user.id, email: user.email } });
   } catch (error) {
