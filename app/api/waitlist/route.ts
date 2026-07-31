@@ -18,6 +18,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rateLimit";
+import { sendEmail } from "@/lib/email";
+import {
+  ASUNTO_BIENVENIDA,
+  CONTACTO_BIENVENIDA,
+  TEXTO_BIENVENIDA,
+  htmlBienvenida,
+} from "@/lib/correoBienvenida";
 
 // Tope de RFC 5321 para una dirección completa. Sirve de cortafuegos barato
 // contra payloads absurdos antes de tocar la base de datos.
@@ -69,15 +76,57 @@ export async function POST(request: Request) {
       );
     }
 
-    // upsert en vez de create: apuntarse dos veces no es un error, es alguien
-    // que no se acordaba. Además evita la carrera de dos envíos simultáneos
-    // desde la misma pestaña (doble clic), que con un create suelto reventaría
-    // con P2002.
-    await prisma.waitlist.upsert({
-      where: { email },
-      create: { email },
-      update: {}, // ya estaba: no se toca el createdAt original
-    });
+    // create + captura de P2002 en vez de upsert. El upsert guardaba bien, pero
+    // no sabía decir si acababa de crear el registro o si ya estaba, y aquí esa
+    // diferencia importa: el correo de bienvenida SOLO puede salir en un alta
+    // nueva.
+    //
+    // No es una cuestión de elegancia. Este endpoint es público y sin sesión a
+    // la fuerza (mientras el sitio está en coming-soon no hay usuarios), así que
+    // cualquiera puede meter la dirección de otro. Si mandara correo en cada
+    // POST, el formulario se convertiría en un aparato de acoso: hasta 5 correos
+    // por hora a un tercero, dentro del límite. Enviando solo la primera vez, el
+    // peor caso es un único correo.
+    //
+    // La carrera del doble clic sigue cubierta: de dos peticiones simultáneas,
+    // una crea y la otra recibe P2002, así que tampoco salen dos correos.
+    let esAltaNueva = true;
+    try {
+      await prisma.waitlist.create({ data: { email } });
+    } catch (e: unknown) {
+      const codigo = (e as { code?: string })?.code;
+      if (codigo === "P2002") {
+        // Ya estaba apuntado. No se toca su createdAt y no se reenvía nada.
+        esAltaNueva = false;
+      } else {
+        throw e; // cualquier otro fallo de base de datos sí es un 500 de verdad
+      }
+    }
+
+    // El correo va DESPUÉS de guardar y nunca puede tumbar el alta. Perder una
+    // dirección porque Resend tuvo un mal minuto sería mucho peor que no mandar
+    // el correo: la dirección no se puede recuperar, el correo se puede reenviar.
+    // sendEmail ya captura sus propios errores, pero se envuelve igual por si en
+    // el futuro cambia ese comportamiento.
+    if (esAltaNueva) {
+      try {
+        await sendEmail({
+          to: email,
+          subject: ASUNTO_BIENVENIDA,
+          html: htmlBienvenida(),
+          text: TEXTO_BIENVENIDA,
+          replyTo: CONTACTO_BIENVENIDA,
+          // Gmail y Outlook puntúan mejor el correo no transaccional que ofrece
+          // una salida clara. Es el mismo mecanismo de baja que usa el envío del
+          // día del lanzamiento.
+          headers: {
+            "List-Unsubscribe": `<mailto:${CONTACTO_BIENVENIDA}?subject=BAJA>`,
+          },
+        });
+      } catch (e) {
+        console.error("waitlist: falló el correo de bienvenida para", email, e);
+      }
+    }
 
     return NextResponse.json({ ok: true, mensaje: MENSAJE_OK });
   } catch (e) {

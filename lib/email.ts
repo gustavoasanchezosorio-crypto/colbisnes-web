@@ -14,6 +14,16 @@ interface EmailOptions {
   subject: string;
   html: string;
   attachments?: EmailAttachment[];
+  /** Versión en texto plano. No es un adorno: mejora bastante la entregabilidad
+   *  y es lo que ven los clientes que bloquean HTML. Sin ella, un correo solo-HTML
+   *  puntúa peor en los filtros de spam. */
+  text?: string;
+  /** Buzón al que contesta el destinatario si le da a "Responder". El remitente
+   *  (notificaciones@) es un buzón de salida, no de entrada. */
+  replyTo?: string;
+  /** Cabeceras extra. Se usa sobre todo para List-Unsubscribe, que Gmail y
+   *  Outlook tienen muy en cuenta en correo no transaccional. */
+  headers?: Record<string, string>;
 }
 
 // Inserta el banner anti-phishing del destinatario en el HTML del correo.
@@ -44,7 +54,15 @@ async function inyectarAntiPhishing(to: string, html: string): Promise<string> {
   }
 }
 
-export async function sendEmail({ to, subject, html, attachments }: EmailOptions) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  attachments,
+  text,
+  replyTo,
+  headers,
+}: EmailOptions) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ RESEND_API_KEY no configurada, omitiendo envío de correo');
     return;
@@ -60,6 +78,11 @@ export async function sendEmail({ to, subject, html, attachments }: EmailOptions
       ...(attachments && attachments.length
         ? { attachments: attachments.map(a => ({ filename: a.filename, content: a.content })) }
         : {}),
+      // Los tres van solo si se piden, para no alterar en nada los correos que
+      // ya se envían hoy sin ellos.
+      ...(text ? { text } : {}),
+      ...(replyTo ? { replyTo } : {}),
+      ...(headers ? { headers } : {}),
     });
 
     if (error) {
