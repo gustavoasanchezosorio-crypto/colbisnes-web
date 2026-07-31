@@ -17,31 +17,47 @@ cd ~/Desktop/colbisnes/colbisnes-web
 
 ---
 
-## 0. Antes de mandar nada: arreglar el DNS
+## 0. El DNS — ya está arreglado (30 de julio)
 
-**Esto es bloqueante. No mandes el envío masivo hasta que esté hecho.**
+**Hecho. Esto ya no bloquea nada.** Se deja documentado porque conviene saber
+cómo quedó y cómo comprobarlo si algún día algo huele raro.
 
-Hoy el dominio tiene la autenticación a medias: DKIM funciona (por eso los
-correos sueltos han llegado bien), pero el SPF está mal puesto. Los valores que
-dio Resend se cruzaron: el SPF acabó en el host del DKIM, y el valor del MX
-acabó en el host del SPF.
+El dominio tenía la autenticación a medias: DKIM funcionaba (por eso los correos
+sueltos llegaban bien), pero el SPF estaba mal puesto — los valores que dio
+Resend se habían cruzado. Mandar 200 correos de golpe desde un dominio con SPF
+roto es la forma más rápida de que Gmail clasifique el dominio entero como spam,
+y esa reputación luego cuesta semanas de recuperar.
 
-Mandar 200 correos de golpe desde un dominio con SPF roto es la forma más rápida
-de que Gmail te clasifique el dominio entero como spam — y esa reputación luego
-cuesta semanas de recuperar. Con 46 correos sueltos no pasa nada; con un envío
-masivo sí.
+Cómo quedó, ya verificado contra el servidor autoritativo y contra Google DNS:
 
-Los dos arreglos concretos están en la conversación (registros de Cloudflare).
-En resumen:
+| Host | Tipo | Valor |
+|---|---|---|
+| `send` | TXT | `v=spf1 include:amazonses.com ~all` |
+| `send` | MX | `1 feedback-smtp.sa-east-1.amazonses.com` (intacto) |
+| `resend._domainkey` | TXT | solo el `p=MIGf...` — un único registro |
+| `_dmarc` | TXT | `v=DMARC1; p=none; rua=mailto:hola@colbisnes.com` |
 
-1. `send.colbisnes.com` → TXT debe contener el SPF, no el valor del MX.
-2. `resend._domainkey.colbisnes.com` → tiene un TXT de más que hay que borrar.
-   Un selector DKIM con dos TXT da resultados ambiguos en los verificadores.
-3. **El registro MX de `send.colbisnes.com` está bien. No lo toques.**
+Se corrigió el TXT de `send`, se borró un `v=spf1` de más que colgaba del
+selector DKIM (dos TXT en un mismo selector dan resultados ambiguos en los
+verificadores), y se le añadió el `rua=` al DMARC para recibir los informes.
 
-Verifica los valores exactos en **resend.com/domains → colbisnes.com → Records**
-antes de guardar, y espera a que el panel de Resend muestre el dominio en verde
-(suele tardar entre 5 minutos y 1 hora en propagar).
+Si quieres comprobarlo por tu cuenta en cualquier momento:
+
+```
+dig +short TXT send.colbisnes.com
+dig +short TXT _dmarc.colbisnes.com
+dig +short TXT resend._domainkey.colbisnes.com | wc -l   # debe dar 1
+```
+
+Queda una cosa por mirar, y es en el panel, no en la terminal: que
+**resend.com/domains → colbisnes.com → Records** muestre el dominio en verde.
+Suele tardar entre 5 minutos y 1 hora desde el cambio.
+
+> Nota para quien edite estos registros en el futuro: **esta versión del panel de
+> Cloudflare guarda los valores TXT con las comillas dobles incluidas**. Al
+> escribir un TXT nuevo hay que teclearlo *con* comillas. Es lo contrario de lo
+> que hace Cloudflare históricamente, así que conviene verificar con `dig`
+> después de guardar.
 
 ---
 
@@ -200,6 +216,24 @@ verificarlo cuesta cinco segundos.
 
 ## 6. Si algo sale mal
 
+**Todos los envíos fallan con `API key is invalid`.** Es el `.env` local, no
+Resend. Pasó de verdad el 30 de julio: el `.env` seguía con la clave que se rotó
+el 6 de julio tras la fuga, y encima duplicada en dos líneas. Ya está corregido
+—ahora tiene la misma clave que Railway, en una sola línea— pero si vuelve a
+salir, compara las dos sin llegar a imprimirlas:
+
+```
+# huella de la clave local
+node -e "require('dotenv').config();console.log(require('crypto').createHash('sha256').update(process.env.RESEND_API_KEY||'').digest('hex').slice(0,10))"
+
+# huella de la de Railway (deben coincidir)
+railway variables --service colbisnes-web --environment production --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(require('crypto').createHash('sha256').update(JSON.parse(s).RESEND_API_KEY||'').digest('hex').slice(0,10)))"
+```
+
+Si no coinciden, copia la de Railway al `.env`. **Nunca pegues la clave en un
+chat ni en un commit.** Y ojo: `GET /domains` devuelve 401 incluso con la clave
+buena, porque es una clave de *solo envío* — ese 401 no significa que esté rota.
+
 **Muchos rebotes (*bounced*) en el panel de Resend.** Direcciones falsas o mal
 escritas de la lista. No es grave con pocas, pero una tasa alta de rebotes sí
 daña la reputación del dominio. Si supera el 5%, para el escalonado y revisa la
@@ -237,7 +271,7 @@ mv scripts/.launch-emails-sent.log scripts/.launch-emails-sent.log.viejo
 ## 7. Resumen para copiar y pegar
 
 ```
-# Antes: arreglar los 2 registros DNS y esperar el verde en resend.com/domains
+# DNS: ya arreglado. Solo falta ver el verde en resend.com/domains
 
 # Cuando quieras — ensayo, no manda nada
 node scripts/send-launch-emails.ts

@@ -114,7 +114,7 @@ function construirHtml(): string {
 <title>Colbisnes abre el 12 de agosto</title>
 </head>
 <body style="margin:0;padding:0;background-color:#EEF3FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Miércoles 12 de agosto, 10:20 a.m. hora Colombia.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Abrimos el miércoles 12 de agosto, 10:20 a.m. Aquí se hacen buenos bisnes.</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF3FF;padding:32px 16px;">
     <tr>
@@ -123,30 +123,38 @@ function construirHtml(): string {
 
           <tr>
             <td style="background:linear-gradient(135deg,#1448A3,#1F6BFF);padding:26px 32px;text-align:center;">
-              <img src="https://colbisnes.com/logo-white-email.png" alt="Colbisnes" width="176" style="display:block;width:176px;height:auto;margin:0 auto;border:0;outline:none;" />
+              <img src="https://colbisnes.com/logo-white-email.png?v=2" alt="Colbisnes" width="176" style="display:block;width:176px;height:auto;margin:0 auto;border:0;outline:none;" />
             </td>
           </tr>
 
           <tr>
             <td style="padding:36px 32px 8px;">
-              <h1 style="margin:0 0 16px;color:#0a1628;font-size:20px;font-weight:800;line-height:1.3;">Ya hay fecha</h1>
+              <h1 style="margin:0 0 16px;color:#0a1628;font-size:20px;font-weight:800;line-height:1.3;">¡Bienvenidos!</h1>
 
-              <p style="${parrafo}">Hola,</p>
-              <p style="${parrafo}">Te anotaste para saber cuándo abríamos. Ya hay fecha:</p>
+              <p style="${parrafo}">Ya no más eso de: &ldquo;Aquí se roban hasta un hueco.&rdquo; Relax, para eso se creó Colbisnes.</p>
+              <p style="${parrafo}">No todos hablamos inglés, pero todos los colombianos sabemos hacer bisnes.</p>
 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3FF;border:1px solid #C7D9FF;border-radius:14px;margin:0 0 18px;">
                 <tr>
                   <td style="padding:14px 16px;text-align:center;">
+                    <span style="display:block;color:#64748B;font-size:12px;margin-bottom:3px;">Abrimos</span>
                     <span style="display:block;color:#1448A3;font-size:16px;font-weight:800;line-height:1.45;">Miércoles 12 de agosto, 10:20 a.m.</span>
                     <span style="display:block;color:#64748B;font-size:12px;margin-top:3px;">hora Colombia</span>
                   </td>
                 </tr>
               </table>
 
-              <p style="${parrafo}">Colbisnes es un marketplace donde comprar y vender de segunda deja de ser un acto de fe. El dinero queda retenido en custodia: el vendedor sabe que el pago ya está asegurado antes de despachar, y al comprador no se le libera la plata hasta que confirme que recibió lo que pidió.</p>
-              <p style="${parrafo}"><strong style="color:#0a1628;">Si algo sale mal, el dinero nunca se movió.</strong></p>
-              <p style="${parrafo}">Pagas como quieras: tarjeta, PSE, Nequi, contra-entrega o USDT.</p>
-              <p style="${parrafo}">Nos vemos el miércoles.</p>
+              <p style="${parrafo}">Aquí puedes vender todo eso que ya no usas. Disfruta de bajas comisiones y pagos rápidos. ¡Chao a los intermediarios careros!</p>
+              <p style="${parrafo}">Tu dinero siempre permanece en custodia hasta que confirmes que recibiste tu compra. Después de eso&hellip; <strong style="color:#0a1628;">¡listo el bisnes!</strong></p>
+              <p style="${parrafo}">Nos tomamos la seguridad muy en serio. Por eso, para vender tienes que verificar tu identidad con la cédula. Aquí no hay espacio para perfiles falsos ni para pagos con billetes &ldquo;con la cara de Diomedes Díaz&rdquo;.</p>
+              <p style="${parrafo}">Aquí cabemos todos&hellip; pero ojo: todos los de bien.</p>
+              <p style="${parrafo}">Gracias por hacer bisnes en Colbisnes.</p>
+              <p style="${parrafo}"><strong style="color:#0a1628;">¿Listos para hacer un bisnes?</strong></p>
+
+              <p style="margin:22px 0 0;color:#0a1628;font-size:14.5px;line-height:1.5;">
+                <strong>Gustavo Osorio</strong><br/>
+                <span style="color:#64748B;font-size:13px;">CEO Fundador &middot; Colbisnes Colombia</span>
+              </p>
             </td>
           </tr>
 
@@ -178,19 +186,30 @@ function construirHtml(): string {
 
 /** Versión en texto plano. No es un adorno: mejora bastante la entregabilidad
  *  de un envío masivo y es lo que ven los clientes que bloquean HTML. */
-const TEXTO_PLANO = `Hola,
+const TEXTO_PLANO = `¡BIENVENIDOS!
 
-Te anotaste para saber cuándo abríamos. Ya hay fecha:
+Ya no más eso de: "Aquí se roban hasta un hueco." Relax, para eso se creó Colbisnes.
 
-Miércoles 12 de agosto, 10:20 a.m. (hora Colombia)
+No todos hablamos inglés, pero todos los colombianos sabemos hacer bisnes.
 
-Colbisnes es un marketplace donde comprar y vender de segunda deja de ser un acto de fe. El dinero queda retenido en custodia: el vendedor sabe que el pago ya está asegurado antes de despachar, y al comprador no se le libera la plata hasta que confirme que recibió lo que pidió.
+ABRIMOS: miércoles 12 de agosto, 10:20 a.m. (hora Colombia)
 
-Si algo sale mal, el dinero nunca se movió.
+Aquí puedes vender todo eso que ya no usas. Disfruta de bajas comisiones y pagos rápidos. ¡Chao a los intermediarios careros!
 
-Pagas como quieras: tarjeta, PSE, Nequi, contra-entrega o USDT.
+Tu dinero siempre permanece en custodia hasta que confirmes que recibiste tu compra. Después de eso... ¡listo el bisnes!
 
-Nos vemos el miércoles -> https://colbisnes.com
+Nos tomamos la seguridad muy en serio. Por eso, para vender tienes que verificar tu identidad con la cédula. Aquí no hay espacio para perfiles falsos ni para pagos con billetes "con la cara de Diomedes Díaz".
+
+Aquí cabemos todos... pero ojo: todos los de bien.
+
+Gracias por hacer bisnes en Colbisnes.
+
+¿Listos para hacer un bisnes?
+
+Gustavo Osorio
+CEO Fundador · Colbisnes Colombia
+
+-> https://colbisnes.com
 
 ---
 Recibes este correo porque te apuntaste a la lista de espera de Colbisnes.
