@@ -33,6 +33,31 @@ export const metadata: Metadata = {
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
     images: ["/logo-google.png"],
   },
+  // Comprobado contra el HTML generado, no supuesto: en cuanto se declara el
+  // objeto `icons`, Next deja de emitir por convención el link de app/icon.svg
+  // (el de app/favicon.ico sí lo sigue emitiendo). Por eso icon.svg se vuelve a
+  // declarar aquí a mano: si no, este cambio le quitaría a la web un icono que
+  // hoy sí tiene. favicon.ico NO se declara, para no duplicar su link.
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml", sizes: "any" }],
+    // A sangre completa y SIN canal alfa a propósito: iOS aplica su propia
+    // máscara "squircle" y rellena de negro cualquier transparencia. Si se le
+    // entrega el logo ya redondeado se ve un doble redondeo con borde feo.
+    // Está en /icons/ (y no como app/apple-icon.png) porque ahí mismo irán los
+    // iconos del manifest de la PWA en la fase 3.
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  // OJO: `capable` se deja DESACTIVADO a propósito. Activarlo abre el sitio en
+  // modo standalone en iOS, sin el botón de atrás de Safari, y esta web todavía
+  // no tiene navegación propia dentro de la app: el usuario quedaría atrapado a
+  // mitad de un pago. Se activará en la fase 3, junto con el service worker y el
+  // shell de la PWA. El apple-touch-icon funciona igual sin `capable`.
+  appleWebApp: {
+    title: "Colbisnes",
+    statusBarStyle: "default",
+  },
 };
 
 // Datos estructurados que Google usa para asociar el logo a la marca en resultados
