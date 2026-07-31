@@ -77,6 +77,18 @@ export default function ComingSoonPage() {
     { valor: ss, etiqueta: "Seg" },
   ];
 
+  // Los dos párrafos del mensaje comparten pinta; solo cambia el margen de abajo,
+  // así que el estilo va en una constante en vez de repetirse copiado.
+  const estiloParrafo: React.CSSProperties = {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 16,
+    margin: "0 0 14px",
+    width: "100%",
+    maxWidth: 520,
+    boxSizing: "border-box",
+    lineHeight: 1.5,
+  };
+
   return (
     <div
       style={{
@@ -124,21 +136,74 @@ export default function ComingSoonPage() {
       >
         Estamos afinando los últimos detalles
       </h1>
-      <p
+      <p style={estiloParrafo}>
+        Estamos creando la mejor tienda de segunda mano de Colombia. Aquí puedes
+        vender todo lo que ya no usas, pero con una gran diferencia: nadie te
+        tumba.
+      </p>
+      <p style={{ ...estiloParrafo, margin: "0 0 26px" }}>
+        Tu dinero queda protegido en custodia hasta que el trato se complete con
+        éxito.
+      </p>
+
+      {/* Medios de pago. Los tres archivos ya viven en public/logos y son los
+          mismos que usan la home (PAYMENT_METHODS) y el editor de perfil, así
+          que no se introduce ningún asset nuevo.
+
+          Nequi y Bre-B traen su propio fondo claro dentro del SVG; el de USDT
+          es transparente. Para que los tres se vean parejos sobre el azul, cada
+          uno va dentro de la misma pastilla blanca. */}
+      <div
         style={{
-          color: "rgba(255,255,255,0.9)",
-          fontSize: 16,
-          margin: "0 0 42px",
-          width: "100%",
-          maxWidth: 520,
-          boxSizing: "border-box",
-          lineHeight: 1.5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: 42,
         }}
       >
-        El marketplace colombiano para vender eso que ya no usas en casa —sin que
-        nadie te tumbe. La plata queda protegida en custodia hasta que el trato se
-        cumpla.
-      </p>
+        <span
+          style={{
+            color: "rgba(255,255,255,0.62)",
+            fontSize: 11.5,
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            width: "100%",
+            marginBottom: 2,
+          }}
+        >
+          Pagos con
+        </span>
+
+        {[
+          { src: "/logos/nequi.svg", alt: "Nequi" },
+          { src: "/logos/breb.svg", alt: "Bre-B" },
+          { src: "/logos/usdt.png", alt: "USDT" },
+        ].map((m) => (
+          <span
+            key={m.alt}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#fff",
+              borderRadius: 12,
+              padding: "7px 12px",
+              height: 38,
+              boxSizing: "border-box",
+              boxShadow: "0 6px 18px rgba(2,14,38,0.22)",
+            }}
+          >
+            <img
+              src={m.src}
+              alt={m.alt}
+              style={{ height: 22, width: "auto", display: "block" }}
+            />
+          </span>
+        ))}
+      </div>
 
       {/* Reloj regresivo */}
       <div
