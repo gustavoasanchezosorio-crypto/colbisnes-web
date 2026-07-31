@@ -123,7 +123,13 @@ function construirHtml(): string {
 
           <tr>
             <td style="background:linear-gradient(135deg,#1448A3,#1F6BFF);padding:26px 32px;text-align:center;">
-              <img src="https://colbisnes.com/logo-white-email.png?v=2" alt="Colbisnes" width="176" style="display:block;width:176px;height:auto;margin:0 auto;border:0;outline:none;" />
+              <!-- El sufijo ?v=N es obligatorio al cambiar el logo: el proxy de
+                   imágenes de Gmail cachea por URL y de forma GLOBAL, no por
+                   destinatario. Se saltó a v=3 porque las pruebas del 31 de julio
+                   salieron con ?v=2 mientras el servidor todavía servía el PNG
+                   viejo (el del claim pegado); Gmail pudo quedarse con ese bajo
+                   dicha URL y se lo habría servido a los ~200 del envío masivo. -->
+              <img src="https://colbisnes.com/logo-white-email.png?v=3" alt="Colbisnes" width="176" style="display:block;width:176px;height:auto;margin:0 auto;border:0;outline:none;" />
             </td>
           </tr>
 
