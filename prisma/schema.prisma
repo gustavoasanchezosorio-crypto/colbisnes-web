@@ -9,23 +9,23 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String?
-  name          String?
-  phone         String?
-  city          String?
-  image         String?
-  emailVerified DateTime?
-  role          String    @default("USER")
-  createdAt     DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  phoneWhatsapp    String?
-  usdtWallet       String?
-  usdtRed          String?
-  direccionEnvio   String?
-  resetToken       String?
-  resetTokenExpiry DateTime?
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  password               String?
+  name                   String?
+  phone                  String?
+  city                   String?
+  image                  String?
+  emailVerified          DateTime?
+  role                   String    @default("USER")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  phoneWhatsapp          String?
+  usdtWallet             String?
+  usdtRed                String?
+  direccionEnvio         String?
+  resetToken             String?
+  resetTokenExpiry       DateTime?
   emailVerifyToken       String?
   emailVerifyTokenExpiry DateTime?
 
@@ -56,9 +56,9 @@ model User {
   kycRejectedAt  DateTime?
   // Datos verificados por Didit (extraídos de la decisión al aprobar el KYC).
   // Necesarios para dispersión de fondos vía Wompi Payouts (requiere tipo+número de documento).
-  docType        String?   // p.ej. "Identity Card"
-  docNumber      String?   // cédula / número de documento verificado
-  verifiedName   String?   // nombre completo tal como aparece en el documento
+  docType        String? // p.ej. "Identity Card"
+  docNumber      String? // cédula / número de documento verificado
+  verifiedName   String? // nombre completo tal como aparece en el documento
   nequiNumber    String?
   brebId         String?
 
@@ -75,10 +75,10 @@ model User {
   totpEnabled Boolean @default(false)
 
   // Bloqueo por envío tardío en contraentrega / deuda pendiente con Colbisnes
-  blockedUntil       DateTime?
-  blockedReason       String?
-  deudaPendienteCOP   Int       @default(0)
-  penalizacionScorePts Int      @default(0) // puntos que se restan del trust score por penalizaciones
+  blockedUntil         DateTime?
+  blockedReason        String?
+  deudaPendienteCOP    Int       @default(0)
+  penalizacionScorePts Int       @default(0) // puntos que se restan del trust score por penalizaciones
 
   featuredListings FeaturedListing[]
 }
@@ -110,32 +110,32 @@ model Session {
 }
 
 model Product {
-  id               String    @id @default(cuid())
-  title            String
-  description      String
-  priceCOP         Int
-  city             String
-  condition        String    @default("NUEVO")
-  category         String    @default("Otros")
-  status           String    @default("AVAILABLE")
-  acceptedOfferId  String?
-  paymentExpiresAt DateTime?
-  paidAt               DateTime?
-  wompiTransactionId   String?
-  wompiReference       String?
-  soldAt           DateTime?
-  createdAt        DateTime  @default(now())
+  id                 String    @id @default(cuid())
+  title              String
+  description        String
+  priceCOP           Int
+  city               String
+  condition          String    @default("NUEVO")
+  category           String    @default("Otros")
+  status             String    @default("AVAILABLE")
+  acceptedOfferId    String?
+  paymentExpiresAt   DateTime?
+  paidAt             DateTime?
+  wompiTransactionId String?
+  wompiReference     String?
+  soldAt             DateTime?
+  createdAt          DateTime  @default(now())
 
   sellerId String
   seller   User   @relation(fields: [sellerId], references: [id])
 
-  images   ProductImage[]
-  offers   Offer[]
-  reviews  Review[]
-  messages Message[]
-  tipoEntrega  String  @default("ENVIO")
-  precioEnvio  Int?
-  favoritesCount Int @default(0)
+  images         ProductImage[]
+  offers         Offer[]
+  reviews        Review[]
+  messages       Message[]
+  tipoEntrega    String         @default("ENVIO")
+  precioEnvio    Int?
+  favoritesCount Int            @default(0)
 
   // Listado destacado (pago del vendedor para aparecer primero)
   featuredUntil    DateTime?
@@ -244,25 +244,25 @@ model AuditLog {
 }
 
 model Order {
-  id              String   @id @default(cuid())
-  productId       String
-  buyerEmail      String
-  metodoPago      String   // "ONLINE" | "CONTRA_ENTREGA"
-  estado          String   // "PENDIENTE" | "PAGADO" | "ESPERANDO_ENVIO" | "EN_CAMINO" | "ENTREGADO" | "COMPLETADO" | "CANCELADO"
-  totalPagado     Int
-  comision        Int
-  recibeVendedor  Int
-  codigoSecreto   String?
-  totalUSDT       Float?  // solo para contra entrega
-  numeroGuia      String?
-  transportadora  String?
-  comprobanteUrl  String?
-  enviadoAt       DateTime?
-  pagoLiberado    Boolean   @default(false)
-  pagoLiberadoAt  DateTime?
-  txHashPago      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(cuid())
+  productId      String
+  buyerEmail     String
+  metodoPago     String // "ONLINE" | "CONTRA_ENTREGA"
+  estado         String // "PENDIENTE" | "PAGADO" | "ESPERANDO_ENVIO" | "EN_CAMINO" | "ENTREGADO" | "COMPLETADO" | "CANCELADO"
+  totalPagado    Int
+  comision       Int
+  recibeVendedor Int
+  codigoSecreto  String?
+  totalUSDT      Float? // solo para contra entrega
+  numeroGuia     String?
+  transportadora String?
+  comprobanteUrl String?
+  enviadoAt      DateTime?
+  pagoLiberado   Boolean   @default(false)
+  pagoLiberadoAt DateTime?
+  txHashPago     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Protección de compra extendida (add-on pagado por el comprador)
   proteccionExtendida Boolean @default(false)
@@ -277,13 +277,13 @@ model Order {
 
   // Garantía de contraentrega: el comprador paga la comisión de Colbisnes por adelantado (Nequi)
   // para reservar el producto. Si el vendedor no despacha a tiempo, se penaliza.
-  comisionReservaCOP          Int?
-  comisionReservaPagada       Boolean   @default(false)
+  comisionReservaCOP            Int?
+  comisionReservaPagada         Boolean   @default(false)
   comisionReservaComprobanteUrl String?
-  comisionReservaReferencia   String?
-  comisionReservaConfirmadaAt DateTime?
-  fechaLimiteEnvio            DateTime?
-  envioPenalizado              Boolean  @default(false)
+  comisionReservaReferencia     String?
+  comisionReservaConfirmadaAt   DateTime?
+  fechaLimiteEnvio              DateTime?
+  envioPenalizado               Boolean   @default(false)
 
   @@index([estado, pagoLiberado])
   @@index([buyerEmail])
@@ -293,15 +293,15 @@ model Order {
 // Documentos/contactos bloqueados por deuda pendiente o incumplimiento de envío,
 // para evitar que un vendedor evada el bloqueo creando una cuenta nueva.
 model Blacklist {
-  id          String   @id @default(cuid())
-  documento   String?
-  email       String?
-  telefono    String?
-  motivo      String
-  deudaPendienteCOP Int @default(0)
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  documento         String?
+  email             String?
+  telefono          String?
+  motivo            String
+  deudaPendienteCOP Int      @default(0)
+  activo            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([documento])
   @@index([email])
@@ -318,7 +318,6 @@ model HotWalletPayout {
 
   @@index([createdAt])
 }
-
 
 model Favorite {
   id        String   @id @default(cuid())
@@ -360,25 +359,25 @@ model BluMessage {
 }
 
 model Dispute {
-  id        String   @id @default(cuid())
-  orderId   String
-  reason    String
-  detalle   String?
-  evidence  Json?    // array de URLs (fotos/comprobantes)
-  status    String   @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED_BUYER | RESOLVED_SELLER | CANCELLED
+  id       String  @id @default(cuid())
+  orderId  String
+  reason   String
+  detalle  String?
+  evidence Json? // array de URLs (fotos/comprobantes)
+  status   String  @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED_BUYER | RESOLVED_SELLER | CANCELLED
 
   raisedByUserId      String
-  raisedByUser        User    @relation("disputesRaised", fields: [raisedByUserId], references: [id])
+  raisedByUser        User   @relation("disputesRaised", fields: [raisedByUserId], references: [id])
   raisedAgainstUserId String
-  raisedAgainstUser   User    @relation("disputesReceived", fields: [raisedAgainstUserId], references: [id])
+  raisedAgainstUser   User   @relation("disputesReceived", fields: [raisedAgainstUserId], references: [id])
 
   adminNotes   String?
   resolvedById String?
-  resolvedBy   User?    @relation("disputesResolved", fields: [resolvedById], references: [id])
+  resolvedBy   User?     @relation("disputesResolved", fields: [resolvedById], references: [id])
   resolvedAt   DateTime?
 
   // true si la orden tenía protección de compra extendida — se revisa con prioridad
-  prioritaria  Boolean  @default(false)
+  prioritaria Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -387,4 +386,21 @@ model Dispute {
   @@index([status])
   @@index([raisedByUserId])
   @@index([raisedAgainstUserId])
+}
+
+// Lista de espera del prelanzamiento.
+//
+// La captura vive en /coming-soon y alimenta scripts/send-launch-emails.ts, que
+// el dia del lanzamiento lee esta tabla y manda el aviso de apertura.
+//
+// Se queda deliberadamente minimo: solo el correo y cuando llego. No se guarda
+// IP ni user-agent — para un formulario de "avisame cuando abran" eso seria
+// recolectar datos personales sin necesitarlos, con las obligaciones que trae
+// la Ley 1581 de proteccion de datos, y el abuso ya lo frena el rate limit.
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

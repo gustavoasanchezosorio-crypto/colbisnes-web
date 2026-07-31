@@ -18,6 +18,39 @@ export default function ComingSoonPage() {
   // no haya "hydration mismatch"; el reloj se rellena en el efecto, ya en el cliente.
   const [t, setT] = useState<ReturnType<typeof calcularRestante> | null>(null);
 
+  // Alta en la lista de espera. Sin librerías de formularios: es un campo.
+  const [email, setEmail] = useState("");
+  const [envio, setEnvio] = useState<"idle" | "enviando" | "ok" | "error">("idle");
+  const [aviso, setAviso] = useState("");
+
+  async function apuntarse(e: React.FormEvent) {
+    e.preventDefault();
+    if (envio === "enviando" || envio === "ok") return;
+
+    setEnvio("enviando");
+    setAviso("");
+    try {
+      const r = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) {
+        setEnvio("ok");
+        setAviso(d.mensaje || "¡Listo! Te avisamos apenas abramos.");
+      } else {
+        setEnvio("error");
+        setAviso(d.error || "No pudimos guardarte. Inténtalo de nuevo.");
+      }
+    } catch {
+      // Sin conexión o petición cortada. El usuario no tiene por qué saber
+      // la diferencia: lo que necesita es saber que puede reintentar.
+      setEnvio("error");
+      setAviso("No hay conexión. Revisa tu internet e inténtalo de nuevo.");
+    }
+  }
+
   useEffect(() => {
     setT(calcularRestante(LAUNCH_AT_MS));
     const id = setInterval(() => {
@@ -173,6 +206,111 @@ export default function ComingSoonPage() {
           12 de agosto · 10:20 a.m. (hora de Colombia)
         </span>
       </div>
+
+      {/* Captura de la lista de espera.
+          Todo el tráfico que llegaba aquí antes se iba sin dejar contacto: había
+          reloj y fecha, pero ninguna forma de decir "avísame". Esto alimenta la
+          tabla Waitlist, que es de donde saca los destinatarios el script del
+          correo de lanzamiento. */}
+      <form
+        onSubmit={apuntarse}
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          marginTop: 34,
+          boxSizing: "border-box",
+        }}
+      >
+        <label
+          htmlFor="waitlist-email"
+          style={{
+            display: "block",
+            color: "rgba(255,255,255,0.9)",
+            fontSize: 14,
+            fontWeight: 700,
+            marginBottom: 12,
+          }}
+        >
+          ¿Te avisamos cuando abramos?
+        </label>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 9,
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          <input
+            id="waitlist-email"
+            type="email"
+            required
+            inputMode="email"
+            autoComplete="email"
+            placeholder="tu@correo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={envio === "enviando" || envio === "ok"}
+            style={{
+              flex: "1 1 220px",
+              minWidth: 0,
+              padding: "14px 16px",
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.35)",
+              background: "rgba(255,255,255,0.14)",
+              color: "#fff",
+              fontSize: 15,
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          <button
+            type="submit"
+            disabled={envio === "enviando" || envio === "ok"}
+            style={{
+              flex: "0 0 auto",
+              padding: "14px 24px",
+              borderRadius: 14,
+              border: "none",
+              background: envio === "ok" ? "rgba(255,255,255,0.35)" : "#fff",
+              color: envio === "ok" ? "#fff" : THEME.primaryDark,
+              fontSize: 15,
+              fontWeight: 800,
+              cursor: envio === "enviando" || envio === "ok" ? "default" : "pointer",
+              boxShadow: "0 8px 22px rgba(0,0,0,0.22)",
+            }}
+          >
+            {envio === "enviando" ? "..." : envio === "ok" ? "✓ Apuntado" : "Avísame"}
+          </button>
+        </div>
+
+        {aviso && (
+          <p
+            role="status"
+            style={{
+              margin: "12px 0 0",
+              fontSize: 13.5,
+              fontWeight: 600,
+              lineHeight: 1.45,
+              color: envio === "ok" ? "#BBF7D0" : "#FECACA",
+            }}
+          >
+            {aviso}
+          </p>
+        )}
+
+        <p
+          style={{
+            margin: "10px 0 0",
+            fontSize: 11.5,
+            color: "rgba(255,255,255,0.55)",
+            lineHeight: 1.5,
+          }}
+        >
+          Solo para avisarte de la apertura. Ni spam ni se lo pasamos a nadie.
+        </p>
+      </form>
 
       {/* Firma del fundador, en su azul original. Se saca de la imagen escaneada
           recortando la silueta por inundación desde los bordes: así los brillos
