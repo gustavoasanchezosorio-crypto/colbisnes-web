@@ -8,6 +8,32 @@
  * web ni poder dispararse por accidente con una URL.
  *
  * ---------------------------------------------------------------------------
+ * ⚠️  AVISO: EL REGISTRO DE ENVIADOS NO VIAJA CON EL REPOSITORIO
+ * ---------------------------------------------------------------------------
+ * Este archivo de registro solo existe en esta máquina. Si ejecutas el script
+ * desde otro equipo, se enviará a toda la lista sin historial.
+ *
+ * Es scripts/.launch-emails-sent.log y está en .gitignore, así que no se sube a
+ * git ni está en el servidor: vive únicamente en el portátil desde el que se
+ * hicieron las pruebas. Correr el script desde otro computador (o desde una
+ * copia recién clonada del repositorio) parte de cero y le escribe otra vez a
+ * TODA la lista, incluidos los que ya recibieron el correo. Y un correo enviado
+ * no se puede recoger.
+ *
+ * Si hay que enviarlo desde otro sitio, copia antes ese .log a mano a la carpeta
+ * scripts/ de la máquina nueva.
+ *
+ * ---------------------------------------------------------------------------
+ * QUÉ DICE ESTE CORREO (y en qué se diferencia del de bienvenida)
+ * ---------------------------------------------------------------------------
+ * Son dos correos distintos y tienen que decir cosas distintas:
+ *   · lib/correoBienvenida.ts sale al apuntarse a la lista y anuncia que
+ *     ABRIMOS el 12 de agosto ("espéranos").
+ *   · este sale el 12 de agosto y anuncia que YA ESTAMOS ABIERTOS ("entra
+ *     ahora"). Quien se apuntó en julio ya recibió el primero; si este repitiera
+ *     el mismo texto parecería un reenvío por error.
+ *
+ * ---------------------------------------------------------------------------
  * CÓMO EJECUTARLO
  * ---------------------------------------------------------------------------
  * Desde la RAÍZ del proyecto (colbisnes-web/), no desde scripts/:
@@ -52,12 +78,20 @@
  * · Lleva un registro en scripts/.launch-emails-sent.log con cada dirección ya
  *   enviada. Si el script se cae a mitad de camino (internet, cuota de Resend,
  *   lo que sea), al volver a correrlo se salta a quienes ya recibieron el correo
- *   en vez de escribirles dos veces. Ese log está en .gitignore.
- * · La tabla Waitlist todavía NO existe en el esquema (al 30 de julio de 2026 no
- *   hay captura de correos en /coming-soon). El script la consulta con SQL crudo,
- *   así que compila y no toca prisma/schema.prisma; empezará a funcionar solo,
- *   sin cambiarle nada, apenas exista la tabla con una columna "email". Si la
- *   corres antes, te lo dice con todas las letras en vez de reventar.
+ *   en vez de escribirles dos veces. Ese log está en .gitignore: lee el aviso de
+ *   arriba antes de correr esto desde otra máquina.
+ * · Ese log YA TIENE DENTRO las direcciones de las pruebas de julio, y las de esas
+ *   pruebas recibieron el correo VIEJO (el de "abrimos el 12 de agosto"). Como
+ *   están anotadas, el 12 de agosto se las va a saltar y NO recibirán este correo
+ *   nuevo. Si quieres que también les llegue, hay que borrarlas del .log a mano
+ *   antes de enviar. Son direcciones tuyas y de gente conocida, así que decide tú.
+ * · La tabla Waitlist ya existe (se creó el 30 de julio de 2026 junto con el
+ *   formulario de /coming-soon). El script la consulta con SQL crudo y no toca
+ *   prisma/schema.prisma. Si algún día no estuviera, avisa con todas las letras
+ *   en vez de reventar.
+ * · Quien se apunte a la lista a partir del 31 de julio de 2026 recibe al instante
+ *   el correo de bienvenida (app/api/waitlist/route.ts). Este envío del 12 es el
+ *   SEGUNDO correo que reciben, no el primero.
  * ============================================================================
  */
 
@@ -80,7 +114,7 @@ const REMITENTE = "Colbisnes <notificaciones@colbisnes.com>";
 /** Buzón público de contacto. Sirve de reply-to y de baja (List-Unsubscribe). */
 const CONTACTO = "hola@colbisnes.com";
 
-const ASUNTO = "Colbisnes abre el miércoles 12 de agosto";
+const ASUNTO = "Colbisnes ya está abierto";
 
 /** Retardo entre envíos, en milisegundos, para no saturar la API de Resend. */
 const RETARDO_MS = 200;
@@ -93,15 +127,37 @@ const ARCHIVO_ENVIADOS = join(RAIZ_SCRIPT, ".launch-emails-sent.log");
 // ---------------------------------------------------------------------------
 
 /**
- * Plantilla propia, copiada a conciencia de lib/emailTemplate.ts en vez de
- * importarla. Dos razones:
- *   1. Este correo sale una sola vez y no se puede corregir después. Si alguien
- *      retoca la plantilla compartida por un correo transaccional cualquiera, el
+ * Plantilla propia, escrita aquí dentro en vez de en lib/. Tres razones:
+ *
+ *   1. NO SE PUEDE IMPORTAR DESDE lib/, y esto está comprobado, no supuesto.
+ *      El script se ejecuta con `node scripts/send-launch-emails.ts`, es decir
+ *      como módulo ES y con el borrado de tipos nativo de Node. En ese modo la
+ *      única forma de importar un archivo TypeScript vecino es con la extensión
+ *      puesta (`../lib/correoLanzamiento.ts`); sin extensión, Node no lo
+ *      resuelve. Pero con la extensión puesta, `tsc --noEmit` falla con
+ *      TS5097 ("An import path can only end with a '.ts' extension when
+ *      'allowImportingTsExtensions' is enabled"). O sea: o funciona el script el
+ *      12 de agosto, o pasa el build. Habilitar esa opción en el tsconfig del
+ *      proyecto entero, doce días antes de abrir, para mover de sitio una
+ *      plantilla, es un mal negocio.
+ *   2. Este correo sale una sola vez y no se puede corregir después. Si alguien
+ *      retoca una plantilla compartida por un correo transaccional cualquiera, el
  *      envío de lanzamiento no debería cambiar de aspecto sin que nadie se entere.
- *   2. El script se ejecuta suelto desde la terminal, en la mañana del
+ *   3. El script se ejecuta suelto desde la terminal, en la mañana del
  *      lanzamiento y con prisa. Cuantas menos dependencias internas tenga que
  *      resolver, menos cosas pueden fallar en el peor momento posible.
- * Si se cambia el diseño de marca, hay que actualizar las dos.
+ *
+ * El precio de esto es que el diseño de marca está en dos sitios: aquí y en
+ * lib/correoBienvenida.ts. SI SE CAMBIA EL DISEÑO, HAY QUE TOCAR LOS DOS.
+ *
+ * OJO CON EL `?v=N` DEL LOGO: el proxy de imágenes de Gmail cachea por URL y de
+ * forma GLOBAL, no por destinatario. Si alguna vez se cambia el PNG del logo hay
+ * que subir ese número, o a todo el mundo le seguirá llegando la imagen vieja
+ * cacheada. Se queda en v=3, que es la versión con el logo correcto.
+ *
+ * Este aviso vive en el código y no como comentario HTML dentro de la plantilla:
+ * los comentarios HTML se envían dentro del correo, y no tiene sentido que una
+ * nota interna sobre cachés viaje al buzón de cada destinatario.
  */
 function construirHtml(): string {
   const parrafo =
@@ -111,10 +167,10 @@ function construirHtml(): string {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Colbisnes abre el 12 de agosto</title>
+<title>Colbisnes ya está abierto</title>
 </head>
 <body style="margin:0;padding:0;background-color:#EEF3FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Abrimos el miércoles 12 de agosto, 10:20 a.m. Aquí se hacen buenos bisnes.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Ya puedes comprar y vender de segunda mano con el dinero en custodia.</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF3FF;padding:32px 16px;">
     <tr>
@@ -123,51 +179,33 @@ function construirHtml(): string {
 
           <tr>
             <td style="background:linear-gradient(135deg,#1448A3,#1F6BFF);padding:26px 32px;text-align:center;">
-              <!-- El sufijo ?v=N es obligatorio al cambiar el logo: el proxy de
-                   imágenes de Gmail cachea por URL y de forma GLOBAL, no por
-                   destinatario. Se saltó a v=3 porque las pruebas del 31 de julio
-                   salieron con ?v=2 mientras el servidor todavía servía el PNG
-                   viejo (el del claim pegado); Gmail pudo quedarse con ese bajo
-                   dicha URL y se lo habría servido a los ~200 del envío masivo. -->
               <img src="https://colbisnes.com/logo-white-email.png?v=3" alt="Colbisnes" width="176" style="display:block;width:176px;height:auto;margin:0 auto;border:0;outline:none;" />
             </td>
           </tr>
 
           <tr>
             <td style="padding:36px 32px 8px;">
-              <h1 style="margin:0 0 16px;color:#0a1628;font-size:20px;font-weight:800;line-height:1.3;">¡Bienvenidos!</h1>
+              <p style="margin:0 0 10px;color:#64748B;font-size:14.5px;line-height:1.5;">Hola,</p>
+              <h1 style="margin:0 0 18px;color:#0a1628;font-size:20px;font-weight:800;line-height:1.3;">Colbisnes ya está abierto.</h1>
 
-              <p style="${parrafo}">Ya no más eso de: &ldquo;Aquí se roban hasta un hueco.&rdquo; Relax, para eso se creó Colbisnes.</p>
-              <p style="${parrafo}">No todos hablamos inglés, pero todos los colombianos sabemos hacer bisnes.</p>
+              <p style="${parrafo}">Desde ahora puedes comprar y vender de segunda mano con el dinero en custodia: el vendedor sabe que el pago ya está asegurado antes de despachar, y al comprador no se le libera la plata hasta que confirme que recibió lo que pidió.</p>
 
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3FF;border:1px solid #C7D9FF;border-radius:14px;margin:0 0 18px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3FF;border:1px solid #C7D9FF;border-radius:14px;margin:4px 0 18px;">
                 <tr>
-                  <td style="padding:14px 16px;text-align:center;">
-                    <span style="display:block;color:#64748B;font-size:12px;margin-bottom:3px;">Abrimos</span>
-                    <span style="display:block;color:#1448A3;font-size:16px;font-weight:800;line-height:1.45;">Miércoles 12 de agosto, 10:20 a.m.</span>
-                    <span style="display:block;color:#64748B;font-size:12px;margin-top:3px;">hora Colombia</span>
+                  <td style="padding:16px;text-align:center;">
+                    <span style="display:block;color:#1448A3;font-size:16px;font-weight:800;line-height:1.45;">Si algo sale mal, el dinero nunca se movió.</span>
                   </td>
                 </tr>
               </table>
 
-              <p style="${parrafo}">Aquí puedes vender todo eso que ya no usas. Disfruta de bajas comisiones y pagos rápidos. ¡Chao a los intermediarios careros!</p>
-              <p style="${parrafo}">Tu dinero siempre permanece en custodia hasta que confirmes que recibiste tu compra. Después de eso&hellip; <strong style="color:#0a1628;">¡listo el bisnes!</strong></p>
-              <p style="${parrafo}">Nos tomamos la seguridad muy en serio. Por eso, para vender tienes que verificar tu identidad con la cédula. Aquí no hay espacio para perfiles falsos ni para pagos con billetes &ldquo;con la cara de Diomedes Díaz&rdquo;.</p>
-              <p style="${parrafo}">Aquí cabemos todos&hellip; pero ojo: todos los de bien.</p>
-              <p style="${parrafo}">Gracias por hacer bisnes en Colbisnes.</p>
-              <p style="${parrafo}"><strong style="color:#0a1628;">¿Listos para hacer un bisnes?</strong></p>
-
-              <p style="margin:22px 0 0;color:#0a1628;font-size:14.5px;line-height:1.5;">
-                <strong>Gustavo Osorio</strong><br/>
-                <span style="color:#64748B;font-size:13px;">CEO Fundador &middot; Colbisnes Colombia</span>
-              </p>
+              <p style="${parrafo}">Pagas como quieras: tarjeta, PSE, Nequi, contra-entrega o USDT.</p>
             </td>
           </tr>
 
           <tr>
             <td style="padding:8px 32px 36px;text-align:center;">
               <a href="https://colbisnes.com" style="display:inline-block;background:linear-gradient(135deg,#1448A3,#1F6BFF);color:#ffffff;padding:15px 36px;border-radius:16px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(31,107,255,0.35);">
-                Ir a colbisnes.com
+                Entra ahora &rarr; colbisnes.com
               </a>
             </td>
           </tr>
@@ -176,8 +214,8 @@ function construirHtml(): string {
             <td style="background:#F4F8FF;padding:20px 32px;text-align:center;border-top:1px solid #E2E8F5;">
               <p style="margin:0;color:#94A3B8;font-size:11.5px;line-height:1.6;">
                 Colbisnes &middot; El marketplace colombiano de segunda mano<br/>
-                Recibes este correo porque te apuntaste a la lista de espera.<br/>
-                ¿No quieres saber más? Responde a este correo con la palabra BAJA.
+                Recibes este correo porque te apuntaste a la lista de espera de Colbisnes.<br/>
+                Si ya no te interesa, puedes ignorarlo y no te escribiremos más.
               </p>
             </td>
           </tr>
@@ -192,34 +230,21 @@ function construirHtml(): string {
 
 /** Versión en texto plano. No es un adorno: mejora bastante la entregabilidad
  *  de un envío masivo y es lo que ven los clientes que bloquean HTML. */
-const TEXTO_PLANO = `¡BIENVENIDOS!
+const TEXTO_PLANO = `Hola,
 
-Ya no más eso de: "Aquí se roban hasta un hueco." Relax, para eso se creó Colbisnes.
+COLBISNES YA ESTÁ ABIERTO.
 
-No todos hablamos inglés, pero todos los colombianos sabemos hacer bisnes.
+Desde ahora puedes comprar y vender de segunda mano con el dinero en custodia: el vendedor sabe que el pago ya está asegurado antes de despachar, y al comprador no se le libera la plata hasta que confirme que recibió lo que pidió.
 
-ABRIMOS: miércoles 12 de agosto, 10:20 a.m. (hora Colombia)
+Si algo sale mal, el dinero nunca se movió.
 
-Aquí puedes vender todo eso que ya no usas. Disfruta de bajas comisiones y pagos rápidos. ¡Chao a los intermediarios careros!
+Pagas como quieras: tarjeta, PSE, Nequi, contra-entrega o USDT.
 
-Tu dinero siempre permanece en custodia hasta que confirmes que recibiste tu compra. Después de eso... ¡listo el bisnes!
-
-Nos tomamos la seguridad muy en serio. Por eso, para vender tienes que verificar tu identidad con la cédula. Aquí no hay espacio para perfiles falsos ni para pagos con billetes "con la cara de Diomedes Díaz".
-
-Aquí cabemos todos... pero ojo: todos los de bien.
-
-Gracias por hacer bisnes en Colbisnes.
-
-¿Listos para hacer un bisnes?
-
-Gustavo Osorio
-CEO Fundador · Colbisnes Colombia
-
--> https://colbisnes.com
+Entra ahora -> https://colbisnes.com
 
 ---
 Recibes este correo porque te apuntaste a la lista de espera de Colbisnes.
-Para no recibir más, responde a este correo con la palabra BAJA.`;
+Si ya no te interesa, puedes ignorarlo y no te escribiremos más.`;
 
 // ---------------------------------------------------------------------------
 // Utilidades
