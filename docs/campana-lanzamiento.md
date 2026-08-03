@@ -2,6 +2,32 @@
 
 **Fecha de apertura: miércoles 12 de agosto de 2026, 10:20 a. m. (hora Colombia).**
 Documento escrito el 2 de agosto de 2026. Diez días de campaña.
+**Revisado el 3 de agosto** — ver el cambio de fondo justo aquí abajo.
+
+---
+
+## 🔄 Cambio del 3 de agosto: ya no se apunta a esperar, se entra
+
+Hasta ayer la campaña vendía una fecha: «apúntate y te aviso el 12». Desde hoy vende otra cosa
+mucho más fácil de decir:
+
+> **Apúntate y entras hoy mismo.** El correo de bienvenida trae tu enlace de acceso anticipado.
+> Puedes armar tu perfil y publicar desde ya. Lo único que no se puede hacer todavía es pagar y
+> cobrar — eso se activa el 12.
+
+Por qué importa para todo lo que sigue:
+
+- **La lista de espera dejó de ser una lista de espera.** Es la puerta de entrada. Quien deja su
+  correo recibe acceso en el mismo minuto.
+- **El argumento para vendedores se vuelve concreto.** Ya no es «prepárate para el 12»: es «monta
+  tu tienda esta semana y el 12 arrancas con clientes, no con una publicación en blanco».
+- **La cuenta regresiva sigue sirviendo, pero cambia de sujeto.** Ya no cuenta para entrar: cuenta
+  para *vender*. «El 12 se abren las compras» — no «el 12 abrimos».
+- **El 12 deja de ser un estreno y pasa a ser un interruptor.** Para quien ya entró, ese día lo
+  que cambia es que su publicación empieza a poder venderse. Eso hay que decírselo tal cual.
+
+Todos los textos de abajo ya están escritos con esta lógica. Si reciclas algo de una versión
+anterior, revisa que no diga «te aviso cuando abramos».
 
 ---
 
@@ -18,6 +44,7 @@ Decisiones que tomaste y que condicionan todo lo de abajo:
 | Canales reales: **Instagram + WhatsApp/grupos** | Ahí va el 80 % del esfuerzo. X, Threads y LinkedIn están escritos porque los pediste, pero como material de reserva |
 | **No sales en cámara** | Los tres guiones son de grabación de pantalla y texto sobre imagen |
 | Incentivo: **destacado gratis** | Se comunica como «tu primera publicación en portada, gratis» |
+| **Acceso anticipado al apuntarse** (3 ago) | El gancho ya no es una fecha, es una puerta abierta. Toda llamada a la acción termina en «entra y publica», no en «te aviso» |
 
 ---
 
@@ -25,15 +52,21 @@ Decisiones que tomaste y que condicionan todo lo de abajo:
 
 Tres cosas que descubrí revisando producción y que pueden arruinar la campaña si no las ves venir.
 
-### 1. Hay 2 productos publicados
+### 1. La tienda está en CERO productos
 
-Cinco usuarios registrados, ninguno con KYC aprobado, **2 productos disponibles**. Ese es el estado
-real de la tienda hoy.
+*(Actualizado el 3 de agosto: se borró el catálogo de prueba —5 productos falsos, 9 órdenes de
+ensayo, el destacado— para que lo que se publique de ahora en adelante sea real. Quedaron los 5
+usuarios con su KYC aprobado y los correos de la lista.)*
 
-Si el 12 de agosto llegan 200 personas y encuentran dos artículos, se van y no vuelven. En un
+Hoy el catálogo está vacío. Literalmente cero. Ese es el estado real de la tienda.
+
+Si el 12 de agosto llegan 200 personas y encuentran una vitrina vacía, se van y no vuelven. En un
 marketplace la primera impresión es de una sola vez: no hay segunda oportunidad para parecer un
 sitio con vida. Por eso la campaña de vendedores no es un accesorio — **es la que decide si la del
 12 sirve de algo**.
+
+La buena noticia es que el acceso anticipado te da nueve días para llenarla, y que ahora puedes
+pedirle a alguien que publique **hoy**, no que espere. Antes no podías.
 
 **Meta mínima para el 12: 25 productos publicados.** Con menos de eso, mi consejo honesto es que
 retrases el empuje fuerte de compradores y uses el 12 como apertura discreta.
@@ -59,6 +92,11 @@ comisión. De ahí que el incentivo sea el destacado.
 Resend en plan gratuito: **100 correos al día, 3.000 al mes**. Cada persona que se apunta recibe
 la bienvenida al instante. Si un día entran 120 personas, las últimas 20 **no reciben nada** y no
 te enteras.
+
+**Desde el 3 de agosto esto duele el doble.** Ese correo ya no es un «gracias por apuntarte»: es
+el que lleva el enlace de acceso. Quien no lo recibe no se queda esperando — se queda **afuera**,
+convencido de que la web no funciona. El techo de 100 al día pasó de ser un detalle de cortesía a
+ser el cuello de botella de la campaña entera.
 
 Además el dominio está en calentamiento: `colbisnes.com` lleva poco tiempo enviando, y pasar de
 7 correos a 150 en un día es justo el patrón que los filtros de spam castigan.
@@ -127,7 +165,7 @@ apertura tiene que estar en pantalla **antes** de que se entienda qué app es.
 | 7-11 s | Marketplace de Facebook, muchos productos | Te gusta algo… |
 | 11-15 s | Se cierra la app | …y no lo compras. Por si acaso. |
 | 15-19 s | Pantalla de Colbisnes, un producto | En Colbisnes tu plata queda en custodia |
-| 19-22 s | Logo + dirección web | Abrimos el 12 de agosto · colbisnes.com |
+| 19-22 s | Logo + dirección web | Ya puedes entrar · colbisnes.com |
 
 **Audio:** una canción de tendencia sin letra en el momento del texto. No pongas voz en off leyendo
 lo que ya está escrito.
@@ -142,7 +180,8 @@ lo que ya está escrito.
 > Colbisnes arregla eso. Tu plata entra en custodia y no le llega al vendedor hasta que confirmes
 > que recibiste lo que pediste. Si algo sale mal, el dinero nunca se movió.
 >
-> Abrimos el 12 de agosto. Apúntate en colbisnes.com y entra el primer día 👇
+> Ya puedes entrar: deja tu correo en colbisnes.com y te llega el acceso de una. Las compras se
+> activan el 12 👇
 >
 > #Colombia #segundamano #compraventa #confianza #marketplace #Colbisnes #emprendimiento
 > #ventasonline #Bogotá #Medellín #Cali #Barranquilla #comprayvende #usado #reventa #tecnología
@@ -162,8 +201,22 @@ lo que ya está escrito.
 | 19-24 s | Texto sobre fondo azul | ¿Y si no llega? El dinero nunca se movió. Se devuelve. |
 | 24-28 s | Métodos de pago + logo | Tarjeta · PSE · Nequi · Contra-entrega · USDT |
 
-**Ojo:** para grabarlo necesitas una compra real de punta a punta. Hazla tú con una segunda cuenta
-antes del 12 — te sirve para el video **y** para verificar que el flujo funciona con plata real.
+**⚠️ Ojo, y esto cambió el 3 de agosto:** este guion necesita una compra real de punta a punta, y
+**hasta el 12 no puedes hacerla**. Mientras `COMING_SOON` esté encendido, la única forma de entrar
+es el enlace de acceso anticipado — y ese mismo enlace es el que bloquea el pago. No hay puerta que
+te deje entrar *y* pagar al mismo tiempo. Es a propósito: es lo que impide que un desconocido con
+el enlace mueva plata antes de tiempo.
+
+Tienes tres salidas, en orden de sensatez:
+
+1. **Graba solo hasta el paso 2** (pagar → «pago asegurado») usando la pantalla de bloqueo como
+   corte, y graba el paso 3 el mismo 12 después de las 10:20. Es un día de retraso en un video que
+   igual ibas a publicar esa semana.
+2. **Reconstruye las pantallas** con las capturas del flujo que ya corriste en julio, si las
+   guardaste. Nada de inventar cifras: las pantallas tienen que ser de una compra que existió.
+3. **Apagar `COMING_SOON` un rato** para probar. **No lo recomiendo**: abre la web entera al
+   público sin aviso, justo los días en que estás mandando gente. Si lo haces, que sea de
+   madrugada y por minutos.
 
 **Pie de foto:**
 
@@ -178,7 +231,7 @@ antes del 12 — te sirve para el video **y** para verificar que el flujo funcio
 >
 > Eso es todo. Sin letra menuda.
 >
-> Abrimos el 12 de agosto → colbisnes.com
+> Entra ya en colbisnes.com y publica lo tuyo. Las compras se activan el miércoles 12.
 >
 > #Colombia #segundamano #compraventa #confianza #marketplace #Colbisnes #custodia #comprasegura
 > #ventasonline #emprendimientocolombiano #Bogotá #Medellín #pagoseguro
@@ -192,22 +245,30 @@ antes del 12 — te sirve para el video **y** para verificar que el flujo funcio
 | Tiempo | Imagen | Texto en pantalla |
 |---|---|---|
 | 0-2 s | Números grandes sobre azul, animados | **48 HORAS** |
-| 2-5 s | Se recorre la lista de productos | El miércoles abre Colbisnes |
-| 5-9 s | Formulario de la lista de espera, se escribe un correo | Los que estén en la lista entran primero |
-| 9-12 s | Insignia de destacado sobre un producto | Y los primeros vendedores publican en portada gratis |
-| 12-15 s | Logo + dirección | colbisnes.com · miércoles 12, 10:20 a. m. |
+| 2-5 s | Se recorre el catálogo, ya con productos reales | El miércoles se abren las compras |
+| 5-9 s | Una publicación recién hecha, con sus fotos | Los que ya entraron están publicando ahora |
+| 9-12 s | Insignia de destacado sobre un producto | Publica antes del miércoles y sales en portada gratis |
+| 12-15 s | Logo + dirección | colbisnes.com · entra hoy, vende el miércoles |
+
+**Nota de grabación:** este guion depende de que el catálogo tenga cosas de verdad el día 10. Si
+llegas a esa fecha con cinco productos, no lo grabes — grábalo el 11 con lo que haya, o cambia el
+plano del segundo 2 por una sola publicación en detalle. Un catálogo vacío en cámara hace más daño
+que no publicar el Reel.
 
 **Pie de foto:**
 
 > 48 horas.
 >
-> El miércoles 12 a las 10:20 de la mañana abre Colbisnes: comprar y vender de segunda mano en
+> El miércoles 12 a las 10:20 de la mañana se abren las compras en Colbisnes: segunda mano en
 > Colombia con la plata en custodia.
 >
-> Si te apuntas a la lista de espera antes del miércoles, te aviso apenas abramos.
+> Pero no hay que esperar al miércoles para entrar. Dejas tu correo en colbisnes.com, te llega el
+> acceso y puedes publicar hoy mismo.
 >
-> Y si vas a vender: los primeros en publicar salen en portada gratis. Publicar no te cuesta nada
-> y recibes completo lo que pides.
+> Y ahí está la gracia: el que publica ahora, el miércoles ya tiene su producto en vitrina cuando
+> llegue la gente. El que espera, empieza de cero ese día.
+>
+> Vender no te cuesta nada y recibes completo lo que pides. Los primeros salen en portada gratis.
 >
 > colbisnes.com
 >
@@ -272,9 +333,9 @@ por el hilo.
 > Si vendes, recibes completo lo que pediste. Publicar es gratis.
 
 > **8/**
-> Abre el miércoles 12 de agosto a las 10:20 a. m.
+> Las compras se abren el miércoles 12 de agosto a las 10:20 a. m.
 >
-> Si quieres entrar el primer día, déjame tu correo acá 👇
+> Pero para entrar y publicar no hay que esperar: dejas tu correo y te llega el acceso hoy 👇
 > colbisnes.com
 
 ### Tuit 2 — El dato
@@ -376,8 +437,9 @@ Canal secundario. Sirve para credibilidad y para que alguien que te busque encue
 >
 > Si el trato se cae, el dinero nunca se movió.
 >
-> Abrimos el 12 de agosto en colbisnes.com. Si trabajas en comercio electrónico, pagos o logística
-> en Colombia, me interesa mucho lo que opines.
+> Las compras se abren el 12 de agosto, pero la plataforma ya está en pie y se puede entrar y
+> publicar desde ahora en colbisnes.com. Si trabajas en comercio electrónico, pagos o logística en
+> Colombia, me interesa mucho lo que opines.
 >
 > #ecommerce #Colombia #fintech #marketplace #emprendimiento #C2C
 
@@ -405,7 +467,7 @@ Canal secundario. Sirve para credibilidad y para que alguien que te busque encue
 > Nada de esto es tecnología de punta. Es tecnología aburrida, aplicada bien, a un problema que en
 > Colombia seguimos resolviendo a punta de fe.
 >
-> Abrimos el 12 de agosto → colbisnes.com
+> Ya se puede entrar y publicar en colbisnes.com. Las compras se activan el 12 de agosto.
 >
 > #confianza #identidaddigital #pagos #Colombia #producto #ecommerce
 
@@ -437,12 +499,15 @@ móvil: párrafos de una o dos líneas, sin bloques.
 >
 > Si algo sale mal, la plata nunca se movió.
 >
-> Abrimos el **miércoles 12 de agosto**. Si te interesa, déjame tu correo acá y te aviso el mismo
-> día que abra:
+> Las compras se abren el **miércoles 12 de agosto**, pero ya te puedes meter a mirar y a publicar.
+> Dejas tu correo acá y te llega el acceso al toque:
 > 👉 colbisnes.com
 >
 > Y si tienes cosas que ya no usas y quieres venderlas: publicar es gratis y **recibes completo lo
 > que pides** (la comisión la paga el comprador). Los primeros en publicar salen en portada gratis.
+>
+> Mi consejo: súbelas esta semana. El miércoles, cuando entre la gente a comprar, tu producto ya
+> está ahí en vez de estar subiéndolo.
 >
 > Si conoces a alguien a quien le sirva, pásaselo 🙏
 
@@ -450,26 +515,29 @@ móvil: párrafos de una o dos líneas, sin bloques.
 
 > Ojo que ya casi 👀
 >
-> **Una semana** para que abra Colbisnes — comprar y vender de segunda mano con la plata en
+> **Una semana** para que se abran las compras en Colbisnes — segunda mano con la plata en
 > custodia.
 >
-> Si todavía no dejaste tu correo, es acá: colbisnes.com
+> Pero para entrar no hay que esperar: dejas tu correo en colbisnes.com y te llega el acceso de
+> una. Ya hay gente publicando.
 >
-> Los que estén en la lista entran el primer día.
->
-> Y si vas a vender algo, aprovecha esta semana para publicarlo: los primeros salen en portada
-> gratis y así el miércoles ya estás listo. Toma cinco minutos, solo necesitas fotos y el precio.
+> Si vas a vender algo, hazlo esta semana: los primeros salen en portada gratis y el miércoles,
+> cuando entren los compradores, tu producto ya está arriba. Toma cinco minutos, solo necesitas
+> fotos y el precio.
 
 ### Mensaje 3 — Día del lanzamiento (miércoles 12, 10:20 a. m.)
 
-> **¡Ya estamos abiertos!** 🎉
+> **¡Ya se puede comprar!** 🎉
 >
-> Colbisnes ya está en línea: colbisnes.com
+> Colbisnes queda abierto al público: colbisnes.com
 >
 > Compra y vende de segunda mano con la plata en custodia. Pagas con tarjeta, PSE, Nequi,
 > contra-entrega o USDT.
 >
-> Entra, mira lo que hay y publica lo que quieras vender 👇
+> A los que ya entraron y publicaron estos días: desde este momento sus productos se pueden
+> comprar de verdad. Gracias por haber montado la vitrina antes que nadie 🙌
+>
+> Y si todavía no has entrado, es acá 👇
 > colbisnes.com
 >
 > Gracias a los que me han acompañado estos meses. Hoy por fin arranca 🇨🇴
@@ -481,14 +549,15 @@ móvil: párrafos de una o dos líneas, sin bloques.
 Este no es un correo de marca: es tuyo. Va **uno por uno**, con el nombre de la persona escrito a
 mano. Si mandas cien copias iguales con copia oculta, se nota y no funciona.
 
-**Asunto:** `Un favor (llevo meses en esto y abro el miércoles)`
+**Asunto:** `Un favor (llevo meses en esto y ya lo puedes ver)`
 
 > Hola [NOMBRE],
 >
 > Te escribo por algo personal, no es cadena.
 >
-> Llevo meses trabajando en un proyecto propio y abre el **miércoles 12 de agosto**. Se llama
-> **Colbisnes** y es un sitio para comprar y vender cosas de segunda mano en Colombia.
+> Llevo meses trabajando en un proyecto propio y ya está en pie. Se llama **Colbisnes** y es un
+> sitio para comprar y vender cosas de segunda mano en Colombia. Las compras se activan el
+> **miércoles 12 de agosto**, pero ya se puede entrar, mirar y publicar.
 >
 > La idea salió de algo que nos ha pasado a todos: quieres comprar algo por internet, el vendedor
 > te dice «consígname primero», y ahí se acaba la conversación. O al revés: vas a vender y no
@@ -503,8 +572,9 @@ mano. Si mandas cien copias iguales con copia oculta, se nota y no funciona.
 >
 > **Te pido dos cosas, y las dos son de un minuto:**
 >
-> **1.** Entra a colbisnes.com y déjame tu correo en la lista. Así te aviso el miércoles apenas
-> abramos. No te voy a llenar de correos: es ese y ya.
+> **1.** Entra a colbisnes.com y déjame tu correo. Te llega al instante un correo con tu acceso —
+> con eso ya puedes entrar y mirar por dentro antes de que abramos al público. No te voy a llenar
+> de correos: es ese y ya.
 >
 > **2.** Si conoces a alguien que compre o venda cosas usadas —el que siempre está cambiando de
 > celular, el que vende ropa, el de los repuestos— pásale el enlace. Un solo reenvío me sirve
@@ -526,12 +596,12 @@ mano. Si mandas cien copias iguales con copia oculta, se nota y no funciona.
 
 > Hola [NOMBRE], ¿cómo vas?
 >
-> Te cuento algo mío: llevo meses armando un proyecto y abre el miércoles. Se llama Colbisnes, es
+> Te cuento algo mío: llevo meses armando un proyecto y ya está en pie. Se llama Colbisnes, es
 > para comprar y vender de segunda mano en Colombia pero con la plata en custodia — el vendedor no
 > recibe hasta que el comprador confirme que le llegó bien.
 >
-> ¿Me haces un favor de un minuto? Déjame tu correo acá 👉 colbisnes.com — así te aviso el
-> miércoles que abramos.
+> ¿Me haces un favor de un minuto? Déjame tu correo acá 👉 colbisnes.com — te llega el acceso de
+> una y le echas un ojo. Las compras arrancan el miércoles.
 >
 > Y si conoces a alguien que compre o venda usado, pásale el enlace 🙏
 >
@@ -550,8 +620,8 @@ compradores), como pediste.
 
 | Día | Fecha | 🟦 Oferta (vendedores) | 🟩 Demanda (compradores) |
 |---|---|---|---|
-| **D-10** | dom 2 ago | **Publica 10 productos tuyos.** Cosas reales de tu casa. Fotos con luz de día, fondo limpio. | — |
-| **D-9** | lun 3 ago | Correo/WhatsApp personal a **20 contactos** (§3). Pide publicar. | Story de IG con el mensaje **A** + sticker de enlace |
+| **D-10** | dom 2 ago | ~~Publica 10 productos tuyos~~ *(el catálogo se borró el 3 — arrastrado al D-9)* | — |
+| **D-9** | lun 3 ago | **Publica 10 productos tuyos.** Cosas reales de tu casa, fotos con luz de día y fondo limpio. **Empiezas desde cero: la tienda está vacía.** Además: correo/WhatsApp personal a **20 contactos** (§3), pidiendo que publiquen | Story de IG con el mensaje **A** + sticker de enlace |
 | **D-8** | mar 4 ago | Mensaje 1 de WhatsApp (§2.4) a **3 grupos** donde ya participes | **Reel 1 (el problema)** a las 7-9 p. m. |
 | **D-7** | mié 5 ago | Escríbele a los 5 conocidos que **más venden** cosas. Uno por uno. Ofréceles el destacado. | **Mensaje 2 de WhatsApp**: «una semana» |
 | **D-6** | jue 6 ago | Story: «así se publica», grabación de pantalla de 20 s del formulario | Story con el mensaje **B** |
@@ -568,10 +638,15 @@ El día 11 **no publiques nada nuevo**. Dedícalo a que el 12 no se caiga.
 
 **Por la mañana (revisión técnica, 45 min):**
 - [ ] Repasar los MX de la lista de espera y borrar direcciones mal escritas
-- [ ] Verificar el cupo de Resend (100/día en el plan gratuito — si la lista creció, súbelo)
-- [ ] Hacer **una compra real de punta a punta** con dos cuentas: publicar → ofertar → pagar →
-      despachar → confirmar → liberar. Con plata real, aunque sea $5.000
+- [ ] Verificar el cupo de Resend (100/día en el plan gratuito — si la lista creció, súbelo).
+      **Crítico ahora**: ese correo es el que reparte el acceso; si se agota el cupo, la gente se
+      queda afuera creyendo que la web no sirve
+- [ ] ~~Hacer una compra real de punta a punta~~ → **no se puede el día 11.** El acceso anticipado
+      bloquea el pago por diseño, así que esta prueba solo es posible **después de las 10:20 del
+      12**. Muévela al día 12 como primer punto, antes de mandar un solo mensaje
 - [ ] Confirmar que colbisnes.com responde `200` y no redirige a `/coming-soon`
+- [ ] Entrar con un navegador **sin** la cookie de acceso y confirmar que sigue viendo
+      `/coming-soon`. Si el candado se cayó solo, mejor enterarse hoy que mañana
 - [ ] Revisar que ningún producto publicado tenga fotos malas o precios absurdos. Eres el curador:
       lo que se vea el día 12 es tu portada
 
@@ -587,7 +662,8 @@ Story de IG, foto de tu computador o de la pantalla, con este texto:
 
 Y un mensaje a los que se apuntaron temprano, uno por uno:
 
-> Ey [NOMBRE], mañana abrimos a las 10:20. Te aviso porque fuiste de los primeros en apuntarte 🙏
+> Ey [NOMBRE], mañana a las 10:20 se abren las compras. Te aviso porque fuiste de los primeros en
+> entrar 🙏 Si todavía no has subido nada, hoy es el día: mañana ya te lo pueden comprar.
 
 ## Acción especial del día 12 — La apertura
 
@@ -598,13 +674,17 @@ Orden exacto:
 
 1. **10:20** — Verifica con tus propios ojos que colbisnes.com abre. Un `curl` y una visita real
    desde el celular, con datos móviles, no con tu wifi.
-2. **10:25** — Ejecuta el correo de lanzamiento a la lista de espera *(me lo pides y lo corro)*.
-3. **10:30** — Mensaje 3 de WhatsApp a todos los grupos y contactos.
-4. **10:35** — Story + publicación en Instagram. Fija la publicación en el perfil.
-5. **11:00** — Tuit 5 (si abriste cuenta).
-6. **Todo el día** — Quédate pendiente. Responde cada comentario y cada mensaje en minutos. El día
+2. **10:21** — **La compra de punta a punta que no se pudo hacer el día 11.** Publicar → pagar →
+   despachar → confirmar → liberar, con plata real aunque sea $5.000. Es la primera vez que el
+   camino del dinero se recorre desde julio: si algo falla, te enteras tú y no un cliente. **Si
+   esto falla, se para todo lo demás.**
+3. **10:25** — Ejecuta el correo de lanzamiento a la lista de espera *(me lo pides y lo corro)*.
+4. **10:30** — Mensaje 3 de WhatsApp a todos los grupos y contactos.
+5. **10:35** — Story + publicación en Instagram. Fija la publicación en el perfil.
+6. **11:00** — Tuit 5 (si abriste cuenta).
+7. **Todo el día** — Quédate pendiente. Responde cada comentario y cada mensaje en minutos. El día
    de apertura tu trabajo no es publicar: es **atender**.
-7. **6:00 p. m.** — Story de cierre con lo que pasó: «hoy se publicaron X productos, se registraron
+8. **6:00 p. m.** — Story de cierre con lo que pasó: «hoy se publicaron X productos, se registraron
    Y personas». Los números reales, aunque sean pequeños. La honestidad se nota y se agradece.
 
 **Regla del día 12:** si algo se rompe, arréglalo antes de seguir promocionando. Traer gente a
@@ -752,10 +832,19 @@ semana de apertura.
 ## Las tres que importan
 
 **1. Productos publicados antes del 12 de agosto** — meta: 25. *La más importante de las tres.*
-Es la única que decide si el día 12 hay algo que mirar. Hoy vas por 2.
+Es la única que decide si el día 12 hay algo que mirar. **Hoy vas por 0** (se borró el catálogo de
+prueba el 3 de agosto). Con el acceso anticipado esta métrica por fin depende de otras personas y
+no solo de ti: cada uno que se apunta puede publicar el mismo día.
 
-**2. Apuntados a la lista de espera** — meta: 100. Hoy vas por 7. Es la métrica de alcance: mide si
-tus mensajes llegan a alguien más allá de tu círculo.
+**2. Apuntados** — meta: 100. **Hoy vas por 11**, y 7 entraron en las últimas 48 horas sin que
+hicieras campaña. Es la métrica de alcance: mide si tus mensajes llegan más allá de tu círculo.
+Desde el 3 de agosto también es la métrica de *acceso*, porque apuntarse y entrar son lo mismo.
+
+**2 bis. La que de verdad se te va a escapar: cuántos de los apuntados publicaron algo.** Es el
+único número que dice si el acceso anticipado sirvió para lo que lo montaste. Si se apuntan 100 y
+publican 3, el problema no es el alcance — es que entrar y no saber qué hacer. Míralo cada dos
+días; si la proporción está por debajo de 1 de cada 10, el correo de bienvenida necesita decir
+mejor qué hacer al entrar.
 
 **3. Primera transacción completa entre dos desconocidos** — meta: una, en la primera semana.
 Suena poco. No lo es. Que dos personas que no se conocen cierren un trato completo —pago, envío,
