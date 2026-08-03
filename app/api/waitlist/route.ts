@@ -22,8 +22,9 @@ import { sendEmail } from "@/lib/email";
 import {
   ASUNTO_BIENVENIDA,
   CONTACTO_BIENVENIDA,
-  TEXTO_BIENVENIDA,
   htmlBienvenida,
+  textoBienvenida,
+  urlEntrarAnticipado,
 } from "@/lib/correoBienvenida";
 
 // Tope de RFC 5321 para una dirección completa. Sirve de cortafuegos barato
@@ -110,11 +111,15 @@ export async function POST(request: Request) {
     // el futuro cambia ese comportamiento.
     if (esAltaNueva) {
       try {
+        // El enlace de acceso anticipado se calcula UNA vez y se pasa a las dos
+        // versiones del correo, para que el HTML y el texto plano no puedan
+        // acabar apuntando a sitios distintos.
+        const urlEntrar = urlEntrarAnticipado();
         await sendEmail({
           to: email,
           subject: ASUNTO_BIENVENIDA,
-          html: htmlBienvenida(),
-          text: TEXTO_BIENVENIDA,
+          html: htmlBienvenida(urlEntrar),
+          text: textoBienvenida(urlEntrar),
           replyTo: CONTACTO_BIENVENIDA,
           // Gmail y Outlook puntúan mejor el correo no transaccional que ofrece
           // una salida clara. Es el mismo mecanismo de baja que usa el envío del

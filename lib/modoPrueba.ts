@@ -52,11 +52,40 @@ export const COOKIE_BYPASS = "cb_launch_bypass";
 /** Cookie visible desde el navegador. Solo para pintar el banner. Cero permisos. */
 export const COOKIE_MODO_PRUEBA_UI = "cb_modo_prueba";
 
-/** Texto exacto del banner. Se comparte para que UI y servidor no se desincronicen. */
-export const BANNER_MODO_PRUEBA = "MODO PRUEBA – Las transacciones no son reales";
+/**
+ * Texto exacto del banner. Se comparte para que UI y servidor no se
+ * desincronicen.
+ *
+ * POR QUÉ NO DICE YA "LAS TRANSACCIONES NO SON REALES" (cambiado el 2026-08-02)
+ * ---------------------------------------------------------------------------
+ * Ese texto nació cuando por aquí solo pasaban probadores de confianza, y para
+ * ellos era exacto. Desde hoy el enlace de acceso viaja también en el correo de
+ * bienvenida de la lista de espera, así que quien lee esta franja ya no es un
+ * probador: es un vendedor real al que le estamos pidiendo que publique cosas
+ * suyas de verdad antes del 12 de agosto.
+ *
+ * A esa persona, leer "las transacciones no son reales" justo antes de subir
+ * las fotos de su bicicleta le dice —con razón— que su publicación es de
+ * mentiras y que se va a borrar. Es decir, el aviso saboteaba justo lo que
+ * queríamos conseguir. Lo que NO es real todavía es el pago, y eso se explica
+ * en MENSAJE_PAGO_BLOQUEADO, en el momento en que alguien intenta pagar.
+ *
+ * OJO CON LA LONGITUD: la franja mide 34 px de alto y es de altura fija
+ * (components/BannerModoPrueba.tsx). Si el texto no cabe en una línea en un
+ * móvil estrecho, envuelve y se corta. El texto anterior tenía 44 caracteres;
+ * no pasarse de ahí.
+ */
+export const BANNER_MODO_PRUEBA = "ACCESO ANTICIPADO · Ya puedes publicar";
 
-/** Mensaje del checkout cuando el pago real queda deshabilitado. */
-export const MENSAJE_PAGO_BLOQUEADO = "Modo prueba: el pago real no está disponible";
+/**
+ * Mensaje del checkout cuando el pago real queda deshabilitado.
+ *
+ * Se ve cuando alguien con acceso anticipado intenta pagar. Dice la fecha
+ * exacta a propósito: "no disponible" suena a avería, y esto no está roto —
+ * todavía no ha llegado.
+ */
+export const MENSAJE_PAGO_BLOQUEADO =
+  "Las compras se activan el miércoles 12 de agosto a las 10:20 a.m. Hasta entonces puedes publicar, mirar y preparar tus productos.";
 
 /**
  * ¿Sigue viva la ventana de prelanzamiento?
@@ -144,7 +173,7 @@ export function bloqueadoPorModoPruebaHtml(mensaje: string): Response {
   const html = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Modo prueba · Colbisnes</title></head>
+<title>Acceso anticipado · Colbisnes</title></head>
 <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',Segoe UI,sans-serif;padding:24px">
   <div style="max-width:420px;background:#fff;border:1px solid #fed7aa;border-radius:20px;padding:28px 26px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.07)">
     <div style="font-size:34px;line-height:1">⚠️</div>

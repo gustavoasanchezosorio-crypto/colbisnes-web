@@ -29,7 +29,44 @@
 /** Buzón público de contacto. Sirve de reply-to y de baja (List-Unsubscribe). */
 export const CONTACTO_BIENVENIDA = "hola@colbisnes.com";
 
-export const ASUNTO_BIENVENIDA = "Colbisnes abre el miércoles 12 de agosto";
+export const ASUNTO_BIENVENIDA =
+  "Ya puedes entrar a Colbisnes (las compras arrancan el 12)";
+
+/**
+ * Enlace del botón: acceso anticipado a la web, saltándose el candado.
+ *
+ * QUÉ ABRE Y QUÉ NO
+ * ---------------------------------------------------------------------------
+ * `?acceso=CÓDIGO` deja pasar el candado de prelanzamiento y deja al navegador
+ * en modo prueba (lib/modoPrueba.ts). En ese modo se puede navegar, registrarse,
+ * PUBLICAR productos, verificar identidad y chatear; lo único bloqueado son las
+ * diez rutas que mueven plata. O sea: quien recibe este correo puede montar su
+ * tienda desde hoy, y el 12 de agosto a las 10:20 se abren las compras solas,
+ * con el inventario ya puesto.
+ *
+ * Se hace así porque el problema real del lanzamiento no era la demanda sino la
+ * oferta: el 2 de agosto había 2 productos publicados. Traer compradores a una
+ * tienda vacía gasta la única primera impresión que existe.
+ *
+ * EL CÓDIGO SE VA A HACER PÚBLICO, Y SE ASUME
+ * ---------------------------------------------------------------------------
+ * Va en texto plano dentro de cada correo: se reenvía, se pantallazea y en pocos
+ * días lo tiene cualquiera. Es una decisión tomada, no un descuido. Lo peor que
+ * puede hacer un desconocido con él es entrar a mirar y publicar algo — el
+ * dinero sigue bloqueado —, y pasado el 12 el código queda inerte solo, porque
+ * `enModoPrueba()` y el candado dependen de `comingSoonActivo()`.
+ *
+ * SI LA VARIABLE NO ESTÁ, NO SE INVENTA NADA
+ * ---------------------------------------------------------------------------
+ * Sin `LAUNCH_BYPASS_CODE` el botón cae al sitio a secas. Nunca debe salir un
+ * `?acceso=undefined`: además de no funcionar, le enseña a medio mundo que hay
+ * un parámetro de acceso que adivinar.
+ */
+export function urlEntrarAnticipado(): string {
+  const codigo = process.env.LAUNCH_BYPASS_CODE;
+  if (!codigo) return "https://colbisnes.com";
+  return `https://colbisnes.com/?acceso=${encodeURIComponent(codigo)}`;
+}
 
 /**
  * OJO CON EL `?v=N` DEL LOGO
@@ -43,7 +80,7 @@ export const ASUNTO_BIENVENIDA = "Colbisnes abre el miércoles 12 de agosto";
  * plantilla: los comentarios HTML se envían dentro del correo, y no tiene
  * sentido que una nota interna sobre cachés viaje al buzón de cada destinatario.
  */
-export function htmlBienvenida(): string {
+export function htmlBienvenida(urlEntrar: string = urlEntrarAnticipado()): string {
   const parrafo =
     "margin:0 0 14px;color:#475569;font-size:14.5px;line-height:1.65;";
   return `<!DOCTYPE html>
@@ -51,10 +88,10 @@ export function htmlBienvenida(): string {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Colbisnes abre el 12 de agosto</title>
+<title>Ya puedes entrar a Colbisnes</title>
 </head>
 <body style="margin:0;padding:0;background-color:#EEF3FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Abrimos el miércoles 12 de agosto, 10:20 a.m. Aquí se hacen buenos bisnes.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Entra y publica desde ya. Las compras se activan el miércoles 12 de agosto. Aquí se hacen buenos bisnes.</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF3FF;padding:32px 16px;">
     <tr>
@@ -77,12 +114,15 @@ export function htmlBienvenida(): string {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3FF;border:1px solid #C7D9FF;border-radius:14px;margin:0 0 18px;">
                 <tr>
                   <td style="padding:14px 16px;text-align:center;">
-                    <span style="display:block;color:#64748B;font-size:12px;margin-bottom:3px;">Abrimos</span>
-                    <span style="display:block;color:#1448A3;font-size:16px;font-weight:800;line-height:1.45;">Miércoles 12 de agosto, 10:20 a.m.</span>
+                    <span style="display:block;color:#64748B;font-size:12px;margin-bottom:3px;">Ya puedes entrar y publicar</span>
+                    <span style="display:block;color:#1448A3;font-size:16px;font-weight:800;line-height:1.45;">Las compras se activan el miércoles 12 de agosto, 10:20 a.m.</span>
                     <span style="display:block;color:#64748B;font-size:12px;margin-top:3px;">hora Colombia</span>
                   </td>
                 </tr>
               </table>
+
+              <p style="${parrafo}">Y no tienes que esperar sentado: <strong style="color:#0a1628;">te abrimos la puerta desde ya.</strong> Entra, arma tu perfil y publica lo que quieras vender. Así el 12, cuando se abran las compras, tu bisnes ya está montado y de una empiezan a llegarte clientes.</p>
+              <p style="${parrafo}">Eso sí, para que no haya líos: hasta el 12 se puede publicar, mirar y preparar todo, pero todavía no se puede pagar ni cobrar. Tus publicaciones son de verdad y ahí se quedan.</p>
 
               <p style="${parrafo}">Aquí puedes vender todo eso que ya no usas. Disfruta de bajas comisiones y pagos rápidos. ¡Chao a los intermediarios careros!</p>
               <p style="${parrafo}">Tu dinero siempre permanece en custodia hasta que confirmes que recibiste tu compra. Después de eso&hellip; <strong style="color:#0a1628;">¡listo el bisnes!</strong></p>
@@ -100,9 +140,10 @@ export function htmlBienvenida(): string {
 
           <tr>
             <td style="padding:8px 32px 36px;text-align:center;">
-              <a href="https://colbisnes.com" style="display:inline-block;background:linear-gradient(135deg,#1448A3,#1F6BFF);color:#ffffff;padding:15px 36px;border-radius:16px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(31,107,255,0.35);">
-                Ir a colbisnes.com
+              <a href="${urlEntrar}" style="display:inline-block;background:linear-gradient(135deg,#1448A3,#1F6BFF);color:#ffffff;padding:15px 36px;border-radius:16px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(31,107,255,0.35);">
+                Entrar y publicar ahora
               </a>
+              <p style="margin:12px 0 0;color:#94A3B8;font-size:12px;line-height:1.5;">Este enlace es tuyo: te deja entrar antes de que abramos al público.</p>
             </td>
           </tr>
 
@@ -125,14 +166,23 @@ export function htmlBienvenida(): string {
 }
 
 /** Versión en texto plano. Mejora la entregabilidad y es lo que ven los
- *  clientes de correo que bloquean HTML. */
-export const TEXTO_BIENVENIDA = `¡BIENVENIDOS!
+ *  clientes de correo que bloquean HTML.
+ *
+ *  Dejó de ser una constante el 2026-08-02: ahora lleva dentro el enlace de
+ *  acceso anticipado, que se construye en tiempo de ejecución a partir de
+ *  LAUNCH_BYPASS_CODE. */
+export function textoBienvenida(urlEntrar: string = urlEntrarAnticipado()): string {
+  return `¡BIENVENIDOS!
 
 Ya no más eso de: "Aquí se roban hasta un hueco." Relax, para eso se creó Colbisnes.
 
 No todos hablamos inglés, pero todos los colombianos sabemos hacer bisnes.
 
-ABRIMOS: miércoles 12 de agosto, 10:20 a.m. (hora Colombia)
+YA PUEDES ENTRAR Y PUBLICAR. Las compras se activan el miércoles 12 de agosto, 10:20 a.m. (hora Colombia)
+
+Y no tienes que esperar sentado: te abrimos la puerta desde ya. Entra, arma tu perfil y publica lo que quieras vender. Así el 12, cuando se abran las compras, tu bisnes ya está montado y de una empiezan a llegarte clientes.
+
+Eso sí, para que no haya líos: hasta el 12 se puede publicar, mirar y preparar todo, pero todavía no se puede pagar ni cobrar. Tus publicaciones son de verdad y ahí se quedan.
 
 Aquí puedes vender todo eso que ya no usas. Disfruta de bajas comisiones y pagos rápidos. ¡Chao a los intermediarios careros!
 
@@ -149,8 +199,10 @@ Gracias por hacer bisnes en Colbisnes.
 Gustavo Osorio
 CEO Fundador · Colbisnes Colombia
 
--> https://colbisnes.com
+ENTRAR Y PUBLICAR AHORA -> ${urlEntrar}
+(Este enlace es tuyo: te deja entrar antes de que abramos al público.)
 
 ---
 Recibes este correo porque te apuntaste a la lista de espera de Colbisnes.
 Para no recibir más, responde a este correo con la palabra BAJA.`;
+}

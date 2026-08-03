@@ -348,19 +348,29 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* MODO PRUEBA: el pago queda deshabilitado. No hay llaves de sandbox de
-            Wompi en el proyecto (solo las de producción), así que no existe un
-            destino de pruebas al que mandar al comprador — la única alternativa
-            honesta es no dejar pagar y decirlo con claridad. */}
+        {/* ACCESO ANTICIPADO: el pago queda deshabilitado. No hay llaves de
+            sandbox de Wompi en el proyecto (solo las de producción), así que no
+            existe un destino de pruebas al que mandar al comprador — la única
+            alternativa honesta es no dejar pagar y decirlo con claridad.
+
+            El texto habla de "acceso anticipado" y no de "probador" desde el
+            2026-08-02: a partir de esa fecha el enlace de acceso viaja en el
+            correo de bienvenida de la lista de espera, así que quien llega aquí
+            ya no es alguien de confianza probando, sino un usuario cualquiera
+            que se apuntó. Llamarle probador le sugiere que lo que está viendo
+            es un simulacro, y lo que ve son precios y productos de verdad. */}
         {metodo && modoPrueba && (
           <>
             <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 16, padding: "16px 18px", marginBottom: 12 }}>
-              <p style={{ margin: 0, color: "#92400e", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>⚠️</span> {MENSAJE_PAGO_BLOQUEADO}
+              {/* alignItems flex-start, no center: el mensaje envuelve en dos o
+                  tres líneas en un móvil y con center el ⚠️ quedaba flotando a
+                  media altura del párrafo. */}
+              <p style={{ margin: 0, color: "#92400e", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "flex-start", gap: 8, lineHeight: 1.45 }}>
+                <span style={{ fontSize: 18, lineHeight: 1.1 }}>⚠️</span> {MENSAJE_PAGO_BLOQUEADO}
               </p>
               <p style={{ margin: "6px 0 0", color: "#92400e", fontSize: 13, lineHeight: 1.5 }}>
-                Estás navegando con el acceso de probador. Puedes revisar precios, comisiones y todo el flujo,
-                pero los cobros están bloqueados para que nadie mueva dinero de verdad antes del lanzamiento.
+                Puedes revisar precios, comisiones y todo el flujo. Mientras tanto, publica lo que
+                quieras vender: cuando se abran las compras tu tienda ya está lista.
               </p>
             </div>
             <button disabled
