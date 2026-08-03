@@ -3,8 +3,23 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
+import { LAUNCH_AT_MS } from "@/lib/launch";
+import { COOKIE_MODO_PRUEBA_UI } from "@/lib/modoPrueba";
 
-type Seccion = "resumen" | "usuarios" | "productos" | "pagos" | "bloqueos" | "auditoria" | "urls";
+type Seccion = "resumen" | "lista" | "usuarios" | "productos" | "pagos" | "bloqueos" | "auditoria" | "urls";
+
+// Descompone en días/horas los milisegundos que faltan para el 12. Se calcula en
+// el navegador a partir de LAUNCH_AT_MS, que es una constante del código: no hace
+// falta preguntarle la hora al servidor para pintar un reloj.
+function faltanPara(ms: number): { dias: number; horas: number; pasado: boolean } {
+  const resto = ms - Date.now();
+  if (resto <= 0) return { dias: 0, horas: 0, pasado: true };
+  return {
+    dias: Math.floor(resto / 86400000),
+    horas: Math.floor((resto % 86400000) / 3600000),
+    pasado: false,
+  };
+}
 
 // Enlaces que usamos en Colbisnes, agrupados. Solo URLs públicas de paneles/servicios;
 // nunca credenciales ni secretos.
@@ -96,10 +111,43 @@ export default function AdminPanel() {
     } catch {}
   };
 
+  // Lista de espera y estado del candado. Se cargan UNA vez al entrar, aparte del
+  // resto: la franja de estado y el contador de la pestaña tienen que estar
+  // visibles siempre, no solo cuando estás mirando esa sección.
+  const [espera, setEspera] = useState<any>(null);
+  // Se lee en el efecto, no aquí: en el render del servidor no existe `document`
+  // y leerlo directamente rompería la hidratación.
+  const [enModoPrueba, setEnModoPrueba] = useState(false);
+  const [reloj, setReloj] = useState(() => faltanPara(LAUNCH_AT_MS));
+
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth/login"); return; }
     if (status === "authenticated") { cargarDatos(seccion); }
   }, [status, seccion]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    // La marca del modo prueba NO es httpOnly justamente para esto: el navegador
+    // puede saber por sí solo si arrastra la cookie de probador. Importa mucho en
+    // el panel, porque es la causa de que los desembolsos respondan 403.
+    setEnModoPrueba(document.cookie.split("; ").some(c => c === `${COOKIE_MODO_PRUEBA_UI}=1`));
+    cargarEspera();
+    // Refresco lento: el reloj es informativo, no necesita segundos.
+    const id = setInterval(() => setReloj(faltanPara(LAUNCH_AT_MS)), 60000);
+    return () => clearInterval(id);
+  }, [status]);
+
+  const cargarEspera = async () => {
+    try {
+      const res = await fetch("/api/admin/waitlist");
+      const data = await res.json();
+      if (res.ok && !data.error) setEspera(data);
+    } catch {
+      // Silencioso a propósito: si esto falla, la franja de estado y la pestaña
+      // simplemente no se pintan. No debe tumbar el resto del panel, que es por
+      // donde se mueve el dinero.
+    }
+  };
 
   const cargarDatos = async (seccionActual: Seccion) => {
     setCargando(true);
@@ -107,6 +155,9 @@ export default function AdminPanel() {
     try {
       // La sección de URLs es estática (no consulta API).
       if (seccionActual === "urls") { setDatos(null); return; }
+      // La lista de espera tiene su propio estado (se carga al entrar al panel);
+      // al abrir la pestaña se refresca para no mirar números viejos.
+      if (seccionActual === "lista") { setDatos(null); await cargarEspera(); return; }
       if (seccionActual === "bloqueos") {
         const [resComisiones, resUsuarios] = await Promise.all([
           fetch("/api/admin/confirmar-comision-nequi"),
@@ -308,6 +359,33 @@ export default function AdminPanel() {
         </div>
       </header>
 
+      {/* Franja de estado del prelanzamiento.
+          Responde de un vistazo las tres preguntas que antes había que ir a
+          buscar a Railway o al código: ¿el candado sigue puesto?, ¿cuánto falta
+          para que se abran las compras?, ¿este navegador arrastra la cookie de
+          probador? La tercera es la importante: es la causa de que /liberar-pago
+          devuelva 403 sin explicar por qué.
+
+          Aquí NO se enseña nunca LAUNCH_BYPASS_CODE. El panel dice si el candado
+          está puesto, no cuál es la llave. */}
+      {espera && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#e2e8f0", padding: "10px 24px", fontSize: 13 }}>
+          <span style={{ fontWeight: 700, background: espera.candadoActivo ? "#7c2d12" : "#14532d", color: "#fff", padding: "3px 10px", borderRadius: 20 }}>
+            {espera.candadoActivo ? "🔒 Candado puesto · solo entra quien tiene el enlace" : "🌐 Sitio abierto al público"}
+          </span>
+          <span style={{ opacity: 0.85 }}>
+            {reloj.pasado
+              ? "Las compras ya están abiertas"
+              : `Faltan ${reloj.dias} d ${reloj.horas} h para que se abran las compras (12 ago, 10:20)`}
+          </span>
+          {enModoPrueba && (
+            <a href="/?acceso=salir" style={{ fontWeight: 700, background: "#facc15", color: "#422006", padding: "3px 10px", borderRadius: 20, textDecoration: "none" }}>
+              ⚠️ Este navegador está en modo prueba — los desembolsos te darán 403. Salir →
+            </a>
+          )}
+        </div>
+      )}
+
       {mensaje && (
         <div style={{ background: "#dcfce7", color: "#15803d", padding: "12px 24px", textAlign: "center", fontWeight: 600 }}>
           ✅ {mensaje}
@@ -320,9 +398,10 @@ export default function AdminPanel() {
       )}
 
       <nav style={{ display: "flex", gap: 8, padding: "16px 24px", borderBottom: `1px solid ${T.border}` }}>
-        {(["resumen", "usuarios", "productos", "pagos", "bloqueos", "auditoria", "urls"] as Seccion[]).map(sec => (
+        {(["resumen", "lista", "usuarios", "productos", "pagos", "bloqueos", "auditoria", "urls"] as Seccion[]).map(sec => (
           <button key={sec} onClick={() => setSeccion(sec)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: seccion === sec ? T.blue : T.card, color: seccion === sec ? "white" : T.muted }}>
             {sec === "resumen" ? "📊 Resumen"
+              : sec === "lista" ? `✉️ Lista de espera${espera ? ` (${espera.total})` : ""}`
               : sec === "usuarios" ? `👥 Usuarios${datos?.usuarios ? ` (${datos.usuarios.length})` : ""}`
               : sec === "productos" ? "📦 Productos"
               : sec === "pagos" ? `💰 Pagos${datos?.pagos ? ` (${datos.pagos.length})` : ""}`
@@ -345,12 +424,84 @@ export default function AdminPanel() {
                   { label: "Productos", value: datos?.totalProductos || 0, color: T.blue },
                   { label: "Ofertas", value: datos?.totalOfertas || 0, color: T.gold },
                   { label: "Ventas", value: datos?.totalVentas || 0, color: "#EF4444" },
+                  // Antes del 12 esta es la única cifra que se mueve; sin ella el
+                  // resumen es un tablero de ceros que no dice nada.
+                  { label: "Apuntados a la lista", value: espera?.total ?? 0, color: "#8B5CF6" },
                 ].map((item, i) => (
                   <div key={i} style={{ background: T.card, borderRadius: 16, padding: "24px", border: `1px solid ${T.border}`, textAlign: "center" }}>
                     <div style={{ fontSize: 36, fontWeight: 900, color: item.color }}>{item.value}</div>
                     <div style={{ color: T.muted, fontSize: 13, marginTop: 6 }}>{item.label}</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {seccion === "lista" && (
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
+                  {[
+                    { label: "Apuntados", value: espera?.total ?? 0, color: T.blue },
+                    { label: "Últimas 24 h", value: espera?.ultimas24h ?? 0, color: T.green },
+                    { label: "Ya crearon cuenta", value: espera?.conCuenta ?? 0, color: T.gold },
+                    { label: "Ya publicaron", value: espera?.publicaron ?? 0, color: "#EF4444" },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background: T.card, borderRadius: 16, padding: "24px", border: `1px solid ${T.border}`, textAlign: "center" }}>
+                      <div style={{ fontSize: 36, fontWeight: 900, color: item.color }}>{item.value}</div>
+                      <div style={{ color: T.muted, fontSize: 13, marginTop: 6 }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* El número que de verdad dice si el acceso anticipado funciona.
+                    "Apuntados" solo mide la campaña; "ya crearon cuenta" mide si el
+                    correo de bienvenida consigue que crucen la puerta. */}
+                {espera?.total > 0 && (
+                  <div style={{ background: "#eff6ff", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: T.text }}>
+                    <strong>{espera.conCuenta} de {espera.total}</strong> apuntados entraron y crearon cuenta
+                    {espera.total > espera.conCuenta && (
+                      <> — a <strong>{espera.total - espera.conCuenta}</strong> les llegó el enlace y no lo usaron.</>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ background: T.card, borderRadius: 16, padding: 20, border: `1px solid ${T.border}`, overflowX: "auto" as const }}>
+                  {espera?.lista?.length ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ textAlign: "left" as const, color: T.muted, borderBottom: `1px solid ${T.border}` }}>
+                          <th style={{ padding: "8px 6px" }}>Correo</th>
+                          <th style={{ padding: "8px 6px" }}>Se apuntó</th>
+                          <th style={{ padding: "8px 6px" }}>Cuenta</th>
+                          <th style={{ padding: "8px 6px" }}>Publicó</th>
+                          <th style={{ padding: "8px 6px" }}>Correo que recibió</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {espera.lista.map((f: any) => {
+                          // Los que se apuntaron ANTES de que se desplegara el acceso
+                          // anticipado (commit 1bb7755) recibieron el correo viejo, el
+                          // que no llevaba enlace de entrada. Y como /api/waitlist solo
+                          // envía en el alta nueva, no se les reenvía nada nunca: hay
+                          // que escribirles aparte. Por eso van marcados.
+                          const conEnlace = new Date(f.createdAt).getTime() >= Date.parse("2026-08-03T01:01:28-05:00");
+                          return (
+                            <tr key={f.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                              <td style={{ padding: "8px 6px", wordBreak: "break-all" as const }}>{f.email}</td>
+                              <td style={{ padding: "8px 6px", color: T.muted }}>{new Date(f.createdAt).toLocaleString("es-CO")}</td>
+                              <td style={{ padding: "8px 6px" }}>{f.tieneCuenta ? "✅" : "—"}</td>
+                              <td style={{ padding: "8px 6px" }}>{f.productos > 0 ? `✅ ${f.productos}` : "—"}</td>
+                              <td style={{ padding: "8px 6px", color: conEnlace ? T.muted : "#b45309", fontWeight: conEnlace ? 400 : 700 }}>
+                                {conEnlace ? "Con enlace de entrada" : "⚠️ Viejo, sin enlace"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p style={{ color: T.muted, textAlign: "center" as const, margin: 0 }}>Todavía no hay nadie apuntado.</p>
+                  )}
+                </div>
               </div>
             )}
 

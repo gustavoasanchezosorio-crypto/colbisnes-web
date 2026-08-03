@@ -6,9 +6,6 @@ import { prisma } from "@/lib/prisma";
 function esAdmin(session: any) {
   return session?.user?.role === "ADMIN" || session?.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
 }
-function _unused(email: string) {
-  return false;
-}
 
 export async function GET() {
   try {
