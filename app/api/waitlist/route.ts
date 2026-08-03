@@ -40,7 +40,12 @@ const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Mismo mensaje tanto si el correo es nuevo como si ya estaba. Si respondiera
 // "ya estás apuntado", cualquiera podría usar el formulario para averiguar si
 // una dirección concreta está en la lista.
-const MENSAJE_OK = "¡Listo! Te avisamos apenas abramos.";
+//
+// Por eso está redactado en condicional blando ("en un minuto te llega"): a
+// quien ya estaba apuntado NO se le reenvía nada, y prometerle un correo que
+// no va a salir lo dejaría mirando la bandeja. Decirle "ya estabas" sería peor:
+// convertiría el formulario en un detector de direcciones.
+const MENSAJE_OK = "¡Listo! En un minuto te llega tu acceso al correo.";
 
 export async function POST(request: Request) {
   try {

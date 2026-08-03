@@ -38,7 +38,7 @@ export default function ComingSoonPage() {
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
         setEnvio("ok");
-        setAviso(d.mensaje || "¡Listo! Te avisamos apenas abramos.");
+        setAviso(d.mensaje || "¡Listo! En un minuto te llega tu acceso al correo.");
       } else {
         setEnvio("error");
         setAviso(d.error || "No pudimos guardarte. Inténtalo de nuevo.");
@@ -120,7 +120,7 @@ export default function ComingSoonPage() {
           margin: "0 0 12px",
         }}
       >
-        Muy pronto
+        Acceso anticipado
       </p>
       <h1
         style={{
@@ -134,16 +134,17 @@ export default function ComingSoonPage() {
           lineHeight: 1.2,
         }}
       >
-        Estamos afinando los últimos detalles
+        Ya puedes entrar y publicar
       </h1>
       <p style={estiloParrafo}>
-        Estamos creando la mejor tienda de segunda mano de Colombia. Aquí puedes
-        vender todo lo que ya no usas, pero con una gran diferencia: nadie te
-        tumba.
+        Colbisnes es la tienda de segunda mano de Colombia donde puedes vender
+        todo lo que ya no usas, pero con una gran diferencia: nadie te tumba. Tu
+        dinero queda en custodia hasta que el trato se complete con éxito.
       </p>
       <p style={{ ...estiloParrafo, margin: "0 0 26px" }}>
-        Tu dinero queda protegido en custodia hasta que el trato se complete con
-        éxito.
+        Déjanos tu correo y te llega tu acceso al instante. Arma tu perfil y
+        publica desde hoy: así el 12, cuando se abran las compras, tu tienda ya
+        está montada.
       </p>
 
       {/* Medios de pago. Los tres archivos ya viven en public/logos y son los
@@ -205,7 +206,22 @@ export default function ComingSoonPage() {
         ))}
       </div>
 
-      {/* Reloj regresivo */}
+      {/* Reloj regresivo.
+          Desde el acceso anticipado (2026-08-03) el reloj YA NO cuenta para
+          entrar —se entra hoy— sino para que se activen las compras. Sin este
+          rótulo encima, un contador gigante sigue diciendo "vuelve luego", que
+          es justo lo contrario de lo que queremos. */}
+      <p
+        style={{
+          color: "rgba(255,255,255,0.72)",
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          margin: "0 0 14px",
+        }}
+      >
+        Faltan para que se abran las compras
+      </p>
       <div
         style={{
           display: "flex",
@@ -296,7 +312,7 @@ export default function ComingSoonPage() {
             marginBottom: 12,
           }}
         >
-          ¿Te avisamos cuando abramos?
+          Déjanos tu correo y te mandamos tu acceso
         </label>
 
         <div
@@ -346,7 +362,7 @@ export default function ComingSoonPage() {
               boxShadow: "0 8px 22px rgba(0,0,0,0.22)",
             }}
           >
-            {envio === "enviando" ? "..." : envio === "ok" ? "✓ Apuntado" : "Avísame"}
+            {envio === "enviando" ? "..." : envio === "ok" ? "✓ Mira tu correo" : "Quiero entrar"}
           </button>
         </div>
 
@@ -373,7 +389,8 @@ export default function ComingSoonPage() {
             lineHeight: 1.5,
           }}
         >
-          Solo para avisarte de la apertura. Ni spam ni se lo pasamos a nadie.
+          Te llega un correo con tu enlace de entrada. Ni spam ni se lo pasamos
+          a nadie.
         </p>
       </form>
 
