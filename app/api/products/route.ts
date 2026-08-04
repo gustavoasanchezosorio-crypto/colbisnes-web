@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
-import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 
 export const dynamic = "force-dynamic";
@@ -131,9 +130,17 @@ export async function POST(request: Request) {
     const faltaVerif = await requireEmailVerified(session.user.id);
     if (faltaVerif) return faltaVerif;
 
-    // El vendedor debe tener Nequi + BreB configurados para poder recibir el pago de su venta.
-    const faltaPago = await requirePayoutInfo(session.user.id);
-    if (faltaPago) return faltaPago;
+    // Aquí ya NO se exigen Nequi + Bre-B. Se exigen en el checkout, comprobando
+    // al vendedor antes de que nadie pague (ver lib/checkoutOnline.ts y las rutas
+    // de contra-entrega y USDT).
+    //
+    // Se movió por dos razones. La de fondo: pedirle los datos bancarios a alguien
+    // que todavía no ha vendido nada es la puerta donde más gente se cae, y era la
+    // quinta de cinco (cuenta → correo → KYC → anti-fraude → cobro). La técnica, y
+    // más importante: el candado aquí no garantizaba nada, porque PATCH /api/user
+    // acepta cadena vacía en ambos campos. Se podía publicar con los datos puestos,
+    // vaciarlos y vender igual, y la orden entraba en custodia sin destino de pago.
+    // Comprobarlo justo antes de la compra sí lo garantiza.
 
     // Debe tener configurado su código anti-phishing: así puede distinguir los correos
     // legítimos de Colbisnes de intentos de suplantación antes de operar en la plataforma.

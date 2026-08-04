@@ -8,17 +8,17 @@ export const PAYOUT_ERROR = {
 };
 
 /**
- * Verifica que el usuario tenga configurados AMBOS métodos de cobro en pesos:
- * Nequi (nequiNumber) y llave BreB (brebId). Sin esto, cualquier pago que le
- * corresponda (payout de venta o reembolso de compra) puede quedar sin destino.
+ * ¿Este usuario tiene a dónde recibir plata? Exige AMBOS métodos de cobro en
+ * pesos: Nequi (nequiNumber) y llave Bre-B (brebId).
  *
- * Retorna null si todo está OK, o un NextResponse con el error 403 listo para retornar.
- *
- * Uso:
- *   const faltaPago = await requirePayoutInfo(session.user.id);
- *   if (faltaPago) return faltaPago;
+ * Se comprueba en el momento en que el dinero se va a mover, NO al publicar.
+ * El motivo es que los dos campos se pueden vaciar después desde el perfil
+ * (PATCH /api/user los copia tal cual, y aceptan cadena vacía), así que un
+ * candado puesto al publicar no garantiza nada más tarde: se podía publicar
+ * con datos, borrarlos y vender igual. Comprobarlo justo antes de la compra sí
+ * garantiza que ninguna orden entra en custodia sin destino de pago.
  */
-export async function requirePayoutInfo(userId: string): Promise<NextResponse | null> {
+export async function tieneDatosDeCobro(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { nequiNumber: true, brebId: true },
@@ -27,8 +27,21 @@ export async function requirePayoutInfo(userId: string): Promise<NextResponse | 
   const tieneNequi = !!user?.nequiNumber && user.nequiNumber.trim().length > 0;
   const tieneBreb = !!user?.brebId && user.brebId.trim().length > 0;
 
-  if (!tieneNequi || !tieneBreb) {
-    return NextResponse.json(PAYOUT_ERROR, { status: 403 });
-  }
-  return null;
+  return tieneNequi && tieneBreb;
+}
+
+/**
+ * Igual que tieneDatosDeCobro, pero devuelve directamente el 403 para el
+ * usuario de la sesión. Se usa en el checkout con el COMPRADOR: si le hay que
+ * devolver la plata (reembolso, disputa), el reembolso necesita destino.
+ *
+ * Retorna null si todo está OK, o un NextResponse con el error 403 listo para retornar.
+ *
+ * Uso:
+ *   const faltaPago = await requirePayoutInfo(session.user.id);
+ *   if (faltaPago) return faltaPago;
+ */
+export async function requirePayoutInfo(userId: string): Promise<NextResponse | null> {
+  if (await tieneDatosDeCobro(userId)) return null;
+  return NextResponse.json(PAYOUT_ERROR, { status: 403 });
 }

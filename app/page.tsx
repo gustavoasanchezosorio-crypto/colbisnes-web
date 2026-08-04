@@ -342,11 +342,9 @@ function PageInner() {
           setTimeout(() => { window.location.href = "/perfil/editar"; }, 1800);
           return;
         }
-        if (resp.payoutRequired) {
-          showToast("Registra tu Nequi y tu llave Bre-B antes de publicar. Redirigiendo...", "warning");
-          setTimeout(() => { window.location.href = "/perfil/editar?falta=pago"; }, 1800);
-          return;
-        }
+        // Ya no se comprueba resp.payoutRequired: publicar dejó de exigir Nequi + Bre-B.
+        // Esos datos se piden en la primera VENTA (ver lib/requirePayoutInfo.ts), así que
+        // POST /api/products no puede devolver esa bandera y el bloque quedaba muerto.
         throw new Error(resp.error || resp.message || `Error ${res.status}`);
       }
       reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); setPrecioDisplay("");

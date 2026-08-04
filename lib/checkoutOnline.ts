@@ -4,7 +4,7 @@ import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
-import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
+import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 
@@ -25,6 +25,7 @@ export type PrepararOnlineErrorCode =
   | "not_available"
   | "own_product"
   | "seller_blocked"
+  | "seller_payout"
   | "offer_forbidden"
   | "internal";
 
@@ -63,6 +64,17 @@ export async function prepararOrdenOnline(
   const bloqueoVendedor = await bloqueoResponse(producto.sellerId);
   if (bloqueoVendedor) {
     return { ok: false, code: "seller_blocked", status: 403, message: "Este vendedor tiene su cuenta bloqueada temporalmente y no puede recibir ventas" };
+  }
+
+  // El vendedor tiene que tener a dónde cobrar ANTES de que entre plata en custodia.
+  // Esta comprobación se movió aquí desde POST /api/products (publicar): allí no
+  // servía de nada, porque los campos se pueden vaciar después desde el perfil.
+  // Aquí sí es una garantía real — ninguna orden puede quedar sin destino de pago.
+  //
+  // El mensaje no menciona a Nequi ni a Bre-B: al comprador no le incumben los datos
+  // bancarios del vendedor, y decírselo sería filtrar en qué estado tiene su perfil.
+  if (!(await tieneDatosDeCobro(producto.sellerId))) {
+    return { ok: false, code: "seller_payout", status: 409, message: "Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos." };
   }
 
   let acceptedOfferId = producto.acceptedOfferId;

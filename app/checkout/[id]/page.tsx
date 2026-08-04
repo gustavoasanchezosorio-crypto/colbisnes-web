@@ -53,6 +53,19 @@ export default function CheckoutPage() {
       .catch(() => setPerfilFaltantes([]));
   }, [id]);
 
+  // Vuelta desde /api/checkout/wompi cuando al VENDEDOR le faltan los datos de cobro.
+  // Esa ruta es una navegación (no un fetch), así que no puede contestar JSON: nos
+  // devuelve aquí con ?error=... y el aviso se pinta en el mismo recuadro rojo que
+  // usan contra-entrega y USDT.
+  //
+  // Se lee de window.location en vez de useSearchParams a propósito: useSearchParams
+  // obliga a envolver el componente en <Suspense> o el build falla al prerenderizar.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("error") !== "vendedor-sin-cobro") return;
+    setErrorPago("Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos.");
+  }, []);
+
   useEffect(() => {
     const sellerId = producto?.sellerId || producto?.seller?.id;
     if (!sellerId) return;

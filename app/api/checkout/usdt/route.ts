@@ -8,7 +8,7 @@ import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
-import { requirePayoutInfo } from "@/lib/requirePayoutInfo";
+import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
@@ -59,6 +59,13 @@ export async function POST(req: NextRequest) {
     const bloqueoVendedor = await bloqueoResponse(producto.sellerId);
     if (bloqueoVendedor) {
       return NextResponse.json({ error: "Este vendedor tiene su cuenta bloqueada temporalmente y no puede recibir ventas" }, { status: 403 });
+    }
+
+    // El vendedor tiene que tener a dónde cobrar antes de que arranque la venta
+    // (ver el comentario largo en lib/requirePayoutInfo.ts). Sin esto, la orden
+    // podía quedar sin destino de pago.
+    if (!(await tieneDatosDeCobro(producto.sellerId))) {
+      return NextResponse.json({ error: "Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos." }, { status: 409 });
     }
 
     if (producto.status !== "AVAILABLE" && producto.status !== "PAYMENT_PENDING") {

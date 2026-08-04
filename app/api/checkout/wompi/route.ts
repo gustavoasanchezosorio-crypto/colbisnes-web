@@ -29,6 +29,18 @@ export async function GET(req: NextRequest) {
         case "emailVerification": return NextResponse.redirect(new URL("/auth/verify", publicBase));
         case "antiPhishing":      return NextResponse.redirect(new URL("/perfil/editar", publicBase));
         case "payout":            return NextResponse.redirect(new URL("/perfil/editar?falta=pago", publicBase));
+        // Al VENDEDOR le faltan los datos de cobro. Aquí no hay nada que el comprador
+        // pueda arreglar en su propio perfil, así que se le devuelve al checkout del
+        // producto con el aviso en el recuadro rojo que esa página ya pinta.
+        //
+        // A esta ruta se llega NAVEGANDO (window.location.href en app/checkout/[id]),
+        // no por fetch: si cayera en el `default`, el comprador se quedaría mirando
+        // {"error":...} en crudo y parecería que la web se rompió.
+        //
+        // encodeURIComponent NO es decorativo: productoId viene de la query del usuario
+        // y `new URL("//evil.com", base)` resuelve a https://evil.com — sería un open
+        // redirect. Codificado, cualquier cosa rara queda como un segmento de ruta inerte.
+        case "seller_payout":     return NextResponse.redirect(new URL("/checkout/" + encodeURIComponent(productoId) + "?error=vendedor-sin-cobro", publicBase));
         default:                  return NextResponse.json({ error: prep.message || "No se pudo iniciar el pago" }, { status: prep.status });
       }
     }
