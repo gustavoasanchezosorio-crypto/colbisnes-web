@@ -37,8 +37,12 @@ export default function ComingSoonPage() {
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
+        // La respuesta trae, además del mensaje, las cookies de acceso ya
+        // puestas en este navegador (ver app/api/waitlist/route.ts). Por eso a
+        // partir de aquí se pinta el botón de entrar: el permiso ya está dado,
+        // no hay que esperar ningún correo.
         setEnvio("ok");
-        setAviso(d.mensaje || "¡Listo! En un minuto te llega tu acceso al correo.");
+        setAviso(d.mensaje || "¡Listo! Ya tienes acceso.");
       } else {
         setEnvio("error");
         setAviso(d.error || "No pudimos guardarte. Inténtalo de nuevo.");
@@ -312,7 +316,7 @@ export default function ComingSoonPage() {
             marginBottom: 12,
           }}
         >
-          Déjanos tu correo y te mandamos tu acceso
+          Déjanos tu correo y entras al instante
         </label>
 
         <div
@@ -362,7 +366,7 @@ export default function ComingSoonPage() {
               boxShadow: "0 8px 22px rgba(0,0,0,0.22)",
             }}
           >
-            {envio === "enviando" ? "..." : envio === "ok" ? "✓ Mira tu correo" : "Quiero entrar"}
+            {envio === "enviando" ? "..." : envio === "ok" ? "✓ Listo" : "Quiero entrar"}
           </button>
         </div>
 
@@ -381,6 +385,36 @@ export default function ComingSoonPage() {
           </p>
         )}
 
+        {/* Puerta de entrada. Aparece SOLO tras apuntarse, y no por capricho de
+            diseño: el permiso son las cookies que acaba de poner la respuesta de
+            /api/waitlist, así que antes de enviar el formulario este botón
+            rebotaría contra el middleware y devolvería aquí mismo.
+
+            Es un <a> pelado, no un <Link> de Next, y eso importa: Link
+            precargaría el destino en segundo plano —una petición a "/" que aún
+            no tiene permiso— y además necesitamos una navegación completa para
+            que el navegador mande las cookies recién puestas. */}
+        {envio === "ok" && (
+          <a
+            href="/"
+            style={{
+              display: "block",
+              marginTop: 14,
+              padding: "15px 20px",
+              borderRadius: 14,
+              background: "#fff",
+              color: THEME.primaryDark,
+              fontSize: 15,
+              fontWeight: 800,
+              textDecoration: "none",
+              lineHeight: 1.35,
+              boxShadow: "0 10px 26px rgba(0,0,0,0.26)",
+            }}
+          >
+            Ingresa antes para conocer nuestra web y publicar →
+          </a>
+        )}
+
         <p
           style={{
             margin: "10px 0 0",
@@ -389,8 +423,9 @@ export default function ComingSoonPage() {
             lineHeight: 1.5,
           }}
         >
-          Te llega un correo con tu enlace de entrada. Ni spam ni se lo pasamos
-          a nadie.
+          {envio === "ok"
+            ? "Guardamos tu correo para avisarte el 12 cuando se abran las compras. Ni spam ni se lo pasamos a nadie."
+            : "Entras de una vez, sin esperar ningún correo. Ni spam ni se lo pasamos a nadie."}
         </p>
       </form>
 

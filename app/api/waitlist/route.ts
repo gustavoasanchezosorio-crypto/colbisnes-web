@@ -26,6 +26,11 @@ import {
   textoBienvenida,
   urlEntrarAnticipado,
 } from "@/lib/correoBienvenida";
+import {
+  COOKIE_BYPASS,
+  COOKIE_MODO_PRUEBA_UI,
+  prelanzamientoActivo,
+} from "@/lib/modoPrueba";
 
 // Tope de RFC 5321 para una dirección completa. Sirve de cortafuegos barato
 // contra payloads absurdos antes de tocar la base de datos.
@@ -41,11 +46,17 @@ const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // "ya estás apuntado", cualquiera podría usar el formulario para averiguar si
 // una dirección concreta está en la lista.
 //
-// Por eso está redactado en condicional blando ("en un minuto te llega"): a
-// quien ya estaba apuntado NO se le reenvía nada, y prometerle un correo que
-// no va a salir lo dejaría mirando la bandeja. Decirle "ya estabas" sería peor:
-// convertiría el formulario en un detector de direcciones.
-const MENSAJE_OK = "¡Listo! En un minuto te llega tu acceso al correo.";
+// Antes decía "en un minuto te llega tu acceso al correo", y era mentira a
+// medias: a quien ya estaba apuntado NO se le reenvía nada (rama P2002), así
+// que se quedaba mirando la bandeja. Ahora el acceso lo entrega esta misma
+// respuesta en forma de cookie —ver el final de POST—, así que el mensaje puede
+// ser literal y, además, cierto por igual en los dos casos.
+const MENSAJE_OK = "¡Listo! Ya tienes acceso.";
+
+// Duración de las cookies de acceso: la misma que pone el middleware al abrir
+// el enlace secreto. Si aquí y allí no coincidieran, un mismo navegador tendría
+// dos caducidades distintas según por dónde entró.
+const DIAS_DE_ACCESO = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   try {
@@ -138,7 +149,48 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, mensaje: MENSAJE_OK });
+    // ACCESO INMEDIATO (2026-08-05).
+    //
+    // Hasta hoy la única llave era el enlace `?acceso=CÓDIGO` del correo de
+    // bienvenida, y eso dejó fuera a 9 de las 11 personas apuntadas: se
+    // apuntaron ANTES de que ese enlace existiera (2026-08-03), su correo no lo
+    // llevaba, y volver a apuntarse no reenvía nada (rama P2002 de arriba).
+    // Estaban atrapadas sin ninguna salida.
+    //
+    // Ahora la llave la entrega esta misma respuesta. Las dos cookies son
+    // exactamente las que fija middleware.ts en su paso 1 al abrir el enlace
+    // secreto —mismos nombres, mismos flags, misma caducidad—, así que para el
+    // resto de la app este visitante es indistinguible de uno que llegó por el
+    // correo. Cuatro consecuencias buscadas:
+    //
+    //   · las 9 atascadas entran volviendo a escribir su correo, sin reenvíos
+    //     ni panel de admin: la rama P2002 también desemboca aquí;
+    //   · LAUNCH_BYPASS_CODE no viaja en el cuerpo ni en la URL. El navegador
+    //     recibe el permiso; el código nunca sale del servidor;
+    //   · dejar el correo sigue siendo obligatorio para entrar, así que la lista
+    //     del envío del 12 de agosto se sigue llenando en vez de vaciarse;
+    //   · el límite de 5/hora por IP de arriba pasa a limitar también el reparto
+    //     de accesos, gratis.
+    //
+    // Se apaga solo: fuera de la ventana de prelanzamiento no hay candado que
+    // abrir, y el middleware ya limpia la marca de UI que quedara suelta.
+    const res = NextResponse.json({ ok: true, mensaje: MENSAJE_OK });
+
+    if (prelanzamientoActivo()) {
+      // `secure` NO se puede deducir de request.url: detrás del proxy de Railway
+      // la URL interna es http://localhost:3000, y la cookie saldría sin la
+      // marca `secure` en producción. Se deduce del dominio público, que es el
+      // que de verdad ve el navegador (mismo criterio que /api/checkout/wompi).
+      const seguro = (process.env.NEXT_PUBLIC_URL || "https://colbisnes.com").startsWith("https:");
+      const comunes = { sameSite: "lax" as const, secure: seguro, path: "/", maxAge: DIAS_DE_ACCESO };
+
+      // La que abre el candado de verdad. httpOnly: ningún script la puede leer.
+      res.cookies.set(COOKIE_BYPASS, "1", { ...comunes, httpOnly: true });
+      // Solo para que el banner amarillo sepa pintarse. No otorga permiso alguno.
+      res.cookies.set(COOKIE_MODO_PRUEBA_UI, "1", { ...comunes, httpOnly: false });
+    }
+
+    return res;
   } catch (e) {
     // El detalle va a los logs del servidor, nunca a la respuesta: en un
     // endpoint público el mensaje de error de la base de datos le regala a un
