@@ -1,25 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" fill="none" role="img" aria-label="Colbisnes">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Colbisnes">
+  <!--
+    Marca de Colbisnes: la "c" azul del logotipo sobre un disco blanco, con la
+    bandera de Colombia de fondo.
+
+    Sustituye a la marca de junio (cuadrado azul con C + visto bueno), que dejó
+    de corresponder al logo el 30 de julio, cuando el logotipo pasó a ser el
+    texto "colbisnes". El icono se quedó atrás y el navegador seguía enseñando
+    un símbolo que ya no existe en ninguna otra parte del sitio.
+
+    Cuatro decisiones que NO son de gusto y conviene no deshacer sin pensarlas:
+
+    1. La "c" va DIBUJADA como arco, no como <text>. Un <text> lo pinta el
+       navegador con la tipografía que tenga a mano; en Android o Windows no
+       existe la de Apple y la letra saldría con otra forma. Como geometría se
+       ve igual en todos los aparatos.
+
+    2. La "c" es GRANDE dentro del disco: ocupa el 69 % de su diámetro. La
+       versión que salía de dibujarla con la tipografía ocupaba solo el 42 % y
+       dejaba un anillo blanco enorme; se veía bien en grande, pero a 16 px
+       —que es donde vive un favicon casi siempre— se convertía en un puntico
+       azul ilegible. Si se reduce, se pierde en la pestaña.
+
+    3. El disco blanco es lo que da el contraste. Por eso aquí no hace falta
+       sombra: la "c" azul contra el blanco se lee sola. (La variante sin disco
+       sí la necesitaba, porque el amarillo de la bandera es casi tan claro
+       como el blanco.)
+
+    4. La bandera lleva sus proporciones reales —mitad amarillo, cuarto azul,
+       cuarto rojo—, no tres franjas iguales.
+
+    #1F6BFF es el azul del logotipo (public/logo.svg); #FCD116 y #CE1126 son los
+    mismos que ese archivo ya usa en su bajada "COLOMBIA · COMPRA · VENDE".
+  -->
   <defs>
-    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
-      <stop offset="0%"   stop-color="#0B2D8C"/>
-      <stop offset="100%" stop-color="#1F6BFF"/>
-    </linearGradient>
-    <filter id="s">
-      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#1F6BFF" flood-opacity="0.32"/>
-    </filter>
+    <!-- El redondeo vive aquí, no en el <rect>: así las tres franjas se recortan
+         a la vez y las esquinas quedan limpias. OJO: apple-touch-icon.png NO
+         lleva este redondeo (ver el comentario en app/layout.tsx). -->
+    <clipPath id="r"><rect width="512" height="512" rx="96"/></clipPath>
   </defs>
 
-  <!-- Fondo redondeado -->
-  <rect x="5" y="5" width="120" height="120" rx="28" fill="url(#a)" filter="url(#s)"/>
+  <!-- Bandera: amarillo la mitad de arriba, azul y rojo un cuarto cada uno -->
+  <g clip-path="url(#r)">
+    <rect width="512" height="256" fill="#FCD116"/>
+    <rect y="256" width="512" height="128" fill="#003893"/>
+    <rect y="384" width="512" height="128" fill="#CE1126"/>
+  </g>
 
-  <!-- Highlight superior -->
-  <rect x="5" y="5" width="120" height="58" rx="28" fill="white" opacity="0.07"/>
+  <!-- Disco blanco: 304 px de 512, o sea el 59 % del icono. Más grande taparía
+       la bandera; más pequeño ahogaría la letra. -->
+  <circle cx="256" cy="256" r="152" fill="#FFFFFF"/>
 
-  <!-- C bold arc — centro (65,65), radio 34 -->
-  <path d="M 91 43 A 34 34 0 1 0 91 87"
-        stroke="white" stroke-width="13" stroke-linecap="round"/>
-
-  <!-- Checkmark -->
-  <path d="M 40 65 L 53 79 L 76 50"
-        stroke="white" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- La "c": arco centrado en (256,256), radio de eje 76 y trazo 58, así que
+       mide 210 px de punta a punta. Las puntas caen a ∓50° de la horizontal,
+       que es la abertura del logotipo. -->
+  <path d="M 304.85 197.78 A 76 76 0 1 0 304.85 314.22"
+        fill="none" stroke="#1F6BFF" stroke-width="58" stroke-linecap="round"/>
 </svg>

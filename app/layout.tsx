@@ -38,15 +38,22 @@ export const metadata: Metadata = {
   // (el de app/favicon.ico sí lo sigue emitiendo). Por eso icon.svg se vuelve a
   // declarar aquí a mano: si no, este cambio le quitaría a la web un icono que
   // hoy sí tiene. favicon.ico NO se declara, para no duplicar su link.
+  // El `?v=` NO es decorativo. Los navegadores guardan el favicon durante
+  // semanas y lo sirven desde su caché aunque el archivo del servidor haya
+  // cambiado: sin este parámetro, el icono nuevo (bandera + c azul, 5 de
+  // agosto) tardaría días en aparecer y parecería que el despliegue falló.
+  // Al cambiar la URL se le fuerza a pedirlo otra vez. Mismo truco que usa
+  // /coming-soon con "/logo-white.svg?v=2". Si algún día se vuelve a cambiar
+  // el dibujo, hay que subir el número aquí también.
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml", sizes: "any" }],
+    icon: [{ url: "/icon.svg?v=3", type: "image/svg+xml", sizes: "any" }],
     // A sangre completa y SIN canal alfa a propósito: iOS aplica su propia
     // máscara "squircle" y rellena de negro cualquier transparencia. Si se le
     // entrega el logo ya redondeado se ve un doble redondeo con borde feo.
     // Está en /icons/ (y no como app/apple-icon.png) porque ahí mismo irán los
     // iconos del manifest de la PWA en la fase 3.
     apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/apple-touch-icon.png?v=3", sizes: "180x180", type: "image/png" },
     ],
   },
   // OJO: `capable` se deja DESACTIVADO a propósito. Activarlo abre el sitio en
