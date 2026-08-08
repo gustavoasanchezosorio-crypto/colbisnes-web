@@ -21,8 +21,46 @@ import { formatMoney } from "@/lib/utils";
 import { computeProfileCompletion } from "@/lib/profileCompletion";
 import TrackingOverlay from "@/components/TrackingOverlay";
 import { normalizarHeic, comprimirImagen } from "@/lib/imagen";
+import {
+  PIEZAS,
+  categoriaPideDatosDeDispositivo,
+  esImeiValido,
+  normalizarSaludBateria,
+  pisoDePrecio,
+  mensajePisoDePrecio,
+} from "@/lib/dispositivos";
 
-const extendedSchema = productSchema.extend({ condition: z.enum(["NUEVO", "USADO"]) });
+// El precio se valida contra el piso de SU categoría, no contra un número fijo.
+// Por eso se pisa el `priceCOP` de productSchema (que traía un min(1000) plano) y
+// la comprobación de verdad se hace en el superRefine, donde ya se conoce la
+// categoría elegida. Las mismas reglas corren en el servidor: esto es solo para
+// que el error salga antes y con un mensaje que explique qué hacer.
+const extendedSchema = productSchema
+  .extend({
+    condition: z.enum(["NUEVO", "USADO"]),
+    priceCOP: z.number().min(1, "Escribe el precio"),
+    imei: z.string().optional(),
+    saludBateria: z.string().optional(),
+    piezasReemplazadas: z.array(z.string()).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const piso = pisoDePrecio(data.category);
+    if (typeof data.priceCOP === "number" && data.priceCOP > 0 && data.priceCOP < piso) {
+      ctx.addIssue({ code: "custom", path: ["priceCOP"], message: mensajePisoDePrecio(data.category, piso) });
+    }
+    // Los datos del dispositivo son opcionales; si se escriben, deben ser creíbles.
+    if (!categoriaPideDatosDeDispositivo(data.category)) return;
+    if (data.imei && data.imei.trim() !== "" && !esImeiValido(data.imei)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["imei"],
+        message: "Ese IMEI no es válido. Son 15 dígitos: márcalos con *#06# en el teléfono y cópialos tal cual.",
+      });
+    }
+    if (data.saludBateria && data.saludBateria.trim() !== "" && normalizarSaludBateria(data.saludBateria) === null) {
+      ctx.addIssue({ code: "custom", path: ["saludBateria"], message: "Debe ser un número entre 1 y 100" });
+    }
+  });
 type FormData = z.infer<typeof extendedSchema>;
 
 // Solo letras, tildes, espacios y guiones (sin números ni caracteres especiales)
@@ -288,11 +326,14 @@ function PageInner() {
   }, [sessionStatus, session?.user?.id, products]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(extendedSchema),
     defaultValues: { city: "Bogotá", condition: "NUEVO" },
     mode: "onChange",
   });
+  // Las casillas de IMEI, batería y piezas solo existen para dispositivos.
+  const categoriaElegida = watch("category");
+  const esDispositivo = categoriaPideDatosDeDispositivo(categoriaElegida);
   useEffect(() => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k,v]) => { if (v) params.append(k, v); });
@@ -614,6 +655,78 @@ function PageInner() {
                   <Select {...register("category")}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</Select>
                   <Select {...register("condition")}><option value="NUEVO">Nuevo</option><option value="USADO">Usado</option></Select>
                 </div>
+
+                {/* Ficha del dispositivo. Aparece SOLO en Tecnologia y es toda
+                    opcional: obligarla espantaría a quien vende un cargador o unos
+                    audífonos, que también son Tecnologia y no tienen IMEI. Quien la
+                    llena vende más, y eso es mejor incentivo que una casilla forzada. */}
+                {esDispositivo && (
+                  <div style={{ border: `1.5px solid ${THEME.border}`, borderRadius: 12, padding: "14px 14px 12px", background: THEME.surfaceAlt }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark }}>
+                      Datos del equipo <span style={{ fontWeight: 500, color: THEME.muted }}>(opcional, pero vende más)</span>
+                    </p>
+                    <p style={{ margin: "4px 0 12px", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                      Si es un celular, tablet o modem, escribe estos datos. El comprador
+                      podrá consultar el IMEI en la base oficial antes de pagar.
+                    </p>
+
+                    <div style={{ display: "grid", gap: 10 }}>
+                      <div>
+                        <Input
+                          placeholder="IMEI (15 dígitos, márcalo con *#06#)"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={20}
+                          {...register("imei")}
+                        />
+                        {errors.imei
+                          ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei.message}</p>
+                          : <p style={{ fontSize: 11, color: THEME.muted, margin: "4px 0 0", lineHeight: 1.4 }}>
+                              En la publicación se ve solo una parte (490154•••••••18). El número
+                              completo se lo damos únicamente a compradores con identidad verificada,
+                              y queda registrado quién lo consultó.
+                            </p>}
+                      </div>
+
+                      <div>
+                        <Input
+                          placeholder="Salud de la batería, % (ej: 87)"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={3}
+                          {...register("saludBateria")}
+                          onKeyDown={e => {
+                            const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
+                            if (nav || e.ctrlKey || e.metaKey) return;
+                            if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                          }}
+                        />
+                        {errors.saludBateria && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.saludBateria.message}</p>}
+                      </div>
+
+                      <div>
+                        <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px" }}>Piezas reemplazadas</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {PIEZAS.map(p => (
+                            <label
+                              key={p.id}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}
+                            >
+                              <input type="checkbox" value={p.id} {...register("piezasReemplazadas")} style={{ margin: 0, cursor: "pointer" }} />
+                              {p.label}
+                            </label>
+                          ))}
+                        </div>
+                        <p style={{ fontSize: 11, color: THEME.muted, margin: "8px 0 0", lineHeight: 1.4 }}>
+                          Decirlo de frente no te quita compradores: te quita devoluciones.
+                          Si el comprador recibe el equipo y no corresponde con lo que
+                          publicaste, puede devolverlo por información falsa.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <TextArea
                   placeholder="Descripción detallada *"
                   rows={3}

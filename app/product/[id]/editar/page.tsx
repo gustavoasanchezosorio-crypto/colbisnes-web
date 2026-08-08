@@ -7,6 +7,15 @@ import { THEME, CITIES, CATEGORIES } from "@/lib/theme";
 import { Button, OutlineButton, Input, Select, TextArea } from "@/components/FormComponents";
 import { useToast } from "@/components/Toast";
 import { normalizarHeic, comprimirImagen } from "@/lib/imagen";
+import {
+  PIEZAS,
+  categoriaPideDatosDeDispositivo,
+  esImeiValido,
+  normalizarSaludBateria,
+  piezasALista,
+  pisoDePrecio,
+  mensajePisoDePrecio,
+} from "@/lib/dispositivos";
 
 const MAX_FOTOS = 10;
 
@@ -34,6 +43,14 @@ export default function EditarProductoPage() {
   const [condition, setCondition] = useState<string>("NUEVO");
   const [description, setDescription] = useState("");
 
+  // Ficha del dispositivo (solo categoría Tecnologia)
+  const [imei, setImei] = useState("");
+  const [saludBateria, setSaludBateria] = useState("");
+  const [piezas, setPiezas] = useState<string[]>([]);
+  const esDispositivo = categoriaPideDatosDeDispositivo(category);
+  const alternarPieza = (id: string) =>
+    setPiezas((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+
   // Fotos: las que ya existen (URLs de Cloudinary) y las nuevas (aún archivos locales)
   const [imagenesExistentes, setImagenesExistentes] = useState<string[]>([]);
   const [nuevosArchivos, setNuevosArchivos] = useState<File[]>([]);
@@ -58,6 +75,21 @@ export default function EditarProductoPage() {
         setDescription(data.description || "");
         setImagenesExistentes(((data.images || []) as any[]).map((im) => im.url).filter(Boolean));
         setMeta({ sellerId: data.sellerId, status: data.status });
+        setSaludBateria(data.saludBateria != null ? String(data.saludBateria) : "");
+        setPiezas(piezasALista(data.piezasReemplazadas));
+
+        // GET /api/products/[id] ya no devuelve el IMEI completo (se enmascara para
+        // no repartir números clonables). El dueño sí tiene derecho al suyo, así que
+        // se pide aparte. Si esa llamada falla, se deja el parcial: el PATCH reconoce
+        // el texto con puntos y entiende "no lo toques".
+        if (data.tieneImei) {
+          setImei(data.imeiParcial || "");
+          try {
+            const rImei = await fetch(`/api/products/${id}/imei`, { cache: "no-store", credentials: "include" });
+            const dImei = await rImei.json().catch(() => ({}));
+            if (vivo && rImei.ok && dImei?.imei) setImei(dImei.imei);
+          } catch { /* se queda con el parcial */ }
+        }
       } catch (e: any) {
         if (vivo) setErrorCarga(e.message || "Error al cargar");
       } finally {
@@ -105,8 +137,21 @@ export default function EditarProductoPage() {
     const priceCOP = parseInt(precioDisplay.replace(/\./g, "").replace(/,/g, "")) || 0;
     if (title.trim().length < 3) { showToast("El título debe tener al menos 3 caracteres", "warning"); return; }
     if (description.trim().length < 10) { showToast("La descripción debe tener al menos 10 caracteres", "warning"); return; }
-    if (priceCOP < 1000) { showToast("El precio mínimo es $1.000", "warning"); return; }
     if (!category) { showToast("Selecciona una categoría", "warning"); return; }
+    // El piso depende de la categoría, igual que al publicar. Sin esto, editar era el
+    // atajo para dejar un carro en $1 después de haberlo publicado en su precio real.
+    const piso = pisoDePrecio(category);
+    if (priceCOP < piso) { showToast(mensajePisoDePrecio(category, piso), "warning"); return; }
+    if (esDispositivo) {
+      // El parcial (con •) significa "no lo cambié"; el servidor lo entiende así.
+      const imeiTocado = imei.trim() !== "" && !imei.includes("•");
+      if (imeiTocado && !esImeiValido(imei)) {
+        showToast("Ese IMEI no es válido. Son 15 dígitos: márcalos con *#06#", "warning"); return;
+      }
+      if (saludBateria.trim() !== "" && normalizarSaludBateria(saludBateria) === null) {
+        showToast("La salud de la batería debe ser un número entre 1 y 100", "warning"); return;
+      }
+    }
 
     setGuardando(true);
     try {
@@ -126,7 +171,12 @@ export default function EditarProductoPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images }),
+        body: JSON.stringify({
+          title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images,
+          imei: esDispositivo ? imei.trim() : "",
+          saludBateria: esDispositivo ? saludBateria.trim() : "",
+          piezasReemplazadas: esDispositivo ? piezas : [],
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "No se pudo guardar la publicación");
@@ -233,6 +283,52 @@ export default function EditarProductoPage() {
             <option value="REACONDICIONADO">Reacondicionado</option>
           </Select>
         </div>
+
+        {/* Misma ficha que en el formulario de publicar. Ver app/page.tsx. */}
+        {esDispositivo && (
+          <div style={{ border: `1.5px solid ${THEME.border}`, borderRadius: 12, padding: "14px 14px 12px", background: THEME.surfaceAlt }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark }}>
+              Datos del equipo <span style={{ fontWeight: 500, color: THEME.muted }}>(opcional)</span>
+            </p>
+            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+              <div>
+                <Input
+                  placeholder="IMEI (15 dígitos, márcalo con *#06#)"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={20}
+                  value={imei}
+                  onChange={(e) => setImei(e.target.value)}
+                />
+                <p style={{ fontSize: 11, color: THEME.muted, margin: "4px 0 0", lineHeight: 1.4 }}>
+                  En la publicación se ve solo una parte. El número completo se lo damos
+                  únicamente a compradores con identidad verificada.
+                </p>
+              </div>
+              <Input
+                placeholder="Salud de la batería, % (ej: 87)"
+                type="text"
+                inputMode="numeric"
+                maxLength={3}
+                value={saludBateria}
+                onChange={(e) => setSaludBateria(e.target.value.replace(/\D/g, ""))}
+              />
+              <div>
+                <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px", color: THEME.text }}>Piezas reemplazadas</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {PIEZAS.map((p) => (
+                    <label key={p.id}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}>
+                      <input type="checkbox" checked={piezas.includes(p.id)} onChange={() => alternarPieza(p.id)} style={{ margin: 0, cursor: "pointer" }} />
+                      {p.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <TextArea
           placeholder="Descripción detallada *"
           rows={4}

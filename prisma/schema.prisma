@@ -137,6 +137,20 @@ model Product {
   precioEnvio    Int?
   favoritesCount Int            @default(0)
 
+  // Datos DECLARADOS POR EL VENDEDOR para dispositivos con IMEI (categoría
+  // "Tecnologia"). Colbisnes no verifica ninguno: ver el aviso de lib/dispositivos.ts.
+  // Los tres son opcionales porque casi ninguna publicación es un dispositivo, y
+  // porque hacerlos obligatorios rompería los productos ya creados.
+  //
+  // OJO con `imei`: es el único campo del modelo que NO puede salir completo en una
+  // respuesta pública. Con un IMEI ajeno se clona un equipo. GET /api/products/[id]
+  // lo enmascara para todo el mundo salvo el vendedor y el comprador con la oferta
+  // aceptada. Si algún día se añade otro endpoint que devuelva productos, hay que
+  // acordarse de excluirlo allí también.
+  imei               String?
+  saludBateria       Int? // porcentaje, 1-100
+  piezasReemplazadas String? // tokens de lib/dispositivos.ts separados por coma
+
   // Listado destacado (pago del vendedor para aparecer primero)
   featuredUntil    DateTime?
   featuredListings FeaturedListing[]
@@ -147,6 +161,9 @@ model Product {
   @@index([createdAt])
   @@index([status, createdAt])
   @@index([featuredUntil])
+  // Lo usa la revisión de IMEI repetido al publicar y al editar. Sin él, cada
+  // publicación de Tecnologia recorre la tabla entera de productos.
+  @@index([imei])
 }
 
 model FeaturedListing {

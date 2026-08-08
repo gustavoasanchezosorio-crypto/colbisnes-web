@@ -5,6 +5,17 @@ import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
+import {
+  categoriaPideDatosDeDispositivo,
+  normalizarImei,
+  imeiTieneDigitoDeControlValido,
+  normalizarSaludBateria,
+  normalizarPiezas,
+  enmascararImei,
+  pisoDePrecio,
+  mensajePisoDePrecio,
+  TECHO_DE_PRECIO,
+} from "@/lib/dispositivos";
 
 export const dynamic = "force-dynamic";
 
@@ -86,13 +97,17 @@ export async function GET(request: Request) {
       ])
     );
 
-    const productsWithRating = products.map((product) => ({
+    // El IMEI NUNCA sale completo por aquí. Este listado es público y sin sesión:
+    // devolverlo entero convertiría el catálogo en un directorio de IMEIs para
+    // clonar. Se reemplaza por la versión parcial (ver lib/dispositivos.ts).
+    const productsWithRating = products.map(({ imei, ...product }) => ({
       ...product,
       seller: {
         ...product.seller,
         ...(ratingMap.get(product.seller.id) ?? { avgRating: 0, totalReviews: 0 }),
       },
       firstImage: product.images[0]?.url || null,
+      imeiParcial: enmascararImei(imei),
     }));
 
     return NextResponse.json(productsWithRating, {
@@ -156,6 +171,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
+    const { imei, saludBateria, piezasReemplazadas } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -163,11 +179,74 @@ export async function POST(request: Request) {
     if (!description || typeof description !== "string" || description.trim().length < 10 || description.length > 5000) {
       return NextResponse.json({ error: "Descripción inválida (10-5000 caracteres)" }, { status: 400 });
     }
-    if (typeof priceCOP !== "number" || priceCOP < 1000 || priceCOP > 1_000_000_000) {
-      return NextResponse.json({ error: "Precio inválido (mínimo $1.000 COP)" }, { status: 400 });
+
+    // La categoría se resuelve ANTES que el precio porque el piso depende de ella.
+    const finalCategory =
+      typeof category === "string" && category.length <= 100 && category.trim() !== ""
+        ? category
+        : "Otros";
+
+    // Piso de precio por categoría, no plano. Antes era 1.000 COP para todo, así que
+    // un carro a $1.000 pasaba sin problema: justo el precio de gancho que se busca
+    // evitar. Ver el porqué completo en lib/dispositivos.ts.
+    const piso = pisoDePrecio(finalCategory);
+    if (typeof priceCOP !== "number" || !Number.isFinite(priceCOP)) {
+      return NextResponse.json({ error: "Precio inválido" }, { status: 400 });
+    }
+    if (priceCOP < piso) {
+      return NextResponse.json({ error: mensajePisoDePrecio(finalCategory, piso) }, { status: 400 });
+    }
+    if (priceCOP > TECHO_DE_PRECIO) {
+      return NextResponse.json({ error: "Precio inválido (demasiado alto)" }, { status: 400 });
     }
     if (!city || typeof city !== "string" || city.length > 100) {
       return NextResponse.json({ error: "Ciudad inválida" }, { status: 400 });
+    }
+
+    // ── Datos declarados del dispositivo (solo categoría Tecnologia) ────────────
+    // Fuera de esa categoría se descartan en silencio en vez de dar error: no es
+    // culpa de nadie que el formulario mande campos de más, y guardar un IMEI en
+    // una publicación de un sofá no tendría sentido.
+    let imeiFinal: string | null = null;
+    let bateriaFinal: number | null = null;
+    let piezasFinal: string | null = null;
+
+    if (categoriaPideDatosDeDispositivo(finalCategory)) {
+      if (imei !== undefined && imei !== null && String(imei).trim() !== "") {
+        imeiFinal = normalizarImei(imei);
+        if (!imeiFinal) {
+          return NextResponse.json(
+            { error: "El IMEI debe tener 15 dígitos. Márcalo en el teclado del teléfono: *#06#" },
+            { status: 400 }
+          );
+        }
+        if (!imeiTieneDigitoDeControlValido(imeiFinal)) {
+          return NextResponse.json(
+            { error: "Ese IMEI no es válido: no pasa el dígito de control. Revisa que lo hayas copiado completo y sin cambiar ningún número." },
+            { status: 400 }
+          );
+        }
+        // Un mismo aparato no puede estar publicado dos veces a la vez. Además de
+        // duplicados honestos, esto marca el caso en que alguien copia el IMEI de
+        // otro anuncio para aparentar un equipo legítimo.
+        const yaPublicado = await prisma.product.findFirst({
+          where: { imei: imeiFinal, status: { in: ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW"] } },
+          select: { id: true },
+        });
+        if (yaPublicado) {
+          return NextResponse.json(
+            { error: "Ya hay una publicación activa con ese IMEI. Si es tuya, edítala en vez de crear otra." },
+            { status: 409 }
+          );
+        }
+      }
+      if (saludBateria !== undefined && saludBateria !== null && String(saludBateria).trim() !== "") {
+        bateriaFinal = normalizarSaludBateria(saludBateria);
+        if (bateriaFinal === null) {
+          return NextResponse.json({ error: "La salud de la batería debe ser un número entre 1 y 100" }, { status: 400 });
+        }
+      }
+      piezasFinal = normalizarPiezas(piezasReemplazadas);
     }
     if (images && (!Array.isArray(images) || images.length > 10)) {
       return NextResponse.json({ error: "Máximo 10 imágenes" }, { status: 400 });
@@ -187,9 +266,12 @@ export async function POST(request: Request) {
         priceCOP,
         city: city.trim(),
         condition: finalCondition,
-        category: (typeof category === "string" && category.length <= 100) ? category : "Otros",
+        category: finalCategory,
         status: "AVAILABLE",
         sellerId: session.user.id,
+        imei: imeiFinal,
+        saludBateria: bateriaFinal,
+        piezasReemplazadas: piezasFinal,
         images: validImageUrls?.length
           ? { create: validImageUrls.map((url) => ({ url })) }
           : undefined,

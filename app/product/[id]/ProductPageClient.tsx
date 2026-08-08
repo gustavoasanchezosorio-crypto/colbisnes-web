@@ -10,6 +10,7 @@ import FacturaEnVivo from "@/components/FacturaEnVivo";
 import { THEME } from "@/lib/theme";
 import { GMF_PCT, WOMPI_MIN_TX_COP } from "@/lib/pricing";
 import { useModoPrueba } from "@/lib/useModoPrueba";
+import { piezasALista, etiquetaPieza, URL_CONSULTA_IMEI_OFICIAL } from "@/lib/dispositivos";
 
 interface Product {
   id: string; title: string; description: string; priceCOP: number;
@@ -18,6 +19,11 @@ interface Product {
   seller: { id: string; name: string; email: string; image?: string | null; kycStatus?: string };
   images: { url: string }[];
   acceptedOfferId?: string; paymentExpiresAt?: string;
+  // Ficha del dispositivo declarada por el vendedor. `imeiParcial` es lo único que
+  // manda el servidor: el número completo se pide aparte (ver FichaDelEquipo).
+  category?: string;
+  imeiParcial?: string | null; tieneImei?: boolean;
+  saludBateria?: number | null; piezasReemplazadas?: string | null;
 }
 interface Offer {
   id: string; amountCOP: number; message?: string; status: string;
@@ -835,6 +841,10 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               </div>
             ))}
           </Acordeon>
+
+          {/* Ficha del equipo: fuera del acordeón a propósito. Es información de
+              confianza, no una característica más; si va plegada nadie la abre. */}
+          <FichaDelEquipo productId={productId} product={product} esVendedor={esVendedor} />
         </div>
       </div>
 
@@ -1213,6 +1223,159 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         />
       )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Ficha del dispositivo: IMEI, salud de batería y piezas reemplazadas.
+ *
+ * Dos reglas que gobiernan todo lo que hay aquí y que no conviene relajar:
+ *
+ *  1. NUNCA se pinta el IMEI completo de entrada. Llega enmascarado desde el
+ *     servidor y solo se descubre cuando alguien con identidad verificada lo pide
+ *     a propósito. Un catálogo que muestra IMEIs completos es un catálogo de
+ *     números para clonar.
+ *
+ *  2. NINGÚN texto dice "verificado". Colbisnes no consulta la base del SRTM —no
+ *     tiene API pública— y afirmar que un equipo está limpio trasladaría a la
+ *     plataforma una responsabilidad que es del vendedor. La consulta la hace el
+ *     comprador, en el sitio oficial, y aquí solo se le da el número y el enlace.
+ */
+function FichaDelEquipo({
+  productId, product, esVendedor,
+}: { productId: string; product: Product; esVendedor: boolean }) {
+  const [imeiCompleto, setImeiCompleto] = useState<string | null>(null);
+  const [pidiendo, setPidiendo]         = useState(false);
+  const [errorImei, setErrorImei]       = useState<string | null>(null);
+  const [necesitaKyc, setNecesitaKyc]   = useState(false);
+  const [copiado, setCopiado]           = useState(false);
+
+  const piezas  = piezasALista(product.piezasReemplazadas);
+  const bateria = product.saludBateria ?? null;
+  const hayAlgo = !!product.tieneImei || bateria !== null || piezas.length > 0;
+  if (!hayAlgo) return null;
+
+  const pedirImei = async () => {
+    setPidiendo(true); setErrorImei(null); setNecesitaKyc(false);
+    try {
+      const r = await fetch(`/api/products/${productId}/imei`, { cache: "no-store", credentials: "include" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (d?.kycRequired) setNecesitaKyc(true);
+        throw new Error(d?.error || "No se pudo obtener el IMEI");
+      }
+      setImeiCompleto(d.imei);
+    } catch (e: any) {
+      setErrorImei(e.message || "No se pudo obtener el IMEI");
+    } finally {
+      setPidiendo(false);
+    }
+  };
+
+  const copiar = async () => {
+    if (!imeiCompleto) return;
+    try { await navigator.clipboard.writeText(imeiCompleto); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch {}
+  };
+
+  // Verde/ámbar/rojo según cuánta vida le queda. Los cortes son los que usa la
+  // gente al comprar de segunda mano: por debajo de 80 % Apple ya considera que
+  // la batería debe cambiarse.
+  const colorBateria = bateria === null ? THEME.muted : bateria >= 85 ? VERDE : bateria >= 75 ? "#E07B00" : "#e53e3e";
+
+  return (
+    <div style={{border:`1px solid ${THEME.border}`,borderRadius:"12px",background:"#ffffff",padding:"0.9rem 1rem",marginTop:"0.6rem"}}>
+      <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+        <h3 style={{margin:0,fontSize:"0.95rem",fontWeight:800,color:THEME.text}}>Datos del equipo</h3>
+        <span style={{fontSize:"0.72rem",color:THEME.muted}}>Los declara el vendedor</span>
+      </div>
+
+      {bateria !== null && (
+        <div style={{marginTop:"0.8rem"}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.85rem"}}>
+            <span style={{color:THEME.muted}}>Salud de la batería</span>
+            <span style={{fontWeight:800,color:colorBateria}}>{bateria}%</span>
+          </div>
+          <div style={{marginTop:5,height:6,borderRadius:99,background:THEME.border,overflow:"hidden"}}>
+            <div style={{width:`${bateria}%`,height:"100%",background:colorBateria,borderRadius:99}} />
+          </div>
+        </div>
+      )}
+
+      {piezas.length > 0 && (
+        <div style={{marginTop:"0.85rem"}}>
+          <p style={{margin:"0 0 6px",fontSize:"0.85rem",color:THEME.muted}}>Piezas reemplazadas</p>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {piezas.map(p => (
+              <span key={p} style={{fontSize:"0.78rem",fontWeight:700,padding:"4px 10px",borderRadius:999,
+                background:p==="NINGUNA"?"rgba(34,197,94,0.12)":"rgba(224,123,0,0.12)",
+                color:p==="NINGUNA"?"#15803d":"#9a5b00"}}>
+                {etiquetaPieza(p)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {product.tieneImei && (
+        <div style={{marginTop:"0.9rem",paddingTop:"0.8rem",borderTop:`1px solid ${THEME.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{color:THEME.muted,fontSize:"0.85rem"}}>IMEI</span>
+            <span style={{fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:700,fontSize:"0.88rem",color:THEME.text,letterSpacing:"0.5px"}}>
+              {imeiCompleto ?? product.imeiParcial}
+            </span>
+          </div>
+
+          {!imeiCompleto && !esVendedor && (
+            <button onClick={pedirImei} disabled={pidiendo}
+              style={{marginTop:"0.6rem",width:"100%",padding:"0.6rem",borderRadius:10,border:`1.5px solid ${AZUL}`,
+                background:"transparent",color:AZUL,fontWeight:800,fontSize:"0.85rem",cursor:pidiendo?"default":"pointer",opacity:pidiendo?0.6:1}}>
+              {pidiendo ? "Un momento…" : "Ver el IMEI completo para consultarlo"}
+            </button>
+          )}
+
+          {!imeiCompleto && esVendedor && (
+            <button onClick={pedirImei} disabled={pidiendo}
+              style={{marginTop:"0.6rem",padding:"0.4rem 0.8rem",borderRadius:8,border:`1px solid ${THEME.border}`,
+                background:"transparent",color:THEME.muted,fontWeight:700,fontSize:"0.78rem",cursor:"pointer"}}>
+              {pidiendo ? "…" : "Ver el mío completo"}
+            </button>
+          )}
+
+          {imeiCompleto && (
+            <div style={{marginTop:"0.6rem",display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button onClick={copiar}
+                style={{flex:"1 1 120px",padding:"0.55rem",borderRadius:10,border:`1px solid ${THEME.border}`,
+                  background:"transparent",color:THEME.text,fontWeight:700,fontSize:"0.82rem",cursor:"pointer"}}>
+                {copiado ? "Copiado ✓" : "Copiar IMEI"}
+              </button>
+              <a href={URL_CONSULTA_IMEI_OFICIAL} target="_blank" rel="noopener noreferrer"
+                style={{flex:"1 1 150px",padding:"0.55rem",borderRadius:10,border:"none",textAlign:"center",
+                  background:AZUL,color:"#fff",fontWeight:800,fontSize:"0.82rem",textDecoration:"none"}}>
+                Consultarlo en la base oficial ↗
+              </a>
+            </div>
+          )}
+
+          {necesitaKyc && (
+            <p style={{margin:"0.6rem 0 0",fontSize:"0.8rem",color:THEME.textSoft,lineHeight:1.5}}>
+              El IMEI completo solo se le entrega a personas con identidad verificada, y queda
+              registrado quién lo consultó. Es la forma de que este dato no termine sirviendo
+              para clonar equipos.{" "}
+              <a href="/kyc" style={{color:AZUL,fontWeight:700}}>Verificar mi identidad</a>
+            </p>
+          )}
+          {errorImei && !necesitaKyc && (
+            <p style={{margin:"0.6rem 0 0",fontSize:"0.8rem",color:"#e53e3e"}}>{errorImei}</p>
+          )}
+        </div>
+      )}
+
+      <p style={{margin:"0.85rem 0 0",fontSize:"0.75rem",color:THEME.muted,lineHeight:1.5}}>
+        Colbisnes no verifica estos datos: los escribe el vendedor. La consulta del IMEI en la
+        base oficial la haces tú, antes de pagar. Si al recibir el producto la información no
+        corresponde, puedes devolverlo por información falsa y recuperar tu dinero.
+      </p>
     </div>
   );
 }

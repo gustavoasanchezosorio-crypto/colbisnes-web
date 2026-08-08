@@ -29,6 +29,13 @@ export default function CheckoutPage() {
   // Número Nequi del perfil (para precargar el cobro push) y control del modal Nequi del pago online.
   const [nequiPrefill, setNequiPrefill] = useState<string | null>(null);
   const [showNequiOnline, setShowNequiOnline] = useState(false);
+  // Pantalla de devolución por información falsa. Solo aparece cuando el vendedor
+  // declaró datos del equipo (IMEI, batería o piezas), que es justo cuando hay algo
+  // concreto que pueda no corresponder al recibirlo.
+  const [mostrarGarantia, setMostrarGarantia]   = useState(false);
+  const [garantiaAceptada, setGarantiaAceptada] = useState(false);
+  const [guardandoGarantia, setGuardandoGarantia] = useState(false);
+  const [accionPendiente, setAccionPendiente]   = useState<"pago" | "nequi" | null>(null);
   // Modo prueba del prelanzamiento: quien entró con el link secreto puede recorrer
   // todo el checkout y ver los precios, pero no puede pagar. El servidor bloquea
   // igual (ver lib/modoPrueba.ts); esto es para que no llegue a intentarlo.
@@ -144,14 +151,58 @@ export default function CheckoutPage() {
     ? "/kyc"
     : "/perfil/editar?falta=pago";
 
-  const handleContinuar = () => {
-    if (perfilIncompleto) return;
-    if (modoPrueba) return; // el botón ya está deshabilitado; esto es el cinturón
+  const seguirConElPago = () => {
     if (TEST_MODE) {
       setShowPopup(true);
     } else {
       procesarPago();
     }
+  };
+
+  // ¿Hay algo declarado que el comprador pueda reclamar después? Si el vendedor no
+  // escribió nada del equipo, la pantalla no tiene objeto y no se muestra: un aviso
+  // que sale siempre deja de leerse, y este necesita leerse.
+  const hayDatosDeclarados = !!(
+    producto?.tieneImei ||
+    producto?.saludBateria != null ||
+    (producto?.piezasReemplazadas && String(producto.piezasReemplazadas).trim() !== "")
+  );
+
+  /**
+   * Puerta única antes de pagar. Si hay datos declarados y todavía no se aceptó la
+   * condición de devolución, guarda la intención y abre la pantalla; si no, sigue
+   * derecho. Vale tanto para el botón grande como para el de Nequi.
+   */
+  const conGarantia = (accion: "pago" | "nequi") => {
+    if (!hayDatosDeclarados || garantiaAceptada) {
+      if (accion === "nequi") setShowNequiOnline(true); else seguirConElPago();
+      return;
+    }
+    setAccionPendiente(accion);
+    setMostrarGarantia(true);
+  };
+
+  const aceptarGarantia = async () => {
+    setGuardandoGarantia(true);
+    // Se deja constancia en el servidor (quién, cuándo, desde dónde y qué decía la
+    // publicación en ese momento). Si la llamada falla NO se bloquea la compra: un
+    // problema de red no puede dejar a alguien sin poder pagar. El registro es una
+    // ayuda para resolver disputas, no un candado del dinero.
+    try {
+      await fetch(`/api/products/${id}/aceptar-garantia`, { method: "POST", credentials: "include" });
+    } catch { /* la compra sigue */ }
+    setGuardandoGarantia(false);
+    setGarantiaAceptada(true);
+    setMostrarGarantia(false);
+    const accion = accionPendiente;
+    setAccionPendiente(null);
+    if (accion === "nequi") setShowNequiOnline(true); else seguirConElPago();
+  };
+
+  const handleContinuar = () => {
+    if (perfilIncompleto) return;
+    if (modoPrueba) return; // el botón ya está deshabilitado; esto es el cinturón
+    conGarantia("pago");
   };
 
   const pctOnline = precio > 0 ? ((online.comisionColbisnes / precio) * 100) : 10;
@@ -402,7 +453,7 @@ export default function CheckoutPage() {
 
         {/* Botón exclusivo de Nequi (pago online): notificación push directa a la app del comprador. */}
         {metodo === "online" && !perfilIncompleto && !TEST_MODE && !modoPrueba && perfilFaltantes !== null && (
-          <button onClick={() => setShowNequiOnline(true)}
+          <button onClick={() => conGarantia("nequi")}
             style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             💳 Pagar con Nequi (sin salir de la app)
           </button>
@@ -410,6 +461,49 @@ export default function CheckoutPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
           <span style={{ fontSize: 11, color: THEME.muted }}>🔒 SSL cifrado · Pagos protegidos por Colbisnes</span>
         </div>
+
+        {/* ══ DEVOLUCIÓN POR INFORMACIÓN FALSA ══════════════════════════════════
+            Sale ANTES de pagar, no después, porque después ya no es un aviso sino
+            una excusa. No se cierra tocando el fondo ni con una ✕: las dos únicas
+            salidas son aceptar o volver atrás, para que no se despache sin leer. */}
+        {mostrarGarantia && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(13,27,42,0.55)", backdropFilter: "blur(12px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div style={{ background: "#fff", borderRadius: 22, padding: "26px 22px", maxWidth: 420, width: "100%", boxShadow: "0 24px 70px rgba(0,0,0,0.3)", maxHeight: "88vh", overflowY: "auto" }}>
+              <div style={{ fontSize: 44, textAlign: "center", marginBottom: 10 }}>🛡️</div>
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900, color: THEME.text, textAlign: "center", lineHeight: 1.3 }}>
+                Si la información no corresponde, lo devuelves
+              </h2>
+
+              <p style={{ margin: "14px 0 0", fontSize: 14, color: THEME.textSoft, lineHeight: 1.6 }}>
+                El IMEI, la salud de la batería y las piezas reemplazadas de esta publicación
+                <strong> los declara el vendedor</strong>. Colbisnes no los verifica.
+              </p>
+
+              <div style={{ marginTop: 14, background: "#f0f7ff", border: `1px solid ${THEME.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                <p style={{ margin: 0, fontSize: 14, color: THEME.text, fontWeight: 700, lineHeight: 1.55 }}>
+                  Si al recibir el producto la información no corresponde con lo publicado,
+                  puedes devolverlo por información falsa suministrada y se te devuelve
+                  el dinero que está en custodia.
+                </p>
+              </div>
+
+              <p style={{ margin: "14px 0 0", fontSize: 13, color: THEME.muted, lineHeight: 1.55 }}>
+                Por eso tu plata no le llega al vendedor cuando pagas: queda retenida por
+                Colbisnes hasta que tú confirmes que recibiste lo que decía el anuncio.
+                Revisa el equipo apenas lo tengas en la mano.
+              </p>
+
+              <button onClick={aceptarGarantia} disabled={guardandoGarantia}
+                style={{ width: "100%", marginTop: 20, padding: 16, borderRadius: 16, border: "none", background: guardandoGarantia ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: guardandoGarantia ? "#64748b" : "#fff", fontSize: 16, fontWeight: 800, cursor: guardandoGarantia ? "default" : "pointer" }}>
+                {guardandoGarantia ? "Un momento…" : "Entiendo y continúo"}
+              </button>
+              <button onClick={() => { setMostrarGarantia(false); setAccionPendiente(null); }} disabled={guardandoGarantia}
+                style={{ width: "100%", marginTop: 8, padding: 12, borderRadius: 14, border: "none", background: "transparent", color: THEME.muted, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                Volver a revisar la publicación
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
