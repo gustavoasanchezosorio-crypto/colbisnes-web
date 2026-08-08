@@ -7,8 +7,7 @@ import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import {
   categoriaPideDatosDeDispositivo,
-  normalizarImei,
-  imeiTieneDigitoDeControlValido,
+  validarImeisDeclarados,
   normalizarSaludBateria,
   normalizarPiezas,
   enmascararImei,
@@ -97,10 +96,14 @@ export async function GET(request: Request) {
       ])
     );
 
-    // El IMEI NUNCA sale completo por aquí. Este listado es público y sin sesión:
-    // devolverlo entero convertiría el catálogo en un directorio de IMEIs para
-    // clonar. Se reemplaza por la versión parcial (ver lib/dispositivos.ts).
-    const productsWithRating = products.map(({ imei, ...product }) => ({
+    // NINGUNO de los dos IMEI sale completo por aquí. Este listado es público y sin
+    // sesión: devolverlos enteros convertiría el catálogo en un directorio de IMEIs
+    // para clonar. Se reemplazan por la versión parcial (ver lib/dispositivos.ts).
+    //
+    // En la tarjeta del listado basta con el primero: los dos IMEI de un mismo
+    // equipo comparten los 6 dígitos del TAC, que es lo único que se ve, así que el
+    // segundo no añadiría nada. Completos, los dos, solo en /api/products/[id]/imei.
+    const productsWithRating = products.map(({ imei, imei2, ...product }) => ({
       ...product,
       seller: {
         ...product.seller,
@@ -108,6 +111,7 @@ export async function GET(request: Request) {
       },
       firstImage: product.images[0]?.url || null,
       imeiParcial: enmascararImei(imei),
+      tieneDosImei: !!imei2,
     }));
 
     return NextResponse.json(productsWithRating, {
@@ -171,7 +175,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
-    const { imei, saludBateria, piezasReemplazadas } = body;
+    const { imei, imei2, saludBateria, piezasReemplazadas } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -208,29 +212,30 @@ export async function POST(request: Request) {
     // culpa de nadie que el formulario mande campos de más, y guardar un IMEI en
     // una publicación de un sofá no tendría sentido.
     let imeiFinal: string | null = null;
+    let imei2Final: string | null = null;
     let bateriaFinal: number | null = null;
     let piezasFinal: string | null = null;
 
     if (categoriaPideDatosDeDispositivo(finalCategory)) {
-      if (imei !== undefined && imei !== null && String(imei).trim() !== "") {
-        imeiFinal = normalizarImei(imei);
-        if (!imeiFinal) {
-          return NextResponse.json(
-            { error: "El IMEI debe tener 15 dígitos. Márcalo en el teclado del teléfono: *#06#" },
-            { status: 400 }
-          );
-        }
-        if (!imeiTieneDigitoDeControlValido(imeiFinal)) {
-          return NextResponse.json(
-            { error: "Ese IMEI no es válido: no pasa el dígito de control. Revisa que lo hayas copiado completo y sin cambiar ningún número." },
-            { status: 400 }
-          );
-        }
-        // Un mismo aparato no puede estar publicado dos veces a la vez. Además de
-        // duplicados honestos, esto marca el caso en que alguien copia el IMEI de
-        // otro anuncio para aparentar un equipo legítimo.
+      const imeis = validarImeisDeclarados(imei, imei2);
+      if (!imeis.ok) return NextResponse.json({ error: imeis.error }, { status: 400 });
+      imeiFinal = imeis.imei;
+      imei2Final = imeis.imei2;
+
+      // Un mismo aparato no puede estar publicado dos veces a la vez. Además de
+      // duplicados honestos, esto marca el caso en que alguien copia el IMEI de
+      // otro anuncio para aparentar un equipo legítimo.
+      //
+      // La búsqueda es CRUZADA: cada número declarado se busca en las dos columnas
+      // de las demás publicaciones. Si solo se comparara imei con imei, bastaba con
+      // publicar el mismo equipo intercambiando las dos casillas para esquivarlo.
+      const declarados = [imeiFinal, imei2Final].filter((n): n is string => !!n);
+      if (declarados.length > 0) {
         const yaPublicado = await prisma.product.findFirst({
-          where: { imei: imeiFinal, status: { in: ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW"] } },
+          where: {
+            status: { in: ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW"] },
+            OR: [{ imei: { in: declarados } }, { imei2: { in: declarados } }],
+          },
           select: { id: true },
         });
         if (yaPublicado) {
@@ -270,6 +275,7 @@ export async function POST(request: Request) {
         status: "AVAILABLE",
         sellerId: session.user.id,
         imei: imeiFinal,
+        imei2: imei2Final,
         saludBateria: bateriaFinal,
         piezasReemplazadas: piezasFinal,
         images: validImageUrls?.length

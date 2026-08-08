@@ -11,6 +11,8 @@ import {
   PIEZAS,
   categoriaPideDatosDeDispositivo,
   esImeiValido,
+  normalizarImei,
+  avisoDigitoDeControl,
   normalizarSaludBateria,
   piezasALista,
   pisoDePrecio,
@@ -45,9 +47,16 @@ export default function EditarProductoPage() {
 
   // Ficha del dispositivo (solo categoría Tecnologia)
   const [imei, setImei] = useState("");
+  const [imei2, setImei2] = useState("");
   const [saludBateria, setSaludBateria] = useState("");
   const [piezas, setPiezas] = useState<string[]>([]);
   const esDispositivo = categoriaPideDatosDeDispositivo(category);
+  // Aviso, no bloqueo: el número tiene sus 15 dígitos pero no cuadra con su dígito de
+  // control. Casi siempre es un dígito mal copiado, pero hay equipos reales así, y como
+  // aquí no se consulta ninguna base de datos, nadie puede afirmar que esté mal.
+  // El valor enmascarado (con •) no se revisa: el navegador no conoce el número real.
+  const avisoImei1 = normalizarImei(imei) !== null && !esImeiValido(imei) ? avisoDigitoDeControl("IMEI 1") : null;
+  const avisoImei2 = normalizarImei(imei2) !== null && !esImeiValido(imei2) ? avisoDigitoDeControl("IMEI 2") : null;
   const alternarPieza = (id: string) =>
     setPiezas((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
 
@@ -84,10 +93,14 @@ export default function EditarProductoPage() {
         // el texto con puntos y entiende "no lo toques".
         if (data.tieneImei) {
           setImei(data.imeiParcial || "");
+          setImei2(data.imei2Parcial || "");
           try {
             const rImei = await fetch(`/api/products/${id}/imei`, { cache: "no-store", credentials: "include" });
             const dImei = await rImei.json().catch(() => ({}));
-            if (vivo && rImei.ok && dImei?.imei) setImei(dImei.imei);
+            if (vivo && rImei.ok && dImei?.imei) {
+              setImei(dImei.imei);
+              setImei2(dImei.imei2 || "");
+            }
           } catch { /* se queda con el parcial */ }
         }
       } catch (e: any) {
@@ -144,9 +157,25 @@ export default function EditarProductoPage() {
     if (priceCOP < piso) { showToast(mensajePisoDePrecio(category, piso), "warning"); return; }
     if (esDispositivo) {
       // El parcial (con •) significa "no lo cambié"; el servidor lo entiende así.
-      const imeiTocado = imei.trim() !== "" && !imei.includes("•");
-      if (imeiTocado && !esImeiValido(imei)) {
-        showToast("Ese IMEI no es válido. Son 15 dígitos: márcalos con *#06#", "warning"); return;
+      const tocado = (v: string) => v.trim() !== "" && !v.includes("•");
+      // Lo único que bloquea es que no sean 15 dígitos. El dígito de control NO bloquea:
+      // existen equipos reales cuyo IMEI no cuadra con él, y Colbisnes no consulta ninguna
+      // base de datos, así que una cuenta hecha en el navegador no puede vetar una venta.
+      // Cuando falla se muestra el aviso ámbar debajo de la casilla, y ya.
+      if (tocado(imei) && normalizarImei(imei) === null) {
+        showToast("El IMEI 1 son 15 dígitos: márcalos con *#06# y cópialos tal cual.", "warning"); return;
+      }
+      if (tocado(imei2) && normalizarImei(imei2) === null) {
+        showToast("El IMEI 2 son 15 dígitos: márcalos con *#06# y cópialos tal cual.", "warning"); return;
+      }
+      // Las mismas dos revisiones del par que en el servidor. Solo tienen sentido
+      // cuando los dos valores están a la vista; si alguno sigue enmascarado, el
+      // navegador no conoce el número real y quien decide es el servidor.
+      if (tocado(imei) && tocado(imei2) && normalizarImei(imei) === normalizarImei(imei2)) {
+        showToast("Los dos IMEI son el mismo número. En un equipo de dos SIM son distintos.", "warning"); return;
+      }
+      if (imei.trim() === "" && tocado(imei2)) {
+        showToast("Escribe primero el IMEI 1. Si el equipo tiene uno solo, va en esa casilla.", "warning"); return;
       }
       if (saludBateria.trim() !== "" && normalizarSaludBateria(saludBateria) === null) {
         showToast("La salud de la batería debe ser un número entre 1 y 100", "warning"); return;
@@ -174,6 +203,7 @@ export default function EditarProductoPage() {
         body: JSON.stringify({
           title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images,
           imei: esDispositivo ? imei.trim() : "",
+          imei2: esDispositivo ? imei2.trim() : "",
           saludBateria: esDispositivo ? saludBateria.trim() : "",
           piezasReemplazadas: esDispositivo ? piezas : [],
         }),
@@ -291,28 +321,65 @@ export default function EditarProductoPage() {
               Datos del equipo <span style={{ fontWeight: 500, color: THEME.muted }}>(opcional)</span>
             </p>
             <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-              <div>
-                <Input
-                  placeholder="IMEI (15 dígitos, márcalo con *#06#)"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={20}
-                  value={imei}
-                  onChange={(e) => setImei(e.target.value)}
-                />
-                <p style={{ fontSize: 11, color: THEME.muted, margin: "4px 0 0", lineHeight: 1.4 }}>
-                  En la publicación se ve solo una parte. El número completo se lo damos
-                  únicamente a compradores con identidad verificada.
-                </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                    IMEI 1
+                  </label>
+                  <Input
+                    placeholder="15 dígitos (*#06#)"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={20}
+                    value={imei}
+                    onChange={(e) => setImei(e.target.value)}
+                  />
+                  {avisoImei1 && (
+                    <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei1}</p>
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                    IMEI 2 <span style={{ fontWeight: 500, color: THEME.muted }}>(si tiene dos SIM)</span>
+                  </label>
+                  <Input
+                    placeholder="15 dígitos"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={20}
+                    value={imei2}
+                    onChange={(e) => setImei2(e.target.value)}
+                  />
+                  {avisoImei2 && (
+                    <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei2}</p>
+                  )}
+                </div>
               </div>
-              <Input
-                placeholder="Salud de la batería, % (ej: 87)"
-                type="text"
-                inputMode="numeric"
-                maxLength={3}
-                value={saludBateria}
-                onChange={(e) => setSaludBateria(e.target.value.replace(/\D/g, ""))}
-              />
+              <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
+                En la publicación se ve solo una parte. Los números completos se los damos
+                únicamente a compradores con identidad verificada.
+              </p>
+              <div>
+                <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                  Salud de la batería <span style={{ fontWeight: 500, color: THEME.muted }}>(porcentaje)</span>
+                </label>
+                {/* Mismo tratamiento que en el formulario de publicar: el % queda dentro
+                    de la casilla para que no se pierda al escribir. Ver app/page.tsx. */}
+                <div style={{ position: "relative" }}>
+                  <Input
+                    placeholder="Ej: 87"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={3}
+                    value={saludBateria}
+                    onChange={(e) => setSaludBateria(e.target.value.replace(/\D/g, ""))}
+                    style={{ paddingRight: 36 }}
+                  />
+                  <span style={{ position: "absolute", right: 13, top: 0, height: "100%", display: "flex", alignItems: "center", fontSize: "0.95rem", fontWeight: 600, color: THEME.muted, pointerEvents: "none" }}>
+                    %
+                  </span>
+                </div>
+              </div>
               <div>
                 <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px", color: THEME.text }}>Piezas reemplazadas</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

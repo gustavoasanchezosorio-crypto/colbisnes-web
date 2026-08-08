@@ -19,10 +19,12 @@ interface Product {
   seller: { id: string; name: string; email: string; image?: string | null; kycStatus?: string };
   images: { url: string }[];
   acceptedOfferId?: string; paymentExpiresAt?: string;
-  // Ficha del dispositivo declarada por el vendedor. `imeiParcial` es lo único que
-  // manda el servidor: el número completo se pide aparte (ver FichaDelEquipo).
+  // Ficha del dispositivo declarada por el vendedor. Los parciales son lo único que
+  // manda el servidor: los números completos se piden aparte (ver FichaDelEquipo).
+  // Son dos porque casi todos los celulares de hoy son de dos SIM.
   category?: string;
   imeiParcial?: string | null; tieneImei?: boolean;
+  imei2Parcial?: string | null; tieneImei2?: boolean;
   saludBateria?: number | null; piezasReemplazadas?: string | null;
 }
 interface Offer {
@@ -1245,11 +1247,12 @@ export default function ProductPageClient({ productId }: { productId: string }) 
 function FichaDelEquipo({
   productId, product, esVendedor,
 }: { productId: string; product: Product; esVendedor: boolean }) {
-  const [imeiCompleto, setImeiCompleto] = useState<string | null>(null);
-  const [pidiendo, setPidiendo]         = useState(false);
-  const [errorImei, setErrorImei]       = useState<string | null>(null);
-  const [necesitaKyc, setNecesitaKyc]   = useState(false);
-  const [copiado, setCopiado]           = useState(false);
+  const [imeiCompleto, setImeiCompleto]   = useState<string | null>(null);
+  const [imei2Completo, setImei2Completo] = useState<string | null>(null);
+  const [pidiendo, setPidiendo]           = useState(false);
+  const [errorImei, setErrorImei]         = useState<string | null>(null);
+  const [necesitaKyc, setNecesitaKyc]     = useState(false);
+  const [copiado, setCopiado]             = useState<1 | 2 | null>(null);
 
   const piezas  = piezasALista(product.piezasReemplazadas);
   const bateria = product.saludBateria ?? null;
@@ -1266,6 +1269,7 @@ function FichaDelEquipo({
         throw new Error(d?.error || "No se pudo obtener el IMEI");
       }
       setImeiCompleto(d.imei);
+      setImei2Completo(d.imei2 ?? null);
     } catch (e: any) {
       setErrorImei(e.message || "No se pudo obtener el IMEI");
     } finally {
@@ -1273,9 +1277,12 @@ function FichaDelEquipo({
     }
   };
 
-  const copiar = async () => {
-    if (!imeiCompleto) return;
-    try { await navigator.clipboard.writeText(imeiCompleto); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch {}
+  // Se copia UNO a la vez, no los dos juntos: el formulario del SRTM recibe un
+  // número por consulta, así que pegar los dos pegados obligaría a borrar a mano.
+  const copiar = async (cual: 1 | 2) => {
+    const valor = cual === 1 ? imeiCompleto : imei2Completo;
+    if (!valor) return;
+    try { await navigator.clipboard.writeText(valor); setCopiado(cual); setTimeout(() => setCopiado(null), 2000); } catch {}
   };
 
   // Verde/ámbar/rojo según cuánta vida le queda. Los cortes son los que usa la
@@ -1319,18 +1326,33 @@ function FichaDelEquipo({
 
       {product.tieneImei && (
         <div style={{marginTop:"0.9rem",paddingTop:"0.8rem",borderTop:`1px solid ${THEME.border}`}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{color:THEME.muted,fontSize:"0.85rem"}}>IMEI</span>
-            <span style={{fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:700,fontSize:"0.88rem",color:THEME.text,letterSpacing:"0.5px"}}>
-              {imeiCompleto ?? product.imeiParcial}
-            </span>
-          </div>
+          {/* Cuando el equipo declara los dos IMEI se numeran; cuando declara uno
+              solo se deja "IMEI" a secas. Poner "IMEI 1" sin que exista un 2 haría
+              pensar que el vendedor escondió el otro. */}
+          <FilaImei
+            etiqueta={product.tieneImei2 ? "IMEI 1" : "IMEI"}
+            valor={imeiCompleto ?? product.imeiParcial}
+            desbloqueado={!!imeiCompleto}
+            copiado={copiado === 1}
+            onCopiar={() => copiar(1)}
+          />
+          {product.tieneImei2 && (
+            <FilaImei
+              etiqueta="IMEI 2"
+              valor={imei2Completo ?? product.imei2Parcial}
+              desbloqueado={!!imei2Completo}
+              copiado={copiado === 2}
+              onCopiar={() => copiar(2)}
+            />
+          )}
 
           {!imeiCompleto && !esVendedor && (
             <button onClick={pedirImei} disabled={pidiendo}
               style={{marginTop:"0.6rem",width:"100%",padding:"0.6rem",borderRadius:10,border:`1.5px solid ${AZUL}`,
                 background:"transparent",color:AZUL,fontWeight:800,fontSize:"0.85rem",cursor:pidiendo?"default":"pointer",opacity:pidiendo?0.6:1}}>
-              {pidiendo ? "Un momento…" : "Ver el IMEI completo para consultarlo"}
+              {pidiendo
+                ? "Un momento…"
+                : product.tieneImei2 ? "Ver los IMEI completos para consultarlos" : "Ver el IMEI completo para consultarlo"}
             </button>
           )}
 
@@ -1338,23 +1360,22 @@ function FichaDelEquipo({
             <button onClick={pedirImei} disabled={pidiendo}
               style={{marginTop:"0.6rem",padding:"0.4rem 0.8rem",borderRadius:8,border:`1px solid ${THEME.border}`,
                 background:"transparent",color:THEME.muted,fontWeight:700,fontSize:"0.78rem",cursor:"pointer"}}>
-              {pidiendo ? "…" : "Ver el mío completo"}
+              {pidiendo ? "…" : product.tieneImei2 ? "Ver los míos completos" : "Ver el mío completo"}
             </button>
           )}
 
           {imeiCompleto && (
-            <div style={{marginTop:"0.6rem",display:"flex",gap:8,flexWrap:"wrap"}}>
-              <button onClick={copiar}
-                style={{flex:"1 1 120px",padding:"0.55rem",borderRadius:10,border:`1px solid ${THEME.border}`,
-                  background:"transparent",color:THEME.text,fontWeight:700,fontSize:"0.82rem",cursor:"pointer"}}>
-                {copiado ? "Copiado ✓" : "Copiar IMEI"}
-              </button>
-              <a href={URL_CONSULTA_IMEI_OFICIAL} target="_blank" rel="noopener noreferrer"
-                style={{flex:"1 1 150px",padding:"0.55rem",borderRadius:10,border:"none",textAlign:"center",
-                  background:AZUL,color:"#fff",fontWeight:800,fontSize:"0.82rem",textDecoration:"none"}}>
-                Consultarlo en la base oficial ↗
-              </a>
-            </div>
+            <a href={URL_CONSULTA_IMEI_OFICIAL} target="_blank" rel="noopener noreferrer"
+              style={{marginTop:"0.6rem",display:"block",padding:"0.55rem",borderRadius:10,border:"none",textAlign:"center",
+                background:AZUL,color:"#fff",fontWeight:800,fontSize:"0.82rem",textDecoration:"none"}}>
+              {product.tieneImei2 ? "Consultarlos en la base oficial ↗" : "Consultarlo en la base oficial ↗"}
+            </a>
+          )}
+          {imeiCompleto && product.tieneImei2 && (
+            <p style={{margin:"0.5rem 0 0",fontSize:"0.75rem",color:THEME.muted,lineHeight:1.45}}>
+              Consúltalos por separado: la base oficial recibe un número por consulta, y un
+              equipo puede aparecer reportado por uno solo de los dos.
+            </p>
           )}
 
           {necesitaKyc && (
@@ -1376,6 +1397,39 @@ function FichaDelEquipo({
         base oficial la haces tú, antes de pagar. Si al recibir el producto la información no
         corresponde, puedes devolverlo por información falsa y recuperar tu dinero.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Una línea de IMEI. El botón de copiar solo aparece cuando el número está
+ * desbloqueado: copiar el enmascarado pegaría puntos suspensivos en el formulario
+ * del SRTM y el comprador creería que consultó algo.
+ */
+function FilaImei({
+  etiqueta, valor, desbloqueado, copiado, onCopiar,
+}: {
+  etiqueta: string;
+  valor: string | null | undefined;
+  desbloqueado: boolean;
+  copiado: boolean;
+  onCopiar: () => void;
+}) {
+  return (
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:"0.35rem"}}>
+      <span style={{color:THEME.muted,fontSize:"0.85rem"}}>{etiqueta}</span>
+      <span style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:700,fontSize:"0.88rem",color:THEME.text,letterSpacing:"0.5px"}}>
+          {valor}
+        </span>
+        {desbloqueado && (
+          <button onClick={onCopiar} aria-label={`Copiar ${etiqueta}`}
+            style={{padding:"0.2rem 0.5rem",borderRadius:7,border:`1px solid ${THEME.border}`,
+              background:"transparent",color:copiado?VERDE:THEME.muted,fontWeight:700,fontSize:"0.72rem",cursor:"pointer",whiteSpace:"nowrap"}}>
+            {copiado ? "Copiado ✓" : "Copiar"}
+          </button>
+        )}
+      </span>
     </div>
   );
 }

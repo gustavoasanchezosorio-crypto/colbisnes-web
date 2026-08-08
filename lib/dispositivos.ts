@@ -71,6 +71,110 @@ export function esImeiValido(valor: unknown): boolean {
   return n !== null && imeiTieneDigitoDeControlValido(n);
 }
 
+export type ImeiValidado =
+  | { ok: true; imei: string | null; digitoDeControlOk: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Valida UN IMEI y devuelve el error ya redactado, con la etiqueta de la casilla
+ * que falló ("IMEI 1" o "IMEI 2"). Sin la etiqueta, quien se equivoca en la
+ * segunda casilla ve un error genérico y revisa la primera.
+ *
+ * Vacío es válido y devuelve null: ningún IMEI es obligatorio.
+ *
+ * EL DÍGITO DE CONTROL NO BLOQUEA, y esto es deliberado. Antes sí lo hacía y
+ * estaba mal: se rechazó un equipo real de un vendedor real. El dígito de control
+ * sirve para atrapar números tecleados al azar, pero hay IMEIs legítimos que no lo
+ * cumplen —equipos de marcas menores, genéricos, pantallas que muestran el número
+ * en otro formato— y el precio de equivocarse es que alguien con un teléfono de
+ * verdad en la mano no pueda publicar y se vaya creyendo que la web está rota.
+ *
+ * El razonamiento de fondo: Colbisnes NO verifica nada. La verdad sobre un IMEI
+ * está en el SRTM, que consulta el comprador antes de pagar. Una revisión que no
+ * consulta ninguna base no puede tener poder de veto sobre una venta. Se informa y
+ * se deja decidir a quien tiene el aparato en la mano.
+ */
+export function validarUnImei(valor: unknown, etiqueta: string): ImeiValidado {
+  if (valor === undefined || valor === null || String(valor).trim() === "") {
+    return { ok: true, imei: null, digitoDeControlOk: true };
+  }
+  const n = normalizarImei(valor);
+  if (!n) {
+    return {
+      ok: false,
+      error: `El ${etiqueta} debe tener 15 dígitos. Márcalo en el teclado del teléfono: *#06#`,
+    };
+  }
+  return { ok: true, imei: n, digitoDeControlOk: imeiTieneDigitoDeControlValido(n) };
+}
+
+/**
+ * El aviso que se le muestra a quien escribe un IMEI que no cuadra con su dígito
+ * de control. Está aquí para que el formulario de publicar y el de editar digan
+ * exactamente lo mismo.
+ *
+ * Dice "revisa" y no "está mal" a propósito: en la mayoría de los casos es un
+ * número mal copiado, pero en algunos el equipo es así, y el vendedor honesto no
+ * tiene por qué sentir que se le está acusando de algo.
+ */
+export function avisoDigitoDeControl(etiqueta: string): string {
+  return `Revisa el ${etiqueta}: no cuadra con su dígito de control, así que puede tener un número cambiado. Si lo comparaste con *#06# y es el de tu equipo, publícalo así.`;
+}
+
+export type ImeisValidados =
+  | { ok: true; imei: string | null; imei2: string | null; algunoSinDigitoDeControl: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Valida el PAR de IMEI de una publicación.
+ *
+ * Casi todos los celulares que se venden hoy son de dos SIM y traen dos IMEI, uno
+ * por ranura. Pedir uno solo obligaba al vendedor a escoger cuál declarar —o a
+ * meter los dos en la misma casilla separados por coma, donde la validación no
+ * sirve de nada y el comprador no sabe cuál es cuál.
+ *
+ * El segundo es opcional a propósito: las tablets, los módems y los celulares de
+ * una sola SIM tienen uno solo, y exigirlo dejaría fuera publicaciones legítimas.
+ *
+ * Las dos revisiones del par, más allá de validar cada número por separado:
+ *  - Si solo viene el segundo, se pide moverlo al primero en vez de reacomodarlo
+ *    en silencio. Reordenar datos que el vendedor escribió, sin decírselo, es
+ *    justo lo que no se puede hacer en el campo que sirve para resolver disputas.
+ *  - Si los dos son iguales, es un copiar y pegar: en un equipo de dos SIM los dos
+ *    IMEI SIEMPRE son distintos (comparten los 14 primeros dígitos y cambian en el
+ *    de control). Dejarlo pasar sería declarar como dual-SIM algo que no lo es.
+ */
+export function validarImeisDeclarados(valor1: unknown, valor2: unknown): ImeisValidados {
+  const uno = validarUnImei(valor1, "IMEI 1");
+  if (!uno.ok) return uno;
+  const dos = validarUnImei(valor2, "IMEI 2");
+  if (!dos.ok) return dos;
+
+  if (!uno.imei && dos.imei) {
+    return {
+      ok: false,
+      error:
+        "Escribe primero el IMEI 1. Si el equipo tiene un solo IMEI, va en esa casilla y la segunda se deja vacía.",
+    };
+  }
+  if (uno.imei && dos.imei && uno.imei === dos.imei) {
+    return {
+      ok: false,
+      error:
+        "Los dos IMEI son el mismo número. En un equipo de dos SIM son distintos, casi siempre por el último dígito. Si tu equipo tiene un solo IMEI, deja la segunda casilla vacía.",
+    };
+  }
+  // No bloquea; se devuelve para poder dejarlo escrito en la auditoría. Si un día
+  // hay una disputa por un IMEI que no era el del equipo, sirve saber que el aviso
+  // se mostró y que el vendedor publicó de todos modos.
+  return {
+    ok: true,
+    imei: uno.imei,
+    imei2: dos.imei,
+    algunoSinDigitoDeControl: !uno.digitoDeControlOk || !dos.digitoDeControlOk,
+  };
+}
+
 /**
  * Versión pública del IMEI: se ven los 6 primeros y los 2 últimos.
  *

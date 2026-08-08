@@ -142,12 +142,17 @@ model Product {
   // Los tres son opcionales porque casi ninguna publicación es un dispositivo, y
   // porque hacerlos obligatorios rompería los productos ya creados.
   //
-  // OJO con `imei`: es el único campo del modelo que NO puede salir completo en una
-  // respuesta pública. Con un IMEI ajeno se clona un equipo. GET /api/products/[id]
-  // lo enmascara para todo el mundo salvo el vendedor y el comprador con la oferta
-  // aceptada. Si algún día se añade otro endpoint que devuelva productos, hay que
-  // acordarse de excluirlo allí también.
+  // OJO con `imei` e `imei2`: son los únicos campos del modelo que NO pueden salir
+  // completos en una respuesta pública. Con un IMEI ajeno se clona un equipo. GET
+  // /api/products/[id] los enmascara para todo el mundo salvo el vendedor y el
+  // comprador con la oferta aceptada. Si algún día se añade otro endpoint que
+  // devuelva productos, hay que acordarse de excluirlos allí también.
+  //
+  // Son dos porque casi todos los celulares que se venden hoy son de dos SIM y
+  // traen un IMEI por ranura. `imei2` queda vacío en tablets, módems y equipos de
+  // una sola SIM; `imei` es el que se llena primero (ver validarImeisDeclarados).
   imei               String?
+  imei2              String?
   saludBateria       Int? // porcentaje, 1-100
   piezasReemplazadas String? // tokens de lib/dispositivos.ts separados por coma
 
@@ -161,9 +166,13 @@ model Product {
   @@index([createdAt])
   @@index([status, createdAt])
   @@index([featuredUntil])
-  // Lo usa la revisión de IMEI repetido al publicar y al editar. Sin él, cada
-  // publicación de Tecnologia recorre la tabla entera de productos.
+  // Los usa la revisión de IMEI repetido al publicar y al editar. Sin ellos, cada
+  // publicación de Tecnologia recorre la tabla entera de productos. Son dos índices
+  // porque la revisión es cruzada: el IMEI 1 de una publicación se busca también
+  // entre los IMEI 2 de las demás, para que publicar el mismo equipo dos veces
+  // invirtiendo el orden de las casillas no lo esconda.
   @@index([imei])
+  @@index([imei2])
 }
 
 model FeaturedListing {

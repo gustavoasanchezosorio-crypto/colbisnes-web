@@ -25,6 +25,8 @@ import {
   PIEZAS,
   categoriaPideDatosDeDispositivo,
   esImeiValido,
+  normalizarImei,
+  avisoDigitoDeControl,
   normalizarSaludBateria,
   pisoDePrecio,
   mensajePisoDePrecio,
@@ -40,6 +42,7 @@ const extendedSchema = productSchema
     condition: z.enum(["NUEVO", "USADO"]),
     priceCOP: z.number().min(1, "Escribe el precio"),
     imei: z.string().optional(),
+    imei2: z.string().optional(),
     saludBateria: z.string().optional(),
     piezasReemplazadas: z.array(z.string()).optional(),
   })
@@ -50,11 +53,38 @@ const extendedSchema = productSchema
     }
     // Los datos del dispositivo son opcionales; si se escriben, deben ser creíbles.
     if (!categoriaPideDatosDeDispositivo(data.category)) return;
-    if (data.imei && data.imei.trim() !== "" && !esImeiValido(data.imei)) {
+    const hayUno = !!data.imei && data.imei.trim() !== "";
+    const hayDos = !!data.imei2 && data.imei2.trim() !== "";
+    // Lo ÚNICO que bloquea es que no sean 15 dígitos. El dígito de control se avisa
+    // debajo de la casilla pero deja publicar: ver validarUnImei en lib/dispositivos.
+    if (hayUno && normalizarImei(data.imei) === null) {
       ctx.addIssue({
         code: "custom",
         path: ["imei"],
-        message: "Ese IMEI no es válido. Son 15 dígitos: márcalos con *#06# en el teléfono y cópialos tal cual.",
+        message: "El IMEI son 15 dígitos: márcalos con *#06# en el teléfono y cópialos tal cual.",
+      });
+    }
+    if (hayDos && normalizarImei(data.imei2) === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["imei2"],
+        message: "El IMEI 2 son 15 dígitos: márcalos con *#06# en el teléfono y cópialos tal cual.",
+      });
+    }
+    // Las dos revisiones del par. El error se cuelga de la casilla que hay que
+    // tocar para arreglarlo, no de la primera, que es donde nadie lo buscaría.
+    if (!hayUno && hayDos) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["imei"],
+        message: "Escribe primero el IMEI 1. Si el equipo tiene un solo IMEI, va en esta casilla.",
+      });
+    }
+    if (hayUno && hayDos && normalizarImei(data.imei) === normalizarImei(data.imei2)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["imei2"],
+        message: "Es el mismo número del IMEI 1. En un equipo de dos SIM son distintos; si el tuyo tiene uno solo, deja esta casilla vacía.",
       });
     }
     if (data.saludBateria && data.saludBateria.trim() !== "" && normalizarSaludBateria(data.saludBateria) === null) {
@@ -334,6 +364,19 @@ function PageInner() {
   // Las casillas de IMEI, batería y piezas solo existen para dispositivos.
   const categoriaElegida = watch("category");
   const esDispositivo = categoriaPideDatosDeDispositivo(categoriaElegida);
+
+  // El dígito de control NO bloquea (ver lib/dispositivos.ts): se avisa aparte de
+  // los errores del formulario, en ámbar y no en rojo, porque no impide publicar.
+  // Solo se calcula cuando ya hay 15 dígitos, para no regañar a alguien mientras
+  // todavía está escribiendo el número.
+  const imei1Escrito = watch("imei");
+  const imei2Escrito = watch("imei2");
+  const avisoImei1 =
+    normalizarImei(imei1Escrito) !== null && !esImeiValido(imei1Escrito)
+      ? avisoDigitoDeControl("IMEI 1") : null;
+  const avisoImei2 =
+    normalizarImei(imei2Escrito) !== null && !esImeiValido(imei2Escrito)
+      ? avisoDigitoDeControl("IMEI 2") : null;
   useEffect(() => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k,v]) => { if (v) params.append(k, v); });
@@ -671,36 +714,83 @@ function PageInner() {
                     </p>
 
                     <div style={{ display: "grid", gap: 10 }}>
-                      <div>
-                        <Input
-                          placeholder="IMEI (15 dígitos, márcalo con *#06#)"
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={20}
-                          {...register("imei")}
-                        />
-                        {errors.imei
-                          ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei.message}</p>
-                          : <p style={{ fontSize: 11, color: THEME.muted, margin: "4px 0 0", lineHeight: 1.4 }}>
-                              En la publicación se ve solo una parte (490154•••••••18). El número
-                              completo se lo damos únicamente a compradores con identidad verificada,
-                              y queda registrado quién lo consultó.
-                            </p>}
+                      {/* Los dos IMEI van en el mismo renglón porque son el mismo dato
+                          del mismo equipo: casi todos los celulares de hoy son de dos
+                          SIM y traen uno por ranura. Separarlos en dos renglones haría
+                          parecer que el segundo es otra cosa.
+
+                          auto-fit con minmax es lo que los mantiene juntos en pantallas
+                          normales y los apila solos en un teléfono estrecho, sin media
+                          query: dos casillas de 15 dígitos lado a lado en 360 px no se
+                          pueden ni leer, y esto se llena casi siempre desde el celular. */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+                        <div>
+                          {/* Etiqueta encima y no solo placeholder: al escribir, el
+                              placeholder desaparece y con dos casillas idénticas al
+                              lado ya no se sabe cuál se está llenando. */}
+                          <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                            IMEI 1
+                          </label>
+                          <Input
+                            placeholder="15 dígitos (*#06#)"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={20}
+                            {...register("imei")}
+                          />
+                          {errors.imei
+                            ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei.message}</p>
+                            : avisoImei1 && <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei1}</p>}
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                            IMEI 2 <span style={{ fontWeight: 500, color: THEME.muted }}>(si tiene dos SIM)</span>
+                          </label>
+                          <Input
+                            placeholder="15 dígitos"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={20}
+                            {...register("imei2")}
+                          />
+                          {errors.imei2
+                            ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei2.message}</p>
+                            : avisoImei2 && <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei2}</p>}
+                        </div>
                       </div>
+                      <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
+                        Al marcar <strong>*#06#</strong> el teléfono muestra los dos. En la
+                        publicación se ve solo una parte (490154•••••••18); los números completos
+                        se los damos únicamente a compradores con identidad verificada, y queda
+                        registrado quién los consultó.
+                      </p>
 
                       <div>
-                        <Input
-                          placeholder="Salud de la batería, % (ej: 87)"
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={3}
-                          {...register("saludBateria")}
-                          onKeyDown={e => {
-                            const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
-                            if (nav || e.ctrlKey || e.metaKey) return;
-                            if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
-                          }}
-                        />
+                        <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                          Salud de la batería <span style={{ fontWeight: 500, color: THEME.muted }}>(porcentaje)</span>
+                        </label>
+                        {/* El % va pegado dentro de la casilla y no solo en el placeholder:
+                            así sigue a la vista mientras se escribe. Sin él, un "87" suelto
+                            se puede entender como 87 ciclos o como 87 % — y ese número es
+                            justo de los que se discuten en una devolución. */}
+                        <div style={{ position: "relative" }}>
+                          <Input
+                            placeholder="Ej: 87"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={3}
+                            {...register("saludBateria")}
+                            style={{ paddingRight: 36 }}
+                            onKeyDown={e => {
+                              const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
+                              if (nav || e.ctrlKey || e.metaKey) return;
+                              if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                            }}
+                          />
+                          <span style={{ position: "absolute", right: 13, top: 0, height: "100%", display: "flex", alignItems: "center", fontSize: "0.95rem", fontWeight: 600, color: THEME.muted, pointerEvents: "none" }}>
+                            %
+                          </span>
+                        </div>
                         {errors.saludBateria && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.saludBateria.message}</p>}
                       </div>
 

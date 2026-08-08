@@ -38,17 +38,26 @@ export async function GET(
 
     const producto = await prisma.product.findUnique({
       where: { id },
-      select: { id: true, imei: true, sellerId: true },
+      select: { id: true, imei: true, imei2: true, sellerId: true },
     });
     if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     if (!producto.imei) {
       return NextResponse.json({ error: "Esta publicación no tiene IMEI declarado" }, { status: 404 });
     }
 
+    // Los dos se entregan juntos: un equipo de dos SIM tiene los dos IMEI y el
+    // comprador tiene que poder consultar ambos. Un equipo puede estar reportado por
+    // uno solo, así que devolver únicamente el primero dejaría media revisión hecha.
+    const respuesta = {
+      imei: producto.imei,
+      imei2: producto.imei2,
+      urlConsultaOficial: URL_CONSULTA_IMEI_OFICIAL,
+    };
+
     // Candado 1: el dueño de la publicación.
     const sesion = await getServerSession(authOptions);
     if (sesion?.user?.id === producto.sellerId) {
-      return NextResponse.json({ imei: producto.imei, urlConsultaOficial: URL_CONSULTA_IMEI_OFICIAL });
+      return NextResponse.json(respuesta);
     }
 
     // Candado 2: identidad verificada.
@@ -73,7 +82,7 @@ export async function GET(
       request: req,
     });
 
-    return NextResponse.json({ imei: producto.imei, urlConsultaOficial: URL_CONSULTA_IMEI_OFICIAL });
+    return NextResponse.json(respuesta);
   } catch (error) {
     console.error("GET /api/products/[id]/imei error:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

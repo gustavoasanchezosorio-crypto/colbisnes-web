@@ -6,8 +6,7 @@ import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { registrarAuditoria } from "@/lib/audit";
 import {
   categoriaPideDatosDeDispositivo,
-  normalizarImei,
-  imeiTieneDigitoDeControlValido,
+  validarImeisDeclarados,
   normalizarSaludBateria,
   normalizarPiezas,
   enmascararImei,
@@ -64,18 +63,20 @@ export async function GET(
               : { id: o.id, productId: o.productId, amountCOP: o.amountCOP, status: o.status }
           );
 
-    // El IMEI completo NO viaja en esta respuesta ni siquiera para el vendedor: la
-    // página del producto no lo necesita para pintarse. Quien tenga derecho a verlo
-    // lo pide aparte, a GET /api/products/[id]/imei, que exige identidad verificada
-    // y deja constancia de quién lo consultó. Así, si alguien intenta recolectar
+    // NINGÚN IMEI completo viaja en esta respuesta, ni siquiera para el vendedor: la
+    // página del producto no los necesita para pintarse. Quien tenga derecho a verlos
+    // los pide aparte, a GET /api/products/[id]/imei, que exige identidad verificada
+    // y deja constancia de quién los consultó. Así, si alguien intenta recolectar
     // IMEIs del catálogo para clonarlos, queda un rastro con nombre propio.
-    const { imei, ...productoSinImei } = product;
+    const { imei, imei2, ...productoSinImei } = product;
 
     return NextResponse.json({
       ...productoSinImei,
       offers,
       imeiParcial: enmascararImei(imei),
+      imei2Parcial: enmascararImei(imei2),
       tieneImei: !!imei,
+      tieneImei2: !!imei2,
     });
   } catch (error: any) {
     console.error("GET /api/products/[id] error:", error);
@@ -113,7 +114,7 @@ export async function PATCH(
 
     const body = await req.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
-    const { imei, saludBateria, piezasReemplazadas } = body;
+    const { imei, imei2, saludBateria, piezasReemplazadas } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -148,45 +149,51 @@ export async function PATCH(
     // Si la publicación deja de ser de Tecnologia, los tres campos se borran: un
     // IMEI colgando de un producto que ya no es un teléfono solo puede confundir.
     let imeiFinal: string | null = null;
+    let imei2Final: string | null = null;
     let bateriaFinal: number | null = null;
     let piezasFinal: string | null = null;
+    // No bloquea nada. Queda en la auditoría porque en una disputa importa saber que al
+    // vendedor se le avisó que el número no cuadraba con su dígito de control y aun así
+    // publicó: es la diferencia entre un dedazo y un número inventado.
+    let sinDigitoDeControl = false;
 
     if (categoriaPideDatosDeDispositivo(finalCategory)) {
-      // El formulario de editar puede devolver el IMEI ya enmascarado (con puntos),
+      // El formulario de editar puede devolver un IMEI ya enmascarado (con puntos),
       // porque es lo único que recibió del servidor. En ese caso NO es una edición:
-      // significa "déjalo como estaba".
-      const vieneEnmascarado = typeof imei === "string" && imei.includes("•");
-      if (vieneEnmascarado) {
-        imeiFinal = product.imei;
-      } else if (imei !== undefined && imei !== null && String(imei).trim() !== "") {
-        imeiFinal = normalizarImei(imei);
-        if (!imeiFinal) {
+      // significa "déjalo como estaba", y se sustituye por el valor guardado antes
+      // de validar. Se resuelve casilla por casilla porque el vendedor puede muy
+      // bien cambiar solo uno de los dos y dejar el otro intacto.
+      const sinEnmascarar = (valor: unknown, guardado: string | null) =>
+        typeof valor === "string" && valor.includes("•") ? guardado : valor;
+
+      const imeis = validarImeisDeclarados(
+        sinEnmascarar(imei, product.imei),
+        sinEnmascarar(imei2, product.imei2)
+      );
+      if (!imeis.ok) return NextResponse.json({ error: imeis.error }, { status: 400 });
+      imeiFinal = imeis.imei;
+      imei2Final = imeis.imei2;
+      sinDigitoDeControl = imeis.algunoSinDigitoDeControl;
+
+      // Búsqueda cruzada en las dos columnas, igual que al crear, excluyendo esta
+      // misma publicación. Se hace siempre que haya algún IMEI declarado y no solo
+      // cuando cambian: es una consulta por índice, y condicionarla es la clase de
+      // atajo por el que después se cuela un duplicado.
+      const declarados = [imeiFinal, imei2Final].filter((n): n is string => !!n);
+      if (declarados.length > 0) {
+        const yaPublicado = await prisma.product.findFirst({
+          where: {
+            id: { not: id },
+            status: { in: ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW"] },
+            OR: [{ imei: { in: declarados } }, { imei2: { in: declarados } }],
+          },
+          select: { id: true },
+        });
+        if (yaPublicado) {
           return NextResponse.json(
-            { error: "El IMEI debe tener 15 dígitos. Márcalo en el teclado del teléfono: *#06#" },
-            { status: 400 }
+            { error: "Ya hay una publicación activa con ese IMEI." },
+            { status: 409 }
           );
-        }
-        if (!imeiTieneDigitoDeControlValido(imeiFinal)) {
-          return NextResponse.json(
-            { error: "Ese IMEI no es válido: no pasa el dígito de control. Revisa que lo hayas copiado completo y sin cambiar ningún número." },
-            { status: 400 }
-          );
-        }
-        if (imeiFinal !== product.imei) {
-          const yaPublicado = await prisma.product.findFirst({
-            where: {
-              imei: imeiFinal,
-              id: { not: id },
-              status: { in: ["AVAILABLE", "PAYMENT_PENDING", "IN_ESCROW"] },
-            },
-            select: { id: true },
-          });
-          if (yaPublicado) {
-            return NextResponse.json(
-              { error: "Ya hay una publicación activa con ese IMEI." },
-              { status: 409 }
-            );
-          }
         }
       }
       if (saludBateria !== undefined && saludBateria !== null && String(saludBateria).trim() !== "") {
@@ -222,6 +229,7 @@ export async function PATCH(
           condition: finalCondition,
           category: finalCategory,
           imei: imeiFinal,
+          imei2: imei2Final,
           saludBateria: bateriaFinal,
           piezasReemplazadas: piezasFinal,
           images: validImageUrls.length
@@ -245,14 +253,15 @@ export async function PATCH(
         antes: {
           title: product.title, priceCOP: product.priceCOP, city: product.city,
           condition: product.condition, category: product.category,
-          imei: product.imei, saludBateria: product.saludBateria,
+          imei: product.imei, imei2: product.imei2, saludBateria: product.saludBateria,
           piezasReemplazadas: product.piezasReemplazadas,
         },
         despues: {
           title: title.trim(), priceCOP, city: city.trim(),
           condition: finalCondition, category: finalCategory,
-          imei: imeiFinal, saludBateria: bateriaFinal,
+          imei: imeiFinal, imei2: imei2Final, saludBateria: bateriaFinal,
           piezasReemplazadas: piezasFinal,
+          sinDigitoDeControl,
         },
       },
       request: req,
