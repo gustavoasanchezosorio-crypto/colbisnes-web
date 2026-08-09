@@ -39,6 +39,16 @@ export const ProductCard = React.memo(function ProductCard({
 
   const isFeatured = !!product.featuredUntil && new Date(product.featuredUntil) > new Date();
 
+  // El precio va en su propio renglón, así que dispone del ancho completo de la tarjeta
+  // (~333px en escritorio, ~290px en un teléfono). "$ 1.500.000" en 1.8rem pide unos
+  // 190px y sobra espacio, pero un inmueble de "$ 1.250.000.000" pide ~300px y en el
+  // teléfono se saldría. Un precio cortado en una app de plata no es aceptable: si el
+  // texto es largo se le baja un punto a la letra en vez de dejar que lo recorte el
+  // overflow:hidden de la tarjeta. El corte va por número de caracteres y no por el
+  // valor, porque lo que ocupa ancho son los dígitos y los puntos de miles.
+  const precioTexto = formatMoney(product.priceCOP);
+  const precioTamano = precioTexto.length > 13 ? "1.45rem" : "1.8rem";
+
   const ofertaAceptadaUserId = product.offers && product.offers.length > 0 ? product.offers[0].userId : null;
   const esCompradorAutorizado = !!currentUserId && currentUserId === ofertaAceptadaUserId;
 
@@ -380,128 +390,143 @@ export const ProductCard = React.memo(function ProductCard({
             </button>}
           </div>
         )}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div style={{ flex: 1 }}>
-            <Link href={`/product/${product.id}`} style={{ textDecoration: "none" }}>
-              <h3 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 6, color: THEME.text, cursor: "pointer" }}>
-                {product.title}
-              </h3>
-            </Link>
-            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-              <span style={{ fontSize: "0.9rem", color: THEME.muted }}>📍 {product.city}</span>
-              <span style={{ fontSize: "0.9rem", color: THEME.muted }}>📦 {status}</span>
-              {!isSold && isOwner && pendingOffersCount > 0 && (
-                <span style={{
-                  background: "linear-gradient(135deg,#1448A3,#1F6BFF)",
-                  color: "#fff",
-                  padding: "5px 12px",
-                  borderRadius: 20,
-                  fontSize: "0.8rem",
-                  fontWeight: 800,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  boxShadow: "0 3px 12px rgba(31,107,255,0.4)",
-                  animation: "ofertaPulse 1.6s ease-in-out infinite",
-                }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", animation: "ofertaBlink 1.6s ease-in-out infinite" }} />
-                  {pendingOffersCount} oferta{pendingOffersCount !== 1 ? "s" : ""} nueva{pendingOffersCount !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: "0.9rem", marginTop: 8, color: THEME.muted, lineHeight: 1.5 }}>
-              {product.description}
-            </p>
+        {/* Cuerpo de la tarjeta: título, precio, descripción y vendedor, uno debajo del
+            otro y cada uno con el ancho completo.
 
-            {product.seller && (
-              <Link
-                href={`/user/${product.seller.id}`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 12,
-                  color: THEME.primary,
-                  textDecoration: "none",
-                  fontSize: "0.9rem",
-                  // flexWrap: si el nombre del vendedor es largo, el badge baja de línea
-                  // intacto en vez de aplastarse (era la causa del badge "moneda" partido).
-                  flexWrap: "wrap",
-                  // Sin este tope, el nombre largo empuja el ancho de la tarjeta hacia
-                  // afuera en vez de recortarse dentro de ella.
-                  maxWidth: "100%",
-                }}
-              >
-                {/* "Vendedor:" y el nombre van pegados en UN solo renglón. Antes el nombre
-                    se partía a media palabra en la segunda línea (GUSTAVO / OSORIO) y la
-                    tarjeta se veía rota. Ahora, si no cabe, se recorta con puntos
-                    suspensivos: el nombre completo se ve al entrar a la publicación.
-
-                    minWidth:0 es lo que hace que funcione el recorte — un elemento flex
-                    se niega a encogerse por debajo del ancho de su texto a menos que se
-                    le diga esto, y sin él el overflow:hidden no tiene nada que recortar.
-
-                    La mayúscula va por CSS y no con toUpperCase(): así se guarda el nombre
-                    tal como lo escribió la persona (que es como sale en el correo, en el
-                    comprobante y en el chat) y solo cambia lo que se ve aquí. */}
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    minWidth: 0,
-                    maxWidth: "100%",
-                  }}
-                  title={product.seller.name || "Anónimo"}
-                >
-                  Vendedor:{" "}
-                  <span style={{ textTransform: "uppercase", fontWeight: 700 }}>
-                    {product.seller.name || "Anónimo"}
-                  </span>
-                </span>
-                {product.seller.avgRating ? (
-                  <span style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                    background: "linear-gradient(135deg,#F3D57E,#C79A2E)",
-                    color: "#3a2c05",
-                    padding: "3px 10px",
-                    borderRadius: 999,
-                    fontSize: "0.72rem",
-                    fontWeight: 800,
-                    boxShadow: "0 2px 7px rgba(199,154,46,0.4)",
-                  }}>
-                    <span style={{ color: "#fff", fontSize: "0.82rem", lineHeight: 1, filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }}>★</span>
-                    {Number(product.seller.avgRating).toFixed(1)}
-                    <span style={{ opacity: 0.8, fontWeight: 700 }}>({product.seller.totalReviews})</span>
-                  </span>
-                ) : (
-                  <span style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                    background: THEME.surfaceAlt,
-                    color: THEME.muted,
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    fontSize: "0.7rem",
-                  }}>
-                    Nuevo vendedor
-                  </span>
-                )}
-                {product.seller.kycStatus === "approved" && (
-                  <span style={{ color: THEME.secondary, cursor: "help" }} title="Usuario verificado">✓</span>
-                )}
-              </Link>
+            Antes el precio iba en una fila flex, arriba a la derecha, peleándole el ancho
+            al título. La tarjeta da unos 333px útiles y "$ 1.500.000" en 1.8rem negrita
+            pide ~190px él solo, así que al bloque de texto le quedaban ~127px: ahí el
+            nombre del vendedor no cabe en un renglón, y cuando se le prohibió partirse
+            fue el PRECIO el que se encogió y quedó cortado por el overflow:hidden de la
+            tarjeta. No caben los dos al lado, así que se separan. */}
+        <div>
+          <Link href={`/product/${product.id}`} style={{ textDecoration: "none" }}>
+            {/* overflowWrap:anywhere — un título de una sola palabra larguísima antes
+                empujaba el ancho de la tarjeta hacia afuera; ahora se parte y cabe. */}
+            <h3 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 6, color: THEME.text, cursor: "pointer", overflowWrap: "anywhere" }}>
+              {product.title}
+            </h3>
+          </Link>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+            <span style={{ fontSize: "0.9rem", color: THEME.muted }}>📍 {product.city}</span>
+            <span style={{ fontSize: "0.9rem", color: THEME.muted }}>📦 {status}</span>
+            {!isSold && isOwner && pendingOffersCount > 0 && (
+              <span style={{
+                background: "linear-gradient(135deg,#1448A3,#1F6BFF)",
+                color: "#fff",
+                padding: "5px 12px",
+                borderRadius: 20,
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                boxShadow: "0 3px 12px rgba(31,107,255,0.4)",
+                animation: "ofertaPulse 1.6s ease-in-out infinite",
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", animation: "ofertaBlink 1.6s ease-in-out infinite" }} />
+                {pendingOffersCount} oferta{pendingOffersCount !== 1 ? "s" : ""} nueva{pendingOffersCount !== 1 ? "s" : ""}
+              </span>
             )}
           </div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: THEME.primary, marginLeft: 16 }}>
-            {formatMoney(product.priceCOP)}
+
+          {/* El precio manda: renglón propio, ancho completo y nunca se parte. El
+              nowrap es a propósito — un precio cortado a media cifra ("$ 1.250.000." /
+              "000") se lee como otro número, y eso en una app de plata no va. */}
+          <div style={{ fontSize: precioTamano, fontWeight: 900, color: THEME.primary, lineHeight: 1.15, margin: "12px 0 2px", whiteSpace: "nowrap" }}>
+            {precioTexto}
           </div>
+
+          <p style={{ fontSize: "0.9rem", marginTop: 8, color: THEME.muted, lineHeight: 1.5, overflowWrap: "anywhere" }}>
+            {product.description}
+          </p>
+
+          {product.seller && (
+            <Link
+              href={`/user/${product.seller.id}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 12,
+                color: THEME.primary,
+                textDecoration: "none",
+                fontSize: "0.9rem",
+                // flexWrap: si el nombre del vendedor es largo, el badge baja de línea
+                // intacto en vez de aplastarse (era la causa del badge "moneda" partido).
+                flexWrap: "wrap",
+                // Sin este tope, el nombre largo empuja el ancho de la tarjeta hacia
+                // afuera en vez de recortarse dentro de ella.
+                maxWidth: "100%",
+              }}
+            >
+              {/* "Vendedor:" y el nombre van pegados en UN solo renglón. Antes el nombre
+                  se partía a media palabra en la segunda línea (GUSTAVO / OSORIO) y la
+                  tarjeta se veía rota. Ahora cabe entero porque el precio ya no le quita
+                  el ancho; si aun así no cupiera (un nombre larguísimo), se recorta con
+                  puntos suspensivos y el completo queda en el title y en la publicación.
+
+                  minWidth:0 es lo que hace que funcione el recorte — un elemento flex
+                  se niega a encogerse por debajo del ancho de su texto a menos que se
+                  le diga esto, y sin él el overflow:hidden no tiene nada que recortar.
+
+                  La mayúscula va por CSS y no con toUpperCase(): así se guarda el nombre
+                  tal como lo escribió la persona (que es como sale en el correo, en el
+                  comprobante y en el chat) y solo cambia lo que se ve aquí. */}
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                }}
+                title={product.seller.name || "Anónimo"}
+              >
+                Vendedor:{" "}
+                <span style={{ textTransform: "uppercase", fontWeight: 700 }}>
+                  {product.seller.name || "Anónimo"}
+                </span>
+              </span>
+              {product.seller.avgRating ? (
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  background: "linear-gradient(135deg,#F3D57E,#C79A2E)",
+                  color: "#3a2c05",
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                  boxShadow: "0 2px 7px rgba(199,154,46,0.4)",
+                }}>
+                  <span style={{ color: "#fff", fontSize: "0.82rem", lineHeight: 1, filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }}>★</span>
+                  {Number(product.seller.avgRating).toFixed(1)}
+                  <span style={{ opacity: 0.8, fontWeight: 700 }}>({product.seller.totalReviews})</span>
+                </span>
+              ) : (
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  background: THEME.surfaceAlt,
+                  color: THEME.muted,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  fontSize: "0.7rem",
+                }}>
+                  Nuevo vendedor
+                </span>
+              )}
+              {product.seller.kycStatus === "approved" && (
+                <span style={{ color: THEME.secondary, cursor: "help" }} title="Usuario verificado">✓</span>
+              )}
+            </Link>
+          )}
         </div>
 
         {product.status === 'PAYMENT_PENDING' && timer && timer !== "00:00" && isOwner && (
