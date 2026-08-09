@@ -199,6 +199,54 @@ export function enmascararImei(imei: string | null | undefined): string | null {
 // comprador y la consulta la hace él, no Colbisnes.
 export const URL_CONSULTA_IMEI_OFICIAL = "https://www.imeicolombia.com.co/";
 
+// Estados de Order en los que la plata YA se movió. Lo usan el endpoint que
+// entrega el IMEI (app/api/products/[id]/imei) y la ficha del producto.
+export const ESTADOS_CON_PLATA_MOVIDA = [
+  "PAGADO",           // online: escrow fondeado
+  "ESPERANDO_ENVIO",  // contra entrega: comisión de reserva ya confirmada
+  "EN_CAMINO",
+  "ENTREGADO",
+  "COMPLETADO",
+] as const;
+
+// Contra entrega: la orden nace aquí, cuando el comprador reserva el equipo y
+// ANTES de que pague la comisión de reserva.
+export const ESTADO_RESERVA_CONTRA_ENTREGA = "ESPERANDO_COMISION";
+
+/**
+ * ¿Esta orden le da derecho a su comprador a ver el IMEI completo?
+ *
+ * Dos caminos, y la diferencia entre ellos es dónde está la plata:
+ *
+ *   • Pago en línea / USDT: desde que el pago se confirma. Antes de eso no se
+ *     muestra. No hace falta: el escrow lo cubre. Cuando ve el número, Colbisnes
+ *     todavía tiene el dinero, así que si consulta el SRTM y el equipo aparece
+ *     reportado, abre disputa y se le devuelve.
+ *
+ *   • Contra entrega: desde que RESERVA, sin haber pagado todavía la comisión.
+ *     Aquí el escrow no lo protege igual —Colbisnes solo llega a retener la
+ *     comisión, no el valor del equipo, que se paga en efectivo al mensajero—,
+ *     así que tiene que poder consultar el SRTM antes de soltar un peso. Si
+ *     esperáramos a la comisión confirmada, descubrir que el equipo está
+ *     reportado ya le habría costado plata.
+ *
+ * Reservar no es gratis en el sentido que importa: exige identidad verificada,
+ * correo verificado, anti-phishing y datos de cobro, y deja la publicación
+ * bloqueada 24 horas en exclusiva (una sola orden activa por producto). Recoger
+ * IMEIs así obligaría a bloquear publicaciones ajenas una por una, a la vista
+ * del vendedor y con el nombre propio en el registro de auditoría.
+ *
+ * Se comprueba en el servidor (es el candado de verdad) y en el cliente, que solo
+ * lo usa para decidir si dibuja el botón o el aviso de "todavía no".
+ */
+export function ordenHabilitaVerImei(
+  orden: { estado?: string | null; metodoPago?: string | null } | null | undefined
+): boolean {
+  if (!orden?.estado) return false;
+  if ((ESTADOS_CON_PLATA_MOVIDA as readonly string[]).includes(orden.estado)) return true;
+  return orden.metodoPago === "CONTRA_ENTREGA" && orden.estado === ESTADO_RESERVA_CONTRA_ENTREGA;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. Salud de batería
 // ─────────────────────────────────────────────────────────────────────────────

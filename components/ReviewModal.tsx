@@ -54,7 +54,9 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       <div style={{
         background: THEME.surfaceGradient,
         borderRadius: 20,
-        width: 400,
+        // Mismo arreglo que en OfferModal: ancho fijo se desbordaba en teléfono.
+        width: "100%",
+        maxWidth: 400,
         border: `1px solid ${THEME.border}`,
         boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
         overflow: "hidden",

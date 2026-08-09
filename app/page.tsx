@@ -497,36 +497,16 @@ function PageInner() {
   return (
     <div style={{ minHeight: "100vh", background: THEME.background, color: THEME.text, animation: nudgeActive ? "nudgeSoftShake 0.5s ease-out" : "none" }}>
 
-      {/* Aviso elegante — toast que se desliza suave desde arriba */}
-      {nudgeActive && (
-        <div style={{
-          position: "fixed", top: 18, left: 0, right: 0, zIndex: 9999, pointerEvents: "none",
-          display: "flex", justifyContent: "center",
-          animation: "nudgeSlideIn 0.38s cubic-bezier(0.22,1,0.36,1)",
-        }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 12,
-            background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "white",
-            padding: "0.85rem 1.4rem", borderRadius: 16,
-            fontSize: "0.98rem", fontWeight: 800,
-            boxShadow: "0 12px 34px rgba(0,63,122,0.35), 0 2px 8px rgba(0,0,0,0.18)",
-            border: "1px solid rgba(255,205,0,0.55)", maxWidth: "90vw",
-          }}>
-            <span style={{
-              width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-              background: "rgba(255,205,0,0.18)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
-            }}>💬</span>
-            <div style={{ textAlign: "left", lineHeight: 1.2 }}>
-              Nuevo mensaje
-              <div style={{ fontSize: "0.78rem", fontWeight: 600, opacity: 0.8, marginTop: 2 }}>
-                Alguien quiere hablar contigo
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Aquí vivía un segundo aviso de "Nuevo mensaje", una franja azul fija arriba.
+          Se quitó porque era una trampa: tenía pointerEvents:"none" y ningún onClick,
+          o sea que no se podía tocar. Salía encima del aviso bueno —el del borde
+          dorado que monta NotificationProvider— y como aparecía primero y en el borde
+          superior, era el que la gente intentaba tocar. Tocarlo no hacía nada y a los
+          2,2 s desaparecía solo.
 
+          Ahora hay un único aviso, el de NotificationContext.tsx: se toca, sabe de qué
+          publicación te escribieron y abre la conversación. Lo que sí se conserva de
+          aquí es `nudgeActive`, que sigue dando el temblor suave de la página. */}
       <style>{`
         @keyframes nudgeSoftShake {
           0%   { transform: translateX(0); }
@@ -536,10 +516,6 @@ function PageInner() {
           60%  { transform: translateX(3px); }
           75%  { transform: translateX(-1.5px); }
           100% { transform: translateX(0); }
-        }
-        @keyframes nudgeSlideIn {
-          from { opacity: 0; transform: translateY(-16px); }
-          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
       <header style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,89,159,0.3)" }}>
@@ -760,9 +736,9 @@ function PageInner() {
                       </div>
                       <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
                         Al marcar <strong>*#06#</strong> el teléfono muestra los dos. En la
-                        publicación se ve solo una parte (490154•••••••18); los números completos
-                        se los damos únicamente a compradores con identidad verificada, y queda
-                        registrado quién los consultó.
+                        publicación se ve solo una parte (490154•••••••18). Los números completos
+                        se los entregamos únicamente a tu comprador, cuando ya haya reservado o
+                        pagado el equipo. Queda registrado quién los consultó.
                       </p>
 
                       <div>
@@ -923,7 +899,12 @@ function PageInner() {
           <SkeletonGrid count={6} />
         ) : (
           <InfiniteScroll dataLength={productsCount} next={fetchMore} hasMore={hasMore} loader={<SkeletonGrid count={2} />} endMessage={productsCount > 0 ? <p style={{ textAlign: "center", padding: 20, color: THEME.muted }}>No hay mas productos</p> : null}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+            {/* El mínimo va envuelto en min(320px, 100%) y no suelto: un minmax(320px…)
+                pelado es un piso RÍGIDO, así que en un teléfono angosto (un iPhone SE
+                deja 288 px útiles después del padding) la columna seguía midiendo 320
+                y empujaba la página hacia el lado, con barra horizontal y todo. Con
+                min(...) la columna nunca pide más de lo que hay. */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(320px, 100%), 1fr))", gap: 20 }}>
               {products.map(product => (
                 // Ancla con id para que la notificación de mensaje nuevo pueda hacer
                 // scroll directo a la publicación de la que te están escribiendo.

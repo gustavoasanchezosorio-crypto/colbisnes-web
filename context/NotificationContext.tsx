@@ -27,28 +27,86 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // Popup de mensaje nuevo: muestra de qué producto te están escribiendo.
   const [msgPopup, setMsgPopup] = useState<MsgPopup | null>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Un único elemento de audio para toda la sesión (ver el efecto de desbloqueo).
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   // Última fecha de creación de mensaje que ya vimos/notificamos (ISO string, comparable lexicográficamente).
   const lastSeenAtRef = useRef<string | null>(null);
   const firstLoadRef = useRef(true);
 
   const fireNudge = useCallback(() => {
-    try {
-      const audio = new Audio('/sounds/mensaje-nuevo.mp3');
-      audio.volume = 1.0;
-      audio.play().catch((err) => {
-        // Antes este error se tragaba en silencio (.catch(() => {})), lo que hacía
-        // imposible distinguir un bloqueo de autoplay del navegador de otros fallos.
-        console.warn('[notificaciones] No se pudo reproducir el sonido (posible bloqueo de autoplay):', err);
-      });
-    } catch (err) {
-      console.warn('[notificaciones] Error creando el audio de notificación:', err);
+    // Ver el comentario del efecto de desbloqueo, más abajo: se reutiliza SIEMPRE
+    // el mismo elemento, porque el permiso para sonar se le concede a ese elemento
+    // en concreto, no a la página.
+    const audio = audioRef.current;
+    if (audio) {
+      try {
+        audio.currentTime = 0;
+        audio.muted = false;
+        audio.volume = 1.0;
+        audio.play().catch((err) => {
+          console.warn('[notificaciones] No se pudo reproducir el sonido (posible bloqueo de autoplay):', err);
+        });
+      } catch (err) {
+        console.warn('[notificaciones] Error reproduciendo el audio de notificación:', err);
+      }
     }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       // Zumbido más fuerte y notorio: pulsos largos y sostenidos (el patrón anterior
       // era muy corto y casi no se sentía). Duraciones más largas = vibración más marcada.
+      // Nota: en iPhone esto nunca hace nada — Safari no implementa la API de vibración.
+      // El sonido y el aviso en pantalla son los que tienen que funcionar allí.
       try { navigator.vibrate([450, 120, 450, 120, 450, 120, 450, 120, 900, 150, 900]); } catch {}
     }
     setNudgeTick((t) => t + 1);
+  }, []);
+
+  // ── Por qué existe todo esto: el sonido no sonaba ────────────────────────────
+  // Los navegadores (Safari en iPhone el más estricto) no dejan sonar un audio que
+  // no nació de un gesto del usuario. El permiso se le da al ELEMENTO de audio que
+  // se reprodujo durante ese gesto, no a la pestaña. Antes se creaba un `new Audio()`
+  // en cada mensaje: cada uno era un elemento recién nacido que nadie había tocado,
+  // así que siempre llegaba bloqueado y el mensaje entraba mudo.
+  //
+  // La solución es un solo elemento para toda la sesión, y "estrenarlo" con el primer
+  // toque que el usuario dé en cualquier parte: se reproduce y se pausa en el acto,
+  // en silencio, de modo que él no oye nada pero el navegador ya lo marcó como
+  // permitido. De ahí en adelante suena solo cuando llega un mensaje.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const audio = new Audio('/sounds/mensaje-nuevo.mp3');
+    audio.preload = 'auto';
+    audioRef.current = audio;
+
+    let listo = false;
+    const desbloquear = () => {
+      if (listo) return;
+      listo = true;
+      // Se silencia con `muted` y NO con `volume`: en iPhone, Safari ignora los
+      // cambios de volumen por código (allí el volumen solo lo manda el botón
+      // físico del teléfono), así que con volume=0 el usuario oiría el sonido
+      // completo en su primer toque. `muted` sí lo respeta.
+      audio.muted = true;
+      audio.play()
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+        })
+        .catch(() => {
+          // Si aún así falla, se reintenta en el siguiente gesto.
+          audio.muted = false;
+          listo = false;
+        });
+    };
+
+    // `pointerdown` cubre dedo y ratón; `keydown` cubre a quien navega con teclado.
+    // Van en captura y sin `once` para poder reintentar si el primer intento falla.
+    window.addEventListener('pointerdown', desbloquear, true);
+    window.addEventListener('keydown', desbloquear, true);
+    return () => {
+      window.removeEventListener('pointerdown', desbloquear, true);
+      window.removeEventListener('keydown', desbloquear, true);
+    };
   }, []);
 
   // Desplaza el feed hasta la publicación de la que te escribieron y la resalta.
@@ -122,10 +180,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [status]);
 
+  // Al tocar el aviso hay que quedar EN LA CONVERSACIÓN, no en la ficha del producto
+  // con el chat cerrado (que es lo que pasaba antes y obligaba a buscar el botón).
+  // El `?chat=1` lo lee ProductPageClient y abre el panel correcto según quien mire:
+  // al comprador le abre su conversación con el vendedor; al vendedor, su bandeja.
   const abrirProducto = () => {
     const id = msgPopup?.productId;
     setMsgPopup(null);
-    if (id) router.push(`/product/${id}`);
+    if (id) router.push(`/product/${id}?chat=1`);
     else router.push('/mensajes');
   };
 
@@ -136,14 +198,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         <div
           onClick={abrirProducto}
           style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            zIndex: 9800, cursor: 'pointer', width: 'min(360px, calc(100vw - 32px))',
+            // Arriba y centrado, como cualquier notificación del teléfono: es donde
+            // la gente la busca y donde intenta tocarla. Antes salía en mitad de la
+            // pantalla. El `safe-area-inset-top` la baja bajo la muesca del iPhone.
+            position: 'fixed', top: 'calc(14px + env(safe-area-inset-top))',
+            left: '50%', transform: 'translateX(-50%)',
+            // Por encima de todo lo demás (el chat de Chucho va en 1900).
+            zIndex: 9900, cursor: 'pointer', width: 'min(360px, calc(100vw - 32px))',
             background: '#fff', borderRadius: 16, padding: 12,
             // Borde dorado metálico: anillos superpuestos (oro oscuro → oro claro)
             // que siguen las esquinas redondeadas y dan aspecto de metal pulido.
             border: '2px solid transparent',
             boxShadow: '0 0 0 1px #7a5c12, 0 0 0 3px #d4af37, 0 0 0 4px #f7e79b, 0 0 0 5px #b8860b, 0 14px 44px rgba(10,46,107,0.35)',
-            display: 'flex', alignItems: 'center', gap: 12, animation: 'slideIn 0.3s',
+            // OJO: aquí decía `slideIn`, una animación que no está definida en ninguna
+            // hoja del proyecto — o sea, no hacía nada. `notifBajar` sí existe
+            // (globals.css) y baja el aviso desde el borde superior.
+            display: 'flex', alignItems: 'center', gap: 12,
+            animation: 'notifBajar 0.34s cubic-bezier(0.22,1,0.36,1)',
           }}
         >
           {msgPopup.image ? (

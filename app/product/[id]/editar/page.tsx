@@ -356,8 +356,8 @@ export default function EditarProductoPage() {
                 </div>
               </div>
               <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
-                En la publicación se ve solo una parte. Los números completos se los damos
-                únicamente a compradores con identidad verificada.
+                En la publicación se ve solo una parte. Los números completos se los entregamos
+                únicamente a tu comprador, cuando ya haya reservado o pagado el equipo.
               </p>
               <div>
                 <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>

@@ -10,7 +10,7 @@ import FacturaEnVivo from "@/components/FacturaEnVivo";
 import { THEME } from "@/lib/theme";
 import { GMF_PCT, WOMPI_MIN_TX_COP } from "@/lib/pricing";
 import { useModoPrueba } from "@/lib/useModoPrueba";
-import { piezasALista, etiquetaPieza, URL_CONSULTA_IMEI_OFICIAL } from "@/lib/dispositivos";
+import { piezasALista, etiquetaPieza, URL_CONSULTA_IMEI_OFICIAL, ordenHabilitaVerImei } from "@/lib/dispositivos";
 
 interface Product {
   id: string; title: string; description: string; priceCOP: number;
@@ -117,6 +117,19 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   }, [searchParams]);
 
   const esVendedor  = session?.user?.id === product?.sellerId;
+
+  // ¿Este visitante es el comprador de esta publicación, y su orden ya le da derecho
+  // a ver el IMEI completo? La regla vive en ordenHabilitaVerImei para que el cliente
+  // y el servidor no puedan discrepar. Se calcula aquí, y no dentro de la ficha, porque
+  // la orden ya viene cargada para la factura en vivo: no hace falta pedirla otra vez.
+  // El servidor vuelve a comprobarlo por su cuenta — esto solo decide qué se dibuja.
+  const compradorPuedeVerImei = !!(
+    session?.user?.email &&
+    ordenActiva?.buyerEmail &&
+    ordenActiva.buyerEmail.toLowerCase() === session.user.email.toLowerCase() &&
+    ordenHabilitaVerImei(ordenActiva)
+  );
+
   // Si llegan desde el feed con ?oferta=1 ("Hacer oferta"), abrimos directamente el
   // formulario de oferta — pero solo si el usuario puede ofertar (no es el vendedor,
   // no tiene ya una oferta y el producto está disponible). Así evitamos el modal
@@ -234,6 +247,24 @@ export default function ProductPageClient({ productId }: { productId: string }) 
     cargarMensajes();
   };
   const abrirPanelVendedor = () => { setVistaConvs(true); setMensajes([]); setMostrarChat(true); cargarConvsSeller(); };
+
+  // Llegar aquí desde el aviso de "te escribieron" (?chat=1) tiene que dejarte DENTRO
+  // de la conversación. Antes el aviso traía a la ficha con el chat cerrado y tocaba
+  // buscar el botón, que es justo lo que se sentía como "no me lleva al mensaje".
+  //
+  // Va después de las funciones que abre para no usarlas antes de declararlas, y espera
+  // a que `product` haya cargado porque el panel del comprador necesita el nombre y la
+  // foto del vendedor. El ref evita que se vuelva a abrir si el usuario lo cierra y
+  // algo provoca otro render con la misma URL.
+  const chatAutoAbiertoRef = useRef(false);
+  useEffect(() => {
+    if (chatAutoAbiertoRef.current) return;
+    if (searchParams?.get("chat") !== "1") return;
+    if (!product || !session?.user) return;
+    chatAutoAbiertoRef.current = true;
+    if (esVendedor) abrirPanelVendedor();
+    else abrirChatComprador();
+  }, [searchParams, product, session?.user?.id, esVendedor]);
 
   // Helper: maneja respuestas con kycRequired
   const handleKycRequired = (d: any): boolean => {
@@ -376,7 +407,10 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         </button>
       </header>
 
-      <div style={{maxWidth:"960px",margin:"0 auto",padding:"1rem 1rem 4.5rem"}}>
+      {/* El hueco de abajo (4.5rem) es el que reserva el sitio de la barra fija para
+          que el contenido no quede tapado. Ahora crece con la raya del iPhone, igual
+          que la barra, o si no la barra volvería a comerse la última línea. */}
+      <div style={{maxWidth:"960px",margin:"0 auto",padding:"1rem 1rem calc(4.5rem + env(safe-area-inset-bottom))"}}>
       <div className="prod-grid">
 
         {/* ══ GALERÍA (sticky solo en escritorio; en móvil es estática) ═════════ */}
@@ -846,7 +880,12 @@ export default function ProductPageClient({ productId }: { productId: string }) 
 
           {/* Ficha del equipo: fuera del acordeón a propósito. Es información de
               confianza, no una característica más; si va plegada nadie la abre. */}
-          <FichaDelEquipo productId={productId} product={product} esVendedor={esVendedor} />
+          <FichaDelEquipo
+            productId={productId}
+            product={product}
+            esVendedor={esVendedor}
+            puedeVerImei={compradorPuedeVerImei}
+          />
         </div>
       </div>
 
@@ -904,10 +943,16 @@ export default function ProductPageClient({ productId }: { productId: string }) 
         </div>
       )}
 
-      {/* ══ BARRA FIJA (solo móvil — en desktop se ocultan por CSS para no duplicar los CTA) ═ */}
+      {/* ══ BARRA FIJA (solo móvil — en desktop se ocultan por CSS para no duplicar los CTA) ═
+          El padding de abajo suma env(safe-area-inset-bottom): en los iPhone con raya
+          de inicio (X en adelante) esos ~34 px finales de pantalla los ocupa el
+          sistema, y sin esto los botones de "Hacer oferta" y "Comprar" quedaban metidos
+          debajo de la raya, incómodos de tocar. En un teléfono sin raya la variable
+          vale 0 y no cambia nada. */}
       {disponible && !esVendedor && (
         <div className="barra-cta-movil" style={{position:"fixed",bottom:0,left:0,right:0,...glass(0.9,28),
-          borderTop:"1px solid rgba(0,88,159,0.1)",padding:"0.75rem 1.25rem",
+          borderTop:"1px solid rgba(0,88,159,0.1)",
+          padding:"0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom))",
           display:"flex",gap:"0.6rem",zIndex:900}}>
           {session?.user ? (
             <>
@@ -1235,9 +1280,10 @@ export default function ProductPageClient({ productId }: { productId: string }) 
  * Dos reglas que gobiernan todo lo que hay aquí y que no conviene relajar:
  *
  *  1. NUNCA se pinta el IMEI completo de entrada. Llega enmascarado desde el
- *     servidor y solo se descubre cuando alguien con identidad verificada lo pide
- *     a propósito. Un catálogo que muestra IMEIs completos es un catálogo de
- *     números para clonar.
+ *     servidor y solo se descubre cuando lo pide a propósito quien tiene derecho:
+ *     el vendedor, o el comprador que ya reservó o pagó (ver ordenHabilitaVerImei
+ *     en lib/dispositivos.ts). Un catálogo que muestra IMEIs completos es un
+ *     catálogo de números para clonar.
  *
  *  2. NINGÚN texto dice "verificado". Colbisnes no consulta la base del SRTM —no
  *     tiene API pública— y afirmar que un equipo está limpio trasladaría a la
@@ -1245,13 +1291,12 @@ export default function ProductPageClient({ productId }: { productId: string }) 
  *     comprador, en el sitio oficial, y aquí solo se le da el número y el enlace.
  */
 function FichaDelEquipo({
-  productId, product, esVendedor,
-}: { productId: string; product: Product; esVendedor: boolean }) {
+  productId, product, esVendedor, puedeVerImei,
+}: { productId: string; product: Product; esVendedor: boolean; puedeVerImei: boolean }) {
   const [imeiCompleto, setImeiCompleto]   = useState<string | null>(null);
   const [imei2Completo, setImei2Completo] = useState<string | null>(null);
   const [pidiendo, setPidiendo]           = useState(false);
   const [errorImei, setErrorImei]         = useState<string | null>(null);
-  const [necesitaKyc, setNecesitaKyc]     = useState(false);
   const [copiado, setCopiado]             = useState<1 | 2 | null>(null);
 
   const piezas  = piezasALista(product.piezasReemplazadas);
@@ -1260,14 +1305,11 @@ function FichaDelEquipo({
   if (!hayAlgo) return null;
 
   const pedirImei = async () => {
-    setPidiendo(true); setErrorImei(null); setNecesitaKyc(false);
+    setPidiendo(true); setErrorImei(null);
     try {
       const r = await fetch(`/api/products/${productId}/imei`, { cache: "no-store", credentials: "include" });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        if (d?.kycRequired) setNecesitaKyc(true);
-        throw new Error(d?.error || "No se pudo obtener el IMEI");
-      }
+      if (!r.ok) throw new Error(d?.error || "No se pudo obtener el IMEI");
       setImeiCompleto(d.imei);
       setImei2Completo(d.imei2 ?? null);
     } catch (e: any) {
@@ -1346,7 +1388,10 @@ function FichaDelEquipo({
             />
           )}
 
-          {!imeiCompleto && !esVendedor && (
+          {/* El botón solo se le ofrece a quien de verdad puede ver el número: el
+              comprador con el pago ya confirmado. A cualquier otro se le explica
+              cuándo aparece y por qué esperar no lo deja desprotegido. */}
+          {!imeiCompleto && !esVendedor && puedeVerImei && (
             <button onClick={pedirImei} disabled={pidiendo}
               style={{marginTop:"0.6rem",width:"100%",padding:"0.6rem",borderRadius:10,border:`1.5px solid ${AZUL}`,
                 background:"transparent",color:AZUL,fontWeight:800,fontSize:"0.85rem",cursor:pidiendo?"default":"pointer",opacity:pidiendo?0.6:1}}>
@@ -1354,6 +1399,31 @@ function FichaDelEquipo({
                 ? "Un momento…"
                 : product.tieneImei2 ? "Ver los IMEI completos para consultarlos" : "Ver el IMEI completo para consultarlo"}
             </button>
+          )}
+
+          {!imeiCompleto && !esVendedor && !puedeVerImei && (
+            <div style={{marginTop:"0.6rem",padding:"0.7rem 0.8rem",borderRadius:10,background:"rgba(10,46,107,0.05)",
+              border:`1px solid ${THEME.border}`}}>
+              <p style={{margin:0,fontSize:"0.8rem",color:THEME.textSoft,lineHeight:1.5}}>
+                {product.tieneImei2 ? "Los IMEI completos son tuyos" : "El IMEI completo es tuyo"} en
+                cuanto la compra sea tuya, y solo para ti:
+              </p>
+              <ul style={{margin:"0.4rem 0 0",paddingLeft:"1.1rem",fontSize:"0.8rem",color:THEME.textSoft,lineHeight:1.5}}>
+                <li style={{marginBottom:3}}>
+                  <strong>Contra entrega:</strong> apenas reservas el equipo, antes de pagar nada.
+                  Así lo consultas en la base oficial y, si aparece reportado, no sueltas un peso.
+                </li>
+                <li>
+                  <strong>Pago en línea:</strong> cuando se confirme tu pago. Ahí Colbisnes retiene
+                  el dinero hasta que confirmes la entrega, así que si aparece reportado abres una
+                  disputa y se te devuelve.
+                </li>
+              </ul>
+              <p style={{margin:"0.5rem 0 0",fontSize:"0.75rem",color:THEME.muted,lineHeight:1.45}}>
+                No se muestra antes porque con ese número se clonan equipos, y el vendedor
+                tiene derecho a que no quede a la vista de cualquiera.
+              </p>
+            </div>
           )}
 
           {!imeiCompleto && esVendedor && (
@@ -1378,15 +1448,7 @@ function FichaDelEquipo({
             </p>
           )}
 
-          {necesitaKyc && (
-            <p style={{margin:"0.6rem 0 0",fontSize:"0.8rem",color:THEME.textSoft,lineHeight:1.5}}>
-              El IMEI completo solo se le entrega a personas con identidad verificada, y queda
-              registrado quién lo consultó. Es la forma de que este dato no termine sirviendo
-              para clonar equipos.{" "}
-              <a href="/kyc" style={{color:AZUL,fontWeight:700}}>Verificar mi identidad</a>
-            </p>
-          )}
-          {errorImei && !necesitaKyc && (
+          {errorImei && (
             <p style={{margin:"0.6rem 0 0",fontSize:"0.8rem",color:"#e53e3e"}}>{errorImei}</p>
           )}
         </div>

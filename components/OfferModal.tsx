@@ -71,7 +71,11 @@ export const OfferModal: React.FC<OfferModalProps> = ({
         background: THEME.surfaceGradient,
         padding: 30,
         borderRadius: 20,
-        width: 500,
+        // Antes era `width: 500` a secas y en un teléfono de 360 px el modal se
+        // salía de la pantalla por el lado derecho. Con width 100% + maxWidth se
+        // achica al ancho disponible y en escritorio se ve exactamente igual.
+        width: "100%",
+        maxWidth: 500,
         maxHeight: "80vh",
         overflowY: "auto",
         border: `1px solid ${THEME.border}`,

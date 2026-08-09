@@ -28,6 +28,29 @@ select option {
   color: #0d1b2a;
 }
 
+/* ── iPhone: que no se amplíe la página al tocar un campo ──────────────────────
+   Safari en iOS hace zoom automático cuando enfocas un campo cuya letra mide
+   menos de 16 px, y después NO se devuelve solo: el usuario queda con la página
+   ampliada y le toca cerrarla con los dedos. Nuestros campos venían en 0.95rem
+   (15,2 px), así que pasaba en todos los formularios: entrar, registrarse,
+   publicar, pagar y hacer una oferta.
+
+   Va aquí y con !important porque los estilos están escritos en línea dentro de
+   los componentes (y hay campos sueltos en una veintena de archivos): una sola
+   regla los cubre todos sin tocar veinte archivos a cuatro días de abrir.
+
+   Se revisó uno por uno que ningún campo del proyecto pase de 16 px, así que
+   esta regla solo sube los que estaban cortos; no encoge ninguno. Solo aplica
+   en pantallas de teléfono: en escritorio no existe el problema y no se cambia
+   nada de lo que ya está probado. */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Resalta la publicación de la que te acaban de escribir: al recibir la notificación
    de mensaje nuevo, se hace scroll a la tarjeta y esta parpadea con un anillo azul,
    como segundo recordatorio visual además del popup superior. */
@@ -42,10 +65,40 @@ select option {
   100% { box-shadow: 0 0 0 0 rgba(31, 107, 255, 0); }
 }
 
+/* Entrada del aviso de mensaje nuevo (context/NotificationContext.tsx): baja desde
+   el borde superior. El translateX(-50%) tiene que ir en TODOS los fotogramas: es lo
+   que mantiene la tarjeta centrada, y una animación de transform pisa la del style=.
+
+   No se reutiliza el nombre "slideIn" que aparece en ese archivo y en Toast.tsx a
+   propósito: esa animación no está definida en ninguna parte del proyecto (no hacía
+   nada), y definirla ahora la activaría de golpe también en el Toast, que está
+   posicionado distinto. A cuatro días de abrir no vale la pena ese riesgo. */
+@keyframes notifBajar {
+  from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* La barra fija de acción (Hacer oferta / Comprar) es solo para móvil: en pantalla
    ancha ya se ven los CTA dentro de la tarjeta, así que la ocultamos para no duplicar. */
 @media (min-width: 900px) {
   .barra-cta-movil {
     display: none !important;
+  }
+}
+
+/* ── Chucho no puede taparle el botón de comprar ───────────────────────────────
+   El botón flotante del chat se monta en el layout, o sea en TODAS las páginas, y
+   va en bottom:18 con z-index 1900. La barra de compra va en bottom:0 con z-index
+   900 y mide unos 70 px de alto. En teléfono el círculo del chat caía justo encima
+   del botón "Comprar" (que ocupa el lado derecho de la barra).
+
+   El :has() sube el botón solo en las pantallas donde esa barra existe —la ficha de
+   producto en móvil— y lo deja donde estaba en el resto. Si un navegador viejo no
+   entiende :has(), simplemente ignora la regla y queda como estaba: no rompe nada. */
+@media (max-width: 680px) {
+  body:has(.barra-cta-movil) .blu-lanzador {
+    /* !important porque la posición del botón está escrita en línea en el componente,
+       y una hoja de estilos no le gana a un style= sin esto. */
+    bottom: calc(88px + env(safe-area-inset-bottom)) !important;
   }
 }

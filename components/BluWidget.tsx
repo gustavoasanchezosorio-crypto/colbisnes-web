@@ -87,8 +87,11 @@ export default function BluWidget() {
         <button
           onClick={() => setAbierto(true)}
           aria-label="Abrir chat con Chucho Bot"
+          // La clase la lee globals.css para subir el botón cuando en esa pantalla hay
+          // barra de compra fija (solo pasa en la ficha de producto vista en teléfono).
+          className="blu-lanzador"
           style={{
-            position: "fixed", right: 18, bottom: 18, zIndex: 1900,
+            position: "fixed", right: 18, bottom: "calc(18px + env(safe-area-inset-bottom))", zIndex: 1900,
             width: 62, height: 62, borderRadius: "50%", border: "none", cursor: "pointer",
             background: THEME.surfaceGradient, boxShadow: THEME.cardShadow,
             padding: 4, display: "flex", alignItems: "center", justifyContent: "center",

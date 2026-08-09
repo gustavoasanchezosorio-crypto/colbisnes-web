@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireKyc } from "@/lib/requireKyc";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 import { registrarAuditoria } from "@/lib/audit";
-import { URL_CONSULTA_IMEI_OFICIAL } from "@/lib/dispositivos";
+import {
+  URL_CONSULTA_IMEI_OFICIAL,
+  ESTADOS_CON_PLATA_MOVIDA,
+  ESTADO_RESERVA_CONTRA_ENTREGA,
+} from "@/lib/dispositivos";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +20,19 @@ export const dynamic = "force-dynamic";
  * equipo. Si viajara en la respuesta normal del producto, cualquiera podría
  * recorrer el catálogo sin sesión y llevarse todos los IMEIs de un tirón.
  *
- * Tres candados, en este orden:
- *   1. El vendedor siempre puede ver el suyo, sin más requisitos.
- *   2. Cualquier otra persona necesita identidad verificada (mismo listón que
- *      para escribirle a alguien por el chat). No impide que un delincuente con
- *      cédula real lo pida, pero lo obliga a hacerlo CON NOMBRE PROPIO.
- *   3. Tope de 20 consultas por hora y queda registrado quién pidió cuál. Un
- *      patrón de recolección masiva deja de ser invisible.
+ * Quién puede verlo:
+ *   1. El vendedor, siempre — es su equipo.
+ *   2. El comprador de una orden de ESTA publicación que ya lo habilite. La regla
+ *      exacta, y el porqué de cada camino, están en ordenHabilitaVerImei
+ *      (lib/dispositivos.ts): en pago en línea desde que el pago se confirma, en
+ *      contra entrega desde que reserva. Nadie más.
+ *   3. Tope por hora y queda registrado quién pidió cuál.
+ *
+ * Por qué dejó de bastar la cédula (decisión de producto, 2026-08-09): hasta hoy
+ * el único requisito era tener la identidad verificada, así que cualquiera con
+ * cédula podía recorrer el catálogo recogiendo IMEIs — justo el dato con el que
+ * se clona un equipo. Peor: al vendedor se le decía en el formulario de publicar
+ * que su número solo lo verían compradores, y no era cierto.
  *
  * Lo que este endpoint NO hace: decir si el equipo está reportado. Eso vive en el
  * SRTM y no tiene API pública. Por eso devuelve además el enlace de la consulta
@@ -60,13 +69,40 @@ export async function GET(
       return NextResponse.json(respuesta);
     }
 
-    // Candado 2: identidad verificada.
-    const { session, response: errorKyc } = await requireKyc();
-    if (errorKyc) return errorKyc;
+    if (!sesion?.user?.email) {
+      return NextResponse.json({ error: "Inicia sesión para continuar" }, { status: 401 });
+    }
+
+    // Candado 2: ser el comprador de una orden de ESTE producto que ya habilite el dato
+    // (ver ordenHabilitaVerImei: pago confirmado, o reserva hecha en contra entrega).
+    // Se compara por correo en minúsculas porque Order guarda buyerEmail (no un id),
+    // que es el mismo criterio que usan confirm-delivery y disputes.
+    const ordenHabilitante = await prisma.order.findFirst({
+      where: {
+        productId: id,
+        buyerEmail: { equals: sesion.user.email, mode: "insensitive" },
+        OR: [
+          { estado: { in: [...ESTADOS_CON_PLATA_MOVIDA] } },
+          { metodoPago: "CONTRA_ENTREGA", estado: ESTADO_RESERVA_CONTRA_ENTREGA },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!ordenHabilitante) {
+      return NextResponse.json(
+        {
+          error:
+            "El IMEI completo aparece cuando reserves el equipo (contra entrega) o cuando se confirme tu pago (pago en línea).",
+          compraRequerida: true,
+        },
+        { status: 403 }
+      );
+    }
 
     // Candado 3: tope por hora y constancia de quién consultó.
     const ip = getIP(req);
-    const rl = rateLimit(`imei:${session.user.id}:${ip}`, { limit: 20, windowSeconds: 3600 });
+    const rl = rateLimit(`imei:${sesion.user.id}:${ip}`, { limit: 20, windowSeconds: 3600 });
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Has consultado demasiados IMEI en poco tiempo. Intenta de nuevo más tarde." },
@@ -75,7 +111,7 @@ export async function GET(
     }
 
     await registrarAuditoria({
-      userId: session.user.id,
+      userId: sesion.user.id,
       action: "VER_IMEI_COMPLETO",
       entity: "Product",
       entityId: id,
