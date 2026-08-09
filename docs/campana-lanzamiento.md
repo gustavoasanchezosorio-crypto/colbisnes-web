@@ -13,8 +13,15 @@ Hasta ayer la campaña vendía una fecha: «apúntate y te aviso el 12». Desde 
 mucho más fácil de decir:
 
 > **Apúntate y entras hoy mismo.** Dejas tu correo y el botón para entrar te sale ahí mismo.
-> Puedes armar tu perfil y publicar desde ya. Lo único que no se puede hacer todavía es pagar y
-> cobrar — eso se activa el 12.
+> Armas tu perfil, verificas tu identidad y ya puedes publicar. Lo único que no se puede hacer
+> todavía es pagar y cobrar — eso se activa el 12.
+
+> ⚠️ **Publicar SÍ pide verificar la identidad.** Se comprobó en el servidor: antes de dejar crear
+> una publicación exige la identidad aprobada y el código anti fraude del perfil. El 9 de agosto
+> esta guía llegó a decir lo contrario durante unas horas, y prometer menos trámite del que hay es
+> peor que no prometer nada: la persona entra ilusionada, se topa con el documento y la selfie, y
+> siente que le hicieron el truco. Si reescribes cualquier texto de aquí abajo, la verificación se
+> nombra siempre.
 
 Por qué importa para todo lo que sigue:
 
@@ -289,7 +296,7 @@ que no publicar el Reel.
 > Colombia con la plata en custodia.
 >
 > Pero no hay que esperar al miércoles para entrar. Dejas tu correo en colbisnes.com, entras de
-> una y puedes publicar hoy mismo.
+> una, verificas tu identidad y publicas hoy mismo.
 >
 > Y ahí está la gracia: el que publica ahora, el miércoles ya tiene su producto en vitrina cuando
 > llegue la gente. El que espera, empieza de cero ese día.
@@ -361,7 +368,8 @@ por el hilo.
 > **8/**
 > Las compras se abren el miércoles 12 de agosto a las 10:20 a. m.
 >
-> Pero para entrar y publicar no hay que esperar: dejas tu correo y entras ahí mismo 👇
+> Pero para entrar no hay que esperar: dejas tu correo, entras ahí mismo, verificas tu identidad
+> y ya puedes publicar 👇
 > colbisnes.com
 
 ### Tuit 2 — El dato
@@ -493,7 +501,7 @@ Canal secundario. Sirve para credibilidad y para que alguien que te busque encue
 > Nada de esto es tecnología de punta. Es tecnología aburrida, aplicada bien, a un problema que en
 > Colombia seguimos resolviendo a punta de fe.
 >
-> Ya se puede entrar y publicar en colbisnes.com. Las compras se activan el 12 de agosto.
+> Ya se puede entrar, verificarse y publicar en colbisnes.com. Las compras se activan el 12 de agosto.
 >
 > #confianza #identidaddigital #pagos #Colombia #producto #ecommerce
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button, OutlineButton } from "@/components/FormComponents";
@@ -57,6 +57,22 @@ export default function EditarPerfilPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [showAntiPhishing, setShowAntiPhishing] = useState(false);
+
+  // ── Que el aviso no se quede escondido ───────────────────────────────────────
+  // Esta pantalla es larga: "Guardar cambios" está al final y el recuadro de aviso se
+  // pinta arriba del todo, a más de una pantalla de distancia en un teléfono. Quien
+  // guardaba con una casilla mal puesta no veía NADA donde tenía el dedo y se iba
+  // convencido de haber guardado. Pasó de verdad con una dirección de envío: se quedó
+  // sin corregir durante días y nadie se enteró.
+  //
+  // `campoConError` recuerda cuál casilla falló para poder pintar el aviso pegado a
+  // ella y saltar hasta ahí. `intentoGuardar` sube en cada envío: sin él, tocar Guardar
+  // dos veces con el MISMO error no vuelve a mover la pantalla, porque React agrupa el
+  // limpiar y el volver a poner en un solo repintado, el valor final es idéntico al
+  // anterior y el efecto no se entera de nada.
+  const [campoConError, setCampoConError] = useState<string | null>(null);
+  const [intentoGuardar, setIntentoGuardar] = useState(0);
+  const avisoRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
     name: "", phone: "", city: "", image: "",
@@ -154,20 +170,45 @@ export default function EditarPerfilPage() {
     finally { setUploading(false); }
   };
 
+  // Deja el aviso puesto y apunta a qué casilla hay que ir. `campo` en null es para los
+  // errores que no son de una casilla concreta (los que devuelve el servidor).
+  const fallo = (campo: string | null, motivo: string) => {
+    setCampoConError(campo);
+    setErrorMsg(motivo);
+  };
+
+  // Lleva la pantalla hasta donde está el problema y le pone el cursor dentro. Si el
+  // error no es de una casilla concreta, se va al recuadro de arriba, que es lo único
+  // que hay. El foco se pide con un respiro y con preventScroll para que el navegador
+  // no pegue un salto seco encima del desplazamiento suave que acabamos de pedir.
+  useEffect(() => {
+    if (!errorMsg && !successMsg) return;
+    const destino = campoConError
+      ? document.getElementById("campo-" + campoConError)
+      : avisoRef.current;
+    if (!destino) return;
+    destino.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!campoConError) return;
+    const control = destino.querySelector("input, textarea, select") as HTMLElement | null;
+    const t = window.setTimeout(() => control?.focus({ preventScroll: true }), 420);
+    return () => window.clearTimeout(t);
+  }, [errorMsg, successMsg, campoConError, intentoGuardar]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(""); setSuccessMsg("");
+    setIntentoGuardar(n => n + 1);
+    setErrorMsg(""); setSuccessMsg(""); setCampoConError(null);
 
     // Validaciones
-    if (formData.name.trim().length < 2) { setErrorMsg("El nombre debe tener al menos 2 letras"); return; }
-    if (formData.phone && formData.phone.length < 7) { setErrorMsg("El teléfono debe tener al menos 7 dígitos"); return; }
-    if (formData.nequiNumber && formData.nequiNumber.length !== 10) { setErrorMsg("El número Nequi debe tener exactamente 10 dígitos"); return; }
-    if (formData.phoneWhatsapp && formData.phoneWhatsapp.length < 7) { setErrorMsg("El WhatsApp debe tener al menos 7 dígitos"); return; }
-    if (formData.antiPhishingCode && (formData.antiPhishingCode.length < 4 || formData.antiPhishingCode.length > 12)) { setErrorMsg("El código anti fraude debe tener entre 4 y 12 caracteres"); return; }
+    if (formData.name.trim().length < 2) return fallo("name", "El nombre debe tener al menos 2 letras");
+    if (formData.phone && formData.phone.length < 7) return fallo("phone", "El teléfono debe tener al menos 7 dígitos");
+    if (formData.nequiNumber && formData.nequiNumber.length !== 10) return fallo("nequiNumber", "El número Nequi debe tener exactamente 10 dígitos");
+    if (formData.phoneWhatsapp && formData.phoneWhatsapp.length < 7) return fallo("phoneWhatsapp", "El WhatsApp debe tener al menos 7 dígitos");
+    if (formData.antiPhishingCode && (formData.antiPhishingCode.length < 4 || formData.antiPhishingCode.length > 12)) return fallo("antiPhishingCode", "El código anti fraude debe tener entre 4 y 12 caracteres");
     // Misma regla que aplica el servidor (lib/direccion.ts): aquí es solo para avisar
     // antes de dar el viaje, no es la barrera de verdad.
     const revDireccion = validarDireccionEnvio(formData.direccionEnvio);
-    if (!revDireccion.valido) { setErrorMsg(revDireccion.motivo || "Revisa la dirección de envío"); return; }
+    if (!revDireccion.valido) return fallo("direccionEnvio", revDireccion.motivo || "Revisa la dirección de envío");
 
     setSaving(true);
     try {
@@ -182,7 +223,11 @@ export default function EditarPerfilPage() {
       await update();
       setSuccessMsg("¡Perfil actualizado correctamente!");
       setTimeout(() => router.push("/user/" + session?.user?.id), 1200);
-    } catch (error: any) { setErrorMsg(error.message); }
+    } catch (error: any) {
+      // Sin casilla concreta: lo que devuelve el servidor no siempre corresponde a un
+      // campo del formulario. El efecto de arriba se encarga de traer el recuadro a la vista.
+      fallo(null, error.message);
+    }
     finally { setSaving(false); }
   };
 
@@ -198,6 +243,14 @@ export default function EditarPerfilPage() {
   };
   const hint: React.CSSProperties = { fontSize: 11, color: THEME.muted, margin: "3px 0 0" };
 
+  // El aviso repetido al lado de la casilla que falló. El recuadro rojo de arriba se
+  // queda —hace falta para los errores del servidor, que no son de un campo concreto—
+  // pero el que de verdad se lee es este, porque está donde hay que escribir.
+  const errorDe = (campo: string) =>
+    campoConError === campo && errorMsg
+      ? <p style={{ fontSize: 11.5, color: "#b91c1c", margin: "5px 0 0", fontWeight: 700, lineHeight: 1.4 }}>⚠️ {errorMsg}</p>
+      : null;
+
   return (
     <div style={{ minHeight: "100vh", background: THEME.background, color: THEME.text }}>
       <header style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "18px 28px", boxShadow: "0 10px 30px rgba(10,46,107,0.2)" }}>
@@ -210,17 +263,24 @@ export default function EditarPerfilPage() {
         <div style={{ background: THEME.surfaceGradient, borderRadius: 20, padding: "2rem", boxShadow: THEME.cardShadow, border: "1.5px solid transparent" }}>
           <h2 style={{ color: THEME.text, marginTop: 0, textAlign: "center" }}>Editar perfil</h2>
 
-          {successMsg && <div style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#15803d", fontWeight: 700, fontSize: "0.9rem" }}>✅ {successMsg}</div>}
-          {errorMsg  && <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#b91c1c", fontWeight: 700, fontSize: "0.9rem" }}>❌ {errorMsg}</div>}
+          <div ref={avisoRef}>
+            {successMsg && <div style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#15803d", fontWeight: 700, fontSize: "0.9rem" }}>✅ {successMsg}</div>}
+            {errorMsg  && <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#b91c1c", fontWeight: 700, fontSize: "0.9rem" }}>❌ {errorMsg}</div>}
+          </div>
           {faltaQue && <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.40)", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: "#b45309", fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5 }}>
             {faltaQue === "antifraude"
-              ? <>⚠️ Te falta tu <b>código anti fraude</b>. Sin él no puedes hacer una oferta. Escríbelo abajo (una palabra tuya, de 4 a 12 letras o números) y guarda tu perfil.</>
+              ? <>⚠️ Te falta tu <b>código anti fraude</b>. Sin él no puedes publicar ni hacer una oferta. Escríbelo abajo (una palabra tuya, de 4 a 12 letras o números) y guarda tu perfil.</>
               : <>⚠️ Para comprar o cobrar tus ventas necesitas registrar tu <b>número Nequi</b> y tu <b>llave Bre-B</b>. Complétalos abajo y guarda tu perfil.</>}
           </div>}
 
           {/* Estado de verificación de identidad (KYC).
-              Publicar NO lo exige (POST /api/products solo pide el correo verificado); lo que
-              bloquea es hacer una oferta, pagar y recibir el dinero de una venta. */}
+              Publicar SÍ lo exige. Se comprobó leyendo app/api/products/route.ts: antes de crear
+              la publicación busca al vendedor y, si kycStatus !== "approved", responde 403
+              kycRequired; y si no tiene código anti fraude, 403 antiPhishingRequired. Esa
+              comprobación está escrita ahí mismo, con una consulta directa, NO con el ayudante
+              requireKyc() — por eso buscar "requireKyc" en el proyecto no la encuentra y es
+              fácil concluir lo contrario. Si algún día se cambia este texto, hay que abrir ese
+              archivo y leer la comprobación, no fiarse de la búsqueda. */}
           {(() => {
             const aprobado = kycStatus === "approved";
             const enRevision = kycStatus === "pending";
@@ -228,16 +288,15 @@ export default function EditarPerfilPage() {
             const bd = aprobado ? "rgba(34,197,94,0.35)" : enRevision ? "rgba(59,130,246,0.35)" : "rgba(245,158,11,0.40)";
             const col = aprobado ? "#15803d" : enRevision ? "#1d4ed8" : "#b45309";
             const icono = aprobado ? "✅" : enRevision ? "⏳" : "🪪";
-            // Lo que el servidor exige de verdad: requireKyc() está en el chat, en hacer y
-            // en aceptar ofertas, en los tres checkouts, en confirmar la entrega y en
-            // calificar. Publicar NO lo pide. Decirle a alguien que sin KYC no puede
-            // publicar lo frena por nada — justo lo contrario de lo que se busca ahora,
-            // que la gente llene el catálogo antes de que abran las compras.
+            // Lo que el servidor exige de verdad, revisado ruta por ruta: identidad
+            // verificada para publicar, para escribir por el chat, para hacer y aceptar
+            // ofertas, para pagar en los tres checkouts, para confirmar la entrega y para
+            // calificar. O sea: sin esto no se hace nada en la plataforma.
             const texto = aprobado
-              ? "Tu identidad está verificada. Ya puedes escribir, ofertar, comprar y vender."
+              ? "Tu identidad está verificada. Ya puedes publicar, escribir, ofertar, comprar y vender."
               : enRevision
                 ? "Tu verificación de identidad está en revisión. Te avisaremos apenas quede lista."
-                : "Publicar puedes hacerlo desde ya. Verifica tu identidad para poder escribir por el chat, ofertar, comprar y vender.";
+                : "Verifica tu identidad para poder publicar, escribir por el chat, ofertar, comprar y vender.";
             return (
               <div style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: col, fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <span>{icono} {texto}</span>
@@ -253,19 +312,21 @@ export default function EditarPerfilPage() {
             {/* ── DATOS PERSONALES ── */}
             <h3 style={{ color: THEME.gold, fontSize: 14, margin: "0 0 14px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>Datos personales</h3>
 
-            <div style={box}>
+            <div style={box} id="campo-name">
               <label style={lbl}>Nombre completo</label>
               <input style={inp} type="text" value={formData.name}
                 onChange={e => setFormData({ ...formData, name: soloLetras(e.target.value) })}
                 onKeyDown={e => { if (/[0-9!@#$%^&*()_+=\[\]{};':"\\|,.<>/?]/.test(e.key)) e.preventDefault(); }}
                 placeholder="Ej: María García" maxLength={60} />
               <p style={hint}>Solo letras y espacios</p>
+              {errorDe("name")}
             </div>
 
-            <div style={box}>
+            <div style={box} id="campo-phone">
               <label style={lbl}>Teléfono</label>
               <PhoneInput value={formData.phone} onChange={v => setFormData({ ...formData, phone: v })} placeholder="3001234567" />
               <p style={hint}>Solo dígitos, sin el 0 ni el +57</p>
+              {errorDe("phone")}
             </div>
 
             <div style={box}>
@@ -304,7 +365,7 @@ export default function EditarPerfilPage() {
             <h3 style={{ color: THEME.gold, fontSize: 14, margin: "24px 0 14px", textTransform: "uppercase", letterSpacing: "0.05em", borderTop: "1px solid " + THEME.border, paddingTop: 20, textAlign: "center" }}>Métodos de pago</h3>
 
             {/* NEQUI */}
-            <div style={box}>
+            <div style={box} id="campo-nequiNumber">
               <label style={lbl}>Número Nequi</label>
               <div style={{ display: "flex", alignItems: "stretch" }}>
                 <div style={{ padding: "0.65rem 0.85rem", background: "#f3eeff", border: "1.5px solid #c4b5fd", borderRight: "none", borderRadius: "10px 0 0 10px", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -317,6 +378,7 @@ export default function EditarPerfilPage() {
                   placeholder="3001234567" maxLength={10} />
               </div>
               <p style={hint}>10 dígitos exactos</p>
+              {errorDe("nequiNumber")}
             </div>
 
             {/* BRE-B */}
@@ -377,25 +439,27 @@ export default function EditarPerfilPage() {
             {/* ── ENVÍO ── */}
             <h3 style={{ color: THEME.gold, fontSize: 14, margin: "24px 0 14px", textTransform: "uppercase", letterSpacing: "0.05em", borderTop: "1px solid " + THEME.border, paddingTop: 20, textAlign: "center" }}>Notificaciones y envío</h3>
 
-            <div style={box}>
+            <div style={box} id="campo-phoneWhatsapp">
               <label style={lbl}>WhatsApp (para notificaciones)</label>
               <PhoneInput value={formData.phoneWhatsapp} onChange={v => setFormData({ ...formData, phoneWhatsapp: v })} placeholder="3001234567" />
               <p style={hint}>Recibirás notificaciones de ofertas, pagos y envíos</p>
+              {errorDe("phoneWhatsapp")}
             </div>
 
-            <div style={box}>
+            <div style={box} id="campo-direccionEnvio">
               <label style={lbl}>Dirección de envío</label>
               <input style={inp} type="text"
                 value={formData.direccionEnvio}
                 onChange={e => setFormData({ ...formData, direccionEnvio: limpiarDireccion(e.target.value) })}
                 placeholder="Calle 123 #45-67, Barrio, Ciudad" maxLength={DIRECCION_LARGO_MAXIMO} />
               <p style={hint}>Aquí es donde te llega el paquete. No pongas tu correo ni tu teléfono.</p>
+              {errorDe("direccionEnvio")}
             </div>
 
             {/* ── SEGURIDAD ── */}
             <h3 style={{ color: THEME.gold, fontSize: 14, margin: "24px 0 14px", textTransform: "uppercase", letterSpacing: "0.05em", borderTop: "1px solid " + THEME.border, paddingTop: 20, textAlign: "center" }}>Seguridad</h3>
 
-            <div style={box}>
+            <div style={box} id="campo-antiPhishingCode">
               <label style={lbl}>Código anti fraude</label>
               <div style={{ position: "relative" }}>
                 <input style={{ ...inp, letterSpacing: "0.1em", fontWeight: 700, paddingRight: "3rem" }}
@@ -414,6 +478,7 @@ export default function EditarPerfilPage() {
                 4 a 12 letras y números. Aparecerá en todos los correos que te enviemos.
                 Si recibes un correo que dice ser de Colbisnes y <b>no muestra tu código</b>, desconfía: podría ser un intento de fraude.
               </p>
+              {errorDe("antiPhishingCode")}
             </div>
 
             <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem" }}>

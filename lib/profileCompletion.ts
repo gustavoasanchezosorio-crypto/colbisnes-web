@@ -21,8 +21,9 @@ interface CampoPerfil {
   // — si un campo bloquea y no está marcado aquí, el usuario se entera cuando ya se
   // estrelló contra un 403, que es exactamente lo que pasaba con el código anti fraude.
   //
-  // Quién exige qué, a día de hoy:
-  //   · publicar (POST /api/products) ....... nada de esto; solo el correo verificado
+  // Quién exige qué, a día de hoy (verificado abriendo cada ruta, no buscando el nombre
+  // del ayudante requireKyc: publicar hace la comprobación a mano y no lo usa):
+  //   · publicar (POST /api/products) ....... KYC + código anti fraude
   //   · hacer una oferta (POST /api/offers) . KYC + código anti fraude
   //   · pagar (los 3 checkouts) ............. KYC + código anti fraude + Nequi + Bre-B
   //   · que te compren (tieneDatosDeCobro) .. Nequi + Bre-B del vendedor

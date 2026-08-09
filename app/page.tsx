@@ -293,7 +293,8 @@ function PageInner() {
   // Aviso contextual: qué le falta al usuario (crítico) para poder operar.
   // Se llamaba "faltaVender" y ese nombre hacía daño: llevaba a leerlo como cosa de
   // vendedores, cuando el KYC y el código anti fraude frenan también al COMPRADOR en su
-  // primera oferta. Publicar, en cambio, no lo bloquea nada de esto.
+  // primera oferta — y frenan igual a quien va a PUBLICAR (lo comprueba el servidor en
+  // app/api/products/route.ts). No hay nadie a quien esta lista no le aplique.
   const [faltaParaOperar, setFaltaParaOperar] = useState<{ key: string; label: string }[]>([]);
   // Modal emergente para invitar a completar los datos críticos faltantes.
   const [showFaltaModal, setShowFaltaModal] = useState(false);
@@ -581,10 +582,11 @@ function PageInner() {
       </header>
 
       {/* Aviso contextual: qué falta para poder operar.
-          El texto decía "Para vender y recibir tus pagos", y eso mentía por los dos lados:
-          publicar no exige nada de esta lista (solo el correo verificado), y en cambio el
-          KYC y el código anti fraude frenan al COMPRADOR apenas intenta hacer una oferta.
-          Quien solo venía a comprar leía un aviso de vendedores y lo ignoraba. */}
+          El texto decía "Para vender y recibir tus pagos", y eso se leía como cosa de
+          vendedores: quien venía solo a comprar lo ignoraba, y después el KYC y el código
+          anti fraude lo frenaban apenas intentaba hacer su primera oferta. Ahora nombra las
+          tres cosas que de verdad se bloquean —publicar, comprar y cobrar—, comprobadas
+          leyendo las rutas del servidor una por una. */}
       {isAuthenticated && faltaParaOperar.length > 0 && (
         <div
           onClick={() => setShowFaltaModal(true)}
@@ -596,7 +598,7 @@ function PageInner() {
           }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
             <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>
-              Para comprar o cobrar tus ventas te falta:
+              Para publicar, comprar o cobrar tus ventas te falta:
             </span>
             <span style={{ color: "#fff", fontSize: 13, fontWeight: 500, opacity: 0.95 }}>
               {faltaParaOperar.map(f => f.label).join(" · ")}
@@ -627,7 +629,7 @@ function PageInner() {
             <div style={{ fontSize: 48, marginBottom: 8 }}>🚀</div>
             <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800, color: THEME.text }}>Completa tu registro</h2>
             <p style={{ margin: "0 0 18px", fontSize: 14, color: THEME.muted, lineHeight: 1.5 }}>
-              Sin estos datos no puedes <b>hacer una oferta</b> ni <b>cobrar tus ventas</b>. Se piden una sola vez.
+              Sin estos datos no puedes <b>publicar</b>, ni <b>hacer una oferta</b>, ni <b>cobrar tus ventas</b>. Se piden una sola vez.
             </p>
 
             <div style={{ textAlign: "left", background: THEME.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 18, border: `1px solid ${THEME.border}` }}>
