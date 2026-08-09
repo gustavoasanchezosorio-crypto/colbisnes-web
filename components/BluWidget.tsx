@@ -10,6 +10,12 @@ interface BluMsg {
   texto: string;
 }
 
+/** Lo que manda el endpoint cuando hay que poner al cliente en contacto con una persona.
+ *  Solo el enlace: el numero NO se escribe en pantalla (ver el boton mas abajo). */
+interface ContactoWhatsapp {
+  url: string;
+}
+
 const STORAGE_KEY = "blu_conversation_id";
 
 export default function BluWidget() {
@@ -20,6 +26,10 @@ export default function BluWidget() {
   const [input, setInput] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  // Una vez que Chucho ofrece hablar con una persona, el botón verde se queda a la vista
+  // hasta que se cierre el chat. Si desapareciera al mensaje siguiente, el cliente que
+  // duda un momento y escribe otra cosa perdería la única salida que tiene hacia alguien.
+  const [whatsapp, setWhatsapp] = useState<ContactoWhatsapp | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const cargoHistorial = useRef(false);
 
@@ -69,8 +79,9 @@ export default function BluWidget() {
       }
       setMensajes(prev => [...prev, { autor: "BLU", texto: data.respuesta || "..." }]);
       setQuickReplies(Array.isArray(data.quickReplies) ? data.quickReplies : []);
+      if (data.whatsapp?.url) setWhatsapp(data.whatsapp);
     } catch {
-      setMensajes(prev => [...prev, { autor: "BLU", texto: "Se me enredó un bigote 🐾 intenta de nuevo en un momento, o escribe \"hablar con soporte\"." }]);
+      setMensajes(prev => [...prev, { autor: "BLU", texto: "Uy, no me pude conectar 🐾 intenta otra vez en un momentico, o escribe \"hablar con soporte\" y te paso con una persona." }]);
     } finally {
       setEnviando(false);
     }
@@ -103,12 +114,19 @@ export default function BluWidget() {
       )}
 
       {abierto && (
-        <div style={{
-          position: "fixed", right: 18, bottom: 18, zIndex: 1900,
-          width: "min(380px, 92vw)", height: "min(600px, 76vh)",
-          background: THEME.surfaceGradient, borderRadius: 24, border: "1.5px solid transparent",
-          boxShadow: THEME.cardShadow, display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
+        // El alto sale de .blu-panel (globals.css) y NO de un style en línea a propósito:
+        // hacen falta dos declaraciones (76vh de respaldo y 76dvh real) y un objeto de
+        // estilo de React no admite la misma clave dos veces. Con 76vh a secas, en el
+        // teléfono el encabezado del panel se salía por arriba de la pantalla.
+        <div
+          className="blu-panel"
+          style={{
+            position: "fixed", right: 18, bottom: "calc(18px + env(safe-area-inset-bottom))", zIndex: 1900,
+            width: "min(380px, 92vw)",
+            background: THEME.surfaceGradient, borderRadius: 24, border: "1.5px solid transparent",
+            boxShadow: THEME.cardShadow, display: "flex", flexDirection: "column", overflow: "hidden",
+          }}
+        >
           {/* Header */}
           <div style={{
             background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
@@ -146,6 +164,37 @@ export default function BluWidget() {
             )}
             <div ref={finRef} />
           </div>
+
+          {/* Salida hacia una persona de verdad.
+              Va aquí arriba, pegado al campo de escribir, porque es la acción más
+              importante del widget cuando alguien ya dijo que quiere hablar con alguien.
+              No se usa el logotipo de WhatsApp —es marca de Meta— sino su verde y el
+              nombre escrito, que sí es uso legítimo y se reconoce igual de rápido.
+
+              El número NO se escribe en pantalla a propósito: si queda a la vista, la
+              gente lo copia y escribe por fuera de Colbisnes, y ahí ya no hay pedido,
+              ni historial, ni forma de respaldar a nadie si algo sale mal. Tocando el
+              botón el chat se abre igual, pero pasando por aquí. */}
+          {whatsapp && (
+            <div style={{ padding: "0 12px 10px", flexShrink: 0 }}>
+              <a
+                href={whatsapp.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  background: "#25D366", color: "#fff", textDecoration: "none",
+                  borderRadius: 14, padding: "11px 14px", fontSize: 13, fontWeight: 800,
+                  boxShadow: "0 4px 14px rgba(37,211,102,0.35)",
+                }}
+              >
+                💬 Escríbenos por WhatsApp
+              </a>
+              <p style={{ margin: "6px 0 0", textAlign: "center", fontSize: 11, color: THEME.muted, fontWeight: 600 }}>
+                Te contesta una persona del equipo
+              </p>
+            </div>
+          )}
 
           {/* Quick replies */}
           {quickReplies.length > 0 && (

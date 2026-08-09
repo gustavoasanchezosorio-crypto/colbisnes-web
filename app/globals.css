@@ -114,6 +114,14 @@ select option {
   height: 100dvh;
 }
 
+/* El panel de Chucho Bot arrastraba el mismo problema: iba anclado abajo y medido en vh,
+   que en movil ignora la barra del navegador. Al quedar mas alto de lo visible, se le
+   salia el encabezado por arriba de la pantalla. Mismo respaldo vh -> dvh. */
+.blu-panel {
+  height: min(600px, 76vh);
+  height: min(600px, 76dvh);
+}
+
 /* La barra fija de acción (Hacer oferta / Comprar) es solo para móvil: en pantalla
    ancha ya se ven los CTA dentro de la tarjeta, así que la ocultamos para no duplicar. */
 @media (min-width: 900px) {

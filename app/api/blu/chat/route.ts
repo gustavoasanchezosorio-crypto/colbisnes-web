@@ -6,7 +6,14 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 import { sendEmail } from "@/lib/email";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { sendWhatsapp } from "@/lib/whatsapp";
-import { BLU_FALLBACK, BLU_SALUDO_INICIAL, BLU_QUICK_REPLIES_DEFAULT, matchIntent, esSaludo } from "@/lib/bluFaq";
+import {
+  BLU_FALLBACK,
+  BLU_SALUDO_INICIAL,
+  BLU_QUICK_REPLIES_DEFAULT,
+  matchIntent,
+  esSaludo,
+  urlWhatsappSoporte,
+} from "@/lib/bluFaq";
 
 const QUICK_REPLIES_DEFAULT = BLU_QUICK_REPLIES_DEFAULT;
 
@@ -16,6 +23,44 @@ function json(data: any, status = 200) {
   return NextResponse.json(data, { status });
 }
 
+/**
+ * Arma el mensaje que va precargado en WhatsApp cuando el cliente toca el boton verde.
+ *
+ * Lleva la consulta del propio cliente para que quien conteste en Colbisnes no tenga que
+ * preguntar "¿en que le ayudo?" otra vez — llega con el contexto puesto. Se recorta a 300
+ * caracteres porque el texto viaja dentro de la URL de wa.me y no vale la pena arriesgar
+ * un enlace kilometrico; el resto de la conversacion queda igual guardado en BluMessage.
+ */
+function textoParaWhatsapp(mensaje: string, productoTitulo?: string | null): string {
+  const recorte = mensaje.length > 300 ? mensaje.slice(0, 300) + "…" : mensaje;
+  const lineas = ["Hola, vengo de colbisnes.com y necesito ayuda."];
+  if (productoTitulo) lineas.push(`Producto: ${productoTitulo}`);
+  lineas.push("", `Mi consulta: ${recorte}`);
+  return lineas.join("\n");
+}
+
+/**
+ * Bloque que el widget usa para pintar el boton verde de WhatsApp.
+ *
+ * Va SOLO la url, sin el numero por separado: el cliente no tiene por que verlo escrito.
+ * Si queda a la vista lo copian y siguen la conversacion por fuera de Colbisnes, y ahi
+ * ya no hay pedido, ni historial, ni forma de respaldar a nadie si algo sale mal.
+ */
+function bloqueWhatsapp(mensaje: string, productoTitulo?: string | null) {
+  return { url: urlWhatsappSoporte(textoParaWhatsapp(mensaje, productoTitulo)) };
+}
+
+/**
+ * Avisa a Colbisnes de que alguien pidio ayuda humana.
+ *
+ * OJO con el WhatsApp de aqui abajo: sale por lib/whatsapp.ts, que usa Twilio, y en
+ * produccion NO estan puestas TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_FROM
+ * (revisado el 2026-08-09). Sin ellas la funcion imprime un aviso en el log y retorna sin
+ * enviar nada — por eso pedir un humano "no llevaba a nada". El correo a ADMIN_EMAIL si
+ * sale, y el boton verde de WhatsApp que devuelve este endpoint es el camino que de verdad
+ * pone al cliente en contacto. Esta llamada se deja puesta para que empiece a funcionar
+ * sola el dia que se configure Twilio, pero hoy no hay que contar con ella.
+ */
 async function notificarEscalada(params: { conversationId: string; contacto: string; motivo: string; ultimoMensaje: string; productoTitulo?: string | null }) {
   const { conversationId, contacto, motivo, ultimoMensaje, productoTitulo } = params;
   try {
@@ -92,13 +137,27 @@ export async function POST(request: Request) {
           ultimoMensaje: ultimaPregunta?.texto || mensaje,
           productoTitulo: producto?.title,
         });
-        const respuesta = "¡Gracias! Ya avisé al equipo de Colbisnes con tu correo — te contactarán pronto. 🐾";
+        const respuesta =
+          "¡Listo! Ya le pasé tu correo al equipo de Colbisnes, te contactan pronto 🐾\n\nY si tienes afán, escríbenos de una por WhatsApp con el botón de aquí abajo 👇";
         await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: respuesta } });
-        return json({ conversationId: conversation.id, respuesta, quickReplies: QUICK_REPLIES_DEFAULT, escalado: true });
+        return json({
+          conversationId: conversation.id,
+          respuesta,
+          quickReplies: QUICK_REPLIES_DEFAULT,
+          escalado: true,
+          whatsapp: bloqueWhatsapp(ultimaPregunta?.texto || mensaje, producto?.title),
+        });
       } else {
-        const respuesta = "No alcancé a reconocer un correo válido ahí 🐾 ¿me lo compartes de nuevo? (ej: nombre@correo.com)";
+        const respuesta =
+          "Mmm, ahí no alcancé a ver un correo bien escrito 🐾 ¿me lo repites? (así: nombre@correo.com)\n\nO si prefieres no dejarlo, escríbenos de una por WhatsApp 👇";
         await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: respuesta } });
-        return json({ conversationId: conversation.id, respuesta, quickReplies: [], escalado: false });
+        return json({
+          conversationId: conversation.id,
+          respuesta,
+          quickReplies: [],
+          escalado: false,
+          whatsapp: bloqueWhatsapp(mensaje),
+        });
       }
     }
 
@@ -117,21 +176,42 @@ export async function POST(request: Request) {
     await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: intent.respuesta, intencion: intent.id } });
 
     if (intent.escalar) {
+      const producto = productId
+        ? await prisma.product.findUnique({ where: { id: productId }, select: { title: true } })
+        : null;
+
+      // El enlace de WhatsApp acompaña SIEMPRE a una escalada, haya sesión o no. Es el
+      // unico camino que de verdad le llega hoy a una persona: el aviso por WhatsApp del
+      // servidor (notificarEscalada) depende de Twilio, que no esta configurado, y se
+      // rinde en silencio. Ver el comentario de notificarEscalada.
+      const whatsapp = bloqueWhatsapp(mensaje, producto?.title);
       const contactoConocido = userEmail || conversation.userEmail;
+
       if (contactoConocido) {
-        const yaEscalada = conversation.estado === "ESCALADA";
-        if (!yaEscalada) {
-          const producto = productId ? await prisma.product.findUnique({ where: { id: productId }, select: { title: true } }) : null;
+        if (conversation.estado !== "ESCALADA") {
           await prisma.bluConversation.update({ where: { id: conversation.id }, data: { estado: "ESCALADA", escaladaAt: new Date() } });
           await notificarEscalada({ conversationId: conversation.id, contacto: contactoConocido, motivo: intent.id, ultimoMensaje: mensaje, productoTitulo: producto?.title });
         }
-        return json({ conversationId: conversation.id, respuesta: intent.respuesta, quickReplies: QUICK_REPLIES_DEFAULT, escalado: true });
-      } else {
-        await prisma.bluConversation.update({ where: { id: conversation.id }, data: { estado: "ESPERANDO_CONTACTO" } });
-        const respuestaConCorreo = intent.respuesta + "\n\n¿Me compartes tu correo para que el equipo de Colbisnes te contacte?";
-        await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: respuestaConCorreo } });
-        return json({ conversationId: conversation.id, respuesta: respuestaConCorreo, quickReplies: [], escalado: false });
+        return json({ conversationId: conversation.id, respuesta: intent.respuesta, quickReplies: QUICK_REPLIES_DEFAULT, escalado: true, whatsapp });
       }
+
+      // Visitante sin sesion. Antes se le pedia el correo y ahi se acababa todo: si no lo
+      // dejaba —que es lo normal cuando alguien solo quiere preguntar algo— nadie en
+      // Colbisnes se enteraba de que habia pedido ayuda. Por eso "no llevaba a nada".
+      // Ahora el boton de WhatsApp va por delante y el correo queda como alternativa,
+      // no como peaje para poder hablar con alguien.
+      await prisma.bluConversation.update({ where: { id: conversation.id }, data: { estado: "ESPERANDO_CONTACTO" } });
+      // Se guarda solo el añadido: intent.respuesta ya quedó registrada unas lineas
+      // arriba, y guardarla otra vez completa dejaba el mensaje duplicado en el historial.
+      const invitacionCorreo = "Y si prefieres que te escribamos nosotros, déjame tu correo por aquí y le paso el dato al equipo 🐾";
+      await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: invitacionCorreo } });
+      return json({
+        conversationId: conversation.id,
+        respuesta: intent.respuesta + "\n\n" + invitacionCorreo,
+        quickReplies: [],
+        escalado: false,
+        whatsapp,
+      });
     }
 
     return json({ conversationId: conversation.id, respuesta: intent.respuesta, quickReplies: QUICK_REPLIES_DEFAULT, escalado: false });
