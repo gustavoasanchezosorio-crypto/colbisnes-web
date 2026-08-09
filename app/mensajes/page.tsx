@@ -109,17 +109,26 @@ export default function MensajesPage() {
   );
 
   if (status === "loading" || cargando) return (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:THEME.primary,fontFamily:"sans-serif",background:THEME.background}}>
+    <div className="pantalla-chat" style={{display:"flex",alignItems:"center",justifyContent:"center",color:THEME.primary,fontFamily:"sans-serif",background:THEME.background}}>
       Cargando...
     </div>
   );
 
   return (
-    <div style={{fontFamily:"sans-serif",height:"100vh",display:"flex",flexDirection:"column",backgroundColor:THEME.background}}>
+    // El alto sale de .pantalla-chat (globals.css) y no de un style en línea a
+    // propósito: hacen falta DOS declaraciones (100vh de respaldo y 100dvh real)
+    // y un objeto de estilo de React no admite la misma clave dos veces. Con
+    // 100vh a secas, en el teléfono la barra de escribir caía fuera de la pantalla.
+    <div className="pantalla-chat" style={{fontFamily:"sans-serif",display:"flex",flexDirection:"column",backgroundColor:THEME.background}}>
       <div style={{background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,color:"white",padding:"1rem 1.5rem",display:"flex",alignItems:"center",gap:"1rem",position:"relative"}}>
         <button onClick={() => convActiva ? (setConvActiva(null), setMensajes([])) : router.push("/")}
           style={{background:"none",border:"none",color:"white",fontSize:"1.5rem",cursor:"pointer",position:"absolute",left:"1.5rem",top:"50%",transform:"translateY(-50%)"}}>←</button>
-        <h1 style={{margin:0,fontSize:"1.2rem",fontWeight:"bold",width:"100%",textAlign:"center"}}>
+        {/* El padding lateral reserva el sitio de la flecha ←, que va en posición
+            absoluta y por tanto no empuja nada. Sin él, "Chat con <nombre largo>"
+            se centraba sobre la flecha y quedaban las letras encima del icono.
+            El truncado evita que un nombre largo desborde la cabecera en móvil. */}
+        <h1 style={{margin:0,fontSize:"1.2rem",fontWeight:"bold",width:"100%",textAlign:"center",
+          padding:"0 3rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
           {convActiva ? `Chat con ${convActiva.userName}` : "Mis mensajes"}
         </h1>
       </div>
@@ -181,7 +190,10 @@ export default function MensajesPage() {
               return (
                 <div key={msg.id} style={{display:"flex",justifyContent:esMio?"flex-end":"flex-start",alignItems:"flex-end",gap:"0.5rem"}}>
                   {!esMio && avatar(msg.fromUser.name, msg.fromUser.image)}
-                  <div style={{maxWidth:"70%",background:esMio?`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`:"#f4f7fb",color:esMio?"white":THEME.text,
+                  {/* overflowWrap: sin esto, un enlace pegado o una palabra muy larga
+                      no parte, estira la burbuja más allá del 70% y saca el chat de
+                      cuadro. En compraventa la gente pega enlaces constantemente. */}
+                  <div style={{maxWidth:"70%",overflowWrap:"anywhere",background:esMio?`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`:"#f4f7fb",color:esMio?"white":THEME.text,
                     borderRadius:esMio?"16px 16px 4px 16px":"16px 16px 16px 4px",padding:"0.75rem 1rem",
                     boxShadow:esMio?`0 4px 14px ${AZUL}44`:"none",border:esMio?"none":`1px solid ${THEME.border}`}}>
                     <p style={{margin:0,fontSize:"0.95rem",lineHeight:"1.4"}}>{msg.content}</p>
@@ -195,7 +207,10 @@ export default function MensajesPage() {
             })}
             <div ref={bottomRef} />
           </div>
-          <div style={{padding:"1rem",background:"#ffffff",borderTop:`1px solid ${THEME.border}`,display:"flex",gap:"0.75rem",alignItems:"flex-end"}}>
+          {/* El paddingBottom con env() aparta el botón Enviar de la barra de gestos
+              del iPhone. En un teléfono sin muesca env() vale 0 y queda 1rem, igual
+              que antes: no cambia nada donde no hace falta. */}
+          <div style={{padding:"1rem",paddingBottom:"calc(1rem + env(safe-area-inset-bottom))",background:"#ffffff",borderTop:`1px solid ${THEME.border}`,display:"flex",gap:"0.75rem",alignItems:"flex-end"}}>
             <textarea
               value={nuevoMensaje}
               onChange={e => setNuevoMensaje(e.target.value)}

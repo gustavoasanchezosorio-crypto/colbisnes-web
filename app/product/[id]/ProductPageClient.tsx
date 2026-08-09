@@ -1074,7 +1074,10 @@ export default function ProductPageClient({ productId }: { productId: string }) 
       {/* ══ PANEL CHAT LIQUID GLASS ════════════════════════════════════════════ */}
       {mostrarChat && (
         <div style={overlay} onClick={e=>e.target===e.currentTarget&&setMostrarChat(false)}>
-          <div style={modalBase} onClick={e=>e.stopPropagation()}>
+          {/* La clase recorta el alto fijo de 600 px cuando la pantalla no da para
+              tanto (ver .modal-chat en globals.css). Sin ella, en teléfono se
+              perdían el encabezado y la barra de escribir fuera de la pantalla. */}
+          <div className="modal-chat" style={modalBase} onClick={e=>e.stopPropagation()}>
             {esVendedor && vistaConvs ? (
               /* Lista conversaciones vendedor */
               <>
@@ -1161,6 +1164,10 @@ export default function ProductPageClient({ productId }: { productId: string }) 
                       <div key={m.id} style={{display:"flex",justifyContent:mio?"flex-end":"flex-start",animation:"fadeIn 0.2s"}}>
                         <div style={{
                           maxWidth:"74%",padding:"0.6rem 0.95rem",
+                          // Sin esto, un enlace pegado o una palabra muy larga no parte y
+                          // estira la burbuja más allá del 74%, sacando el chat de cuadro.
+                          // En un chat de compraventa la gente pega enlaces todo el tiempo.
+                          overflowWrap:"anywhere",
                           borderRadius:mio?"18px 18px 4px 18px":"18px 18px 18px 4px",
                           background:mio?`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`:"#f4f7fb",
                           color:mio?"white":THEME.text,

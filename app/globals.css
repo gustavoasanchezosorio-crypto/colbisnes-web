@@ -78,6 +78,42 @@ select option {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* ── El chat no cabía en la pantalla del teléfono ──────────────────────────────
+   Dos fallos distintos, con la misma consecuencia: la barra de escribir quedaba
+   fuera de la pantalla y no había manera de llegar a ella.
+
+   1. El panel de chat de la ficha de producto (modalBase en ProductPageClient)
+      tenía un alto FIJO de 600 px dentro de un overlay centrado y fijo. En un
+      teléfono con la barra de direcciones a la vista quedan menos de 600 px
+      útiles, así que el panel sobresalía por arriba y por abajo a la vez; y como
+      el overlay es position:fixed y está centrado, lo que sobresale no se alcanza
+      con scroll: se pierde. Se cortaba el encabezado (con la ✕ de cerrar) y la
+      barra de escribir.
+
+      Se corrige con max-height, sin tocar el height: en escritorio el panel sigue
+      midiendo los mismos 600 px de siempre, y solo en pantallas más bajas se
+      recorta. No hace falta !important porque el estilo en línea define height,
+      no max-height, así que no compiten por la misma propiedad.
+
+   2. La página /mensajes usaba height:100vh. En móvil 100vh NO es lo que se ve:
+      se mide ignorando la barra de direcciones del navegador, así que el
+      contenedor siempre queda más alto que la pantalla y la barra de escribir cae
+      por debajo del borde inferior. Para eso existe dvh, que sí descuenta las
+      barras y se reajusta cuando aparecen o desaparecen.
+
+   La declaración repetida es a propósito: es el patrón de respaldo de CSS. Un
+   navegador que no entienda dvh descarta esa línea y se queda con la de vh —o
+   sea, exactamente como estaba, no empeora—; uno que sí la entienda, la aplica. */
+.modal-chat {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+}
+
+.pantalla-chat {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* La barra fija de acción (Hacer oferta / Comprar) es solo para móvil: en pantalla
    ancha ya se ven los CTA dentro de la tarjeta, así que la ocultamos para no duplicar. */
 @media (min-width: 900px) {
