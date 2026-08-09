@@ -12,6 +12,7 @@ import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
+import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
 
 export async function POST(req: NextRequest) {
   try {
@@ -89,6 +90,9 @@ export async function POST(req: NextRequest) {
     });
     if (ordenExistente) {
       if (ordenExistente.buyerEmail === session.user.email) {
+        // Puede haber corregido su dirección desde el intento anterior: se pone al día
+        // mientras el paquete no haya salido (ver lib/direccionOrden.ts).
+        await refrescarDireccionOrden(ordenExistente, session.user.id, producto.tipoEntrega);
         const trustExistente = await computeTrustScore(producto.sellerId);
         const precioBaseExistente = ordenExistente.recibeVendedor;
         const pricing2 = calcularPrecioUSDT(precioBaseExistente, tasaCOP, trustExistente.label);
@@ -157,6 +161,7 @@ export async function POST(req: NextRequest) {
     // (llamado desde GET /api/products y /api/products/[id]) libera el producto en cuanto
     // alguien carga esas rutas después de vencido el plazo; el cron diario es solo respaldo.
     const expiraEn = new Date(Date.now() + 10 * 60 * 1000);
+    const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
     const [orden] = await prisma.$transaction([
       prisma.order.create({
         data: {
@@ -168,6 +173,7 @@ export async function POST(req: NextRequest) {
           comision:       Math.round(pricing.comisionUSD * tasaCOP),
           recibeVendedor: precioBase,
           totalUSDT:      totalUSDFinal,
+          direccionEnvio,
           proteccionExtendida: extras.proteccionCosto > 0,
           proteccionCosto: extras.proteccionCosto,
           envioCobrado:   extras.envioCobrado,

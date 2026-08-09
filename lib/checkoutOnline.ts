@@ -7,6 +7,7 @@ import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
 import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
+import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
 
 // Resultado de preparar una orden de pago ONLINE. Se comparte entre el checkout web de Wompi
 // (redirect) y el cobro Nequi push (API JSON), para que la lógica de dinero —ofertas, precios,
@@ -128,13 +129,20 @@ export async function prepararOrdenOnline(
     where: { productId: productoId, buyerEmail: session.user.email, estado: "PENDIENTE" },
   });
 
+  // Volvió a intentar el pago sobre una orden que ya existía: puede haber corregido la
+  // dirección en la pantalla de confirmación desde el intento anterior.
+  if (ordenExistente) {
+    const actualizada = await refrescarDireccionOrden(ordenExistente, session.user.id, producto.tipoEntrega);
+    return { ok: true, orden: actualizada, session, precioBase };
+  }
+
   const trust = await computeTrustScore(producto.sellerId);
   const pricing = calcularPrecioOnline(precioBase, trust.label);
   const extras = calcularExtrasCheckout(producto, proteccionExtendida);
+  const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
 
   const orden =
-    ordenExistente ??
-    (await prisma.order.create({
+    await prisma.order.create({
       data: {
         productId: producto.id,
         buyerEmail: session.user.email,
@@ -143,12 +151,13 @@ export async function prepararOrdenOnline(
         totalPagado: pricing.totalComprador + extras.extraTotal,
         comision: pricing.comisionColbisnes,
         recibeVendedor: pricing.recibeVendedor,
+        direccionEnvio,
         proteccionExtendida: extras.proteccionCosto > 0,
         proteccionCosto: extras.proteccionCosto,
         envioCobrado: extras.envioCobrado,
         margenEnvio: extras.margenEnvio,
       },
-    }));
+    });
 
   return { ok: true, orden, session, precioBase };
 }

@@ -50,6 +50,12 @@ export async function GET(req: NextRequest) {
         buyerEmail: orden.buyerEmail,
         metodoPago: orden.metodoPago,
         codigoSecreto: esComprador ? orden.codigoSecreto : undefined,
+        // A dónde va el paquete. Va DENTRO de esta rama a propósito: la rama de
+        // arriba (terceros) no la incluye, y no puede incluirla — es un dato
+        // personal del comprador, y cualquiera que abra la publicación cae ahí.
+        // El vendedor la necesita para despachar; el comprador, para revisar que
+        // sea la correcta antes de que salga.
+        direccionEnvio: orden.direccionEnvio,
         numeroGuia: orden.numeroGuia,
         transportadora: orden.transportadora,
         comprobanteUrl: orden.comprobanteUrl,

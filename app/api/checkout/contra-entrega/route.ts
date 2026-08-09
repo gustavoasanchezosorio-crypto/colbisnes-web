@@ -12,6 +12,7 @@ import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
+import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,6 +72,9 @@ export async function POST(req: NextRequest) {
     });
     if (ordenExistente) {
       if (ordenExistente.buyerEmail === session.user.email) {
+        // Puede haber corregido su dirección desde el intento anterior: se pone al día
+        // mientras el paquete no haya salido (ver lib/direccionOrden.ts).
+        await refrescarDireccionOrden(ordenExistente, session.user.id, producto.tipoEntrega);
         return NextResponse.json({ ok: true, ordenId: ordenExistente.id });
       }
       return NextResponse.json({ error: "Este producto ya tiene un pago en curso" }, { status: 409 });
@@ -115,6 +119,7 @@ export async function POST(req: NextRequest) {
     const extras = calcularExtrasCheckout(producto, false);
     const codigoSecreto = Math.floor(100000 + Math.random() * 900000).toString();
     const ahora = new Date();
+    const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
 
     // El comprador debe pagar primero, por Nequi, la comisión de Colbisnes (garantía de reserva).
     // La orden queda en ESPERANDO_COMISION hasta que un admin confirme el comprobante Nequi.
@@ -140,6 +145,7 @@ export async function POST(req: NextRequest) {
           comision:       pricing.comisionColbisnes,
           recibeVendedor: pricing.recibeVendedor,
           codigoSecreto,
+          direccionEnvio,
           proteccionExtendida: extras.proteccionCosto > 0,
           proteccionCosto: extras.proteccionCosto,
           envioCobrado:   extras.envioCobrado,

@@ -657,6 +657,7 @@ export const ProductCard = React.memo(function ProductCard({
       {showEnviarModal && ordenActiva && (
         <MarcarEnviadoModal
           orderId={ordenActiva.id}
+          direccionEnvio={ordenActiva.direccionEnvio}
           onClose={() => setShowEnviarModal(false)}
           onSuccess={refrescarOrden}
         />

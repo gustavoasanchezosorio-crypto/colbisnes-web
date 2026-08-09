@@ -280,6 +280,14 @@ model Order {
   recibeVendedor Int
   codigoSecreto  String?
   totalUSDT      Float? // solo para contra entrega
+  // Dirección a la que va ESTE paquete, copiada del perfil del comprador cuando se
+  // creó la orden. Es una copia congelada a propósito, no una consulta al perfil:
+  // si el comprador se trastea y edita su perfil, la orden vieja tiene que seguir
+  // diciendo a dónde se despachó. Con plata en custodia y un reclamo de "nunca me
+  // llegó", ese es justo el dato que hay que poder mirar meses después.
+  // Anulable porque las órdenes anteriores a este campo no la tienen, y porque en
+  // las entregas EN_PERSONA no hay a dónde enviar.
+  direccionEnvio String?
   numeroGuia     String?
   transportadora String?
   comprobanteUrl String?

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
 import { computeProfileCompletion } from "@/lib/profileCompletion";
+import { limpiarDireccion, validarDireccionEnvio, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 import { THEME } from "@/lib/theme";
 import NequiPushModal from "@/components/NequiPushModal";
 import { useModoPrueba } from "@/lib/useModoPrueba";
@@ -36,6 +37,19 @@ export default function CheckoutPage() {
   const [garantiaAceptada, setGarantiaAceptada] = useState(false);
   const [guardandoGarantia, setGuardandoGarantia] = useState(false);
   const [accionPendiente, setAccionPendiente]   = useState<"pago" | "nequi" | null>(null);
+  // Confirmación de la dirección de envío. Antes NUNCA se le preguntaba al comprador a
+  // dónde mandar: la dirección vivía suelta en el perfil y el vendedor abría "Registrar
+  // envío" sin verla por ningún lado — le tocaba pedirla por el chat. Aquí se le muestra
+  // la que tiene guardada para que la confirme (o la corrija) antes de pagar, y de ahí
+  // queda copiada en la orden.
+  const [direccionPerfil, setDireccionPerfil]       = useState<string>("");
+  const [mostrarDireccion, setMostrarDireccion]     = useState(false);
+  const [direccionConfirmada, setDireccionConfirmada] = useState(false);
+  const [editandoDireccion, setEditandoDireccion]   = useState(false);
+  const [direccionBorrador, setDireccionBorrador]   = useState("");
+  const [guardandoDireccion, setGuardandoDireccion] = useState(false);
+  const [errorDireccion, setErrorDireccion]         = useState<string | null>(null);
+  const [accionDireccion, setAccionDireccion]       = useState<"pago" | "nequi" | null>(null);
   // Modo prueba del prelanzamiento: quien entró con el link secreto puede recorrer
   // todo el checkout y ver los precios, pero no puede pagar. El servidor bloquea
   // igual (ver lib/modoPrueba.ts); esto es para que no llegue a intentarlo.
@@ -49,6 +63,7 @@ export default function CheckoutPage() {
       .then(u => {
         if (!u || u.error) { setPerfilFaltantes([]); return; }
         setNequiPrefill(u.nequiNumber || null);
+        setDireccionPerfil(u.direccionEnvio || "");
         const { faltantesCriticos } = computeProfileCompletion(u);
         // El código anti-phishing también es obligatorio para pagar (lo exige el servidor).
         const faltantes = [...faltantesCriticos];
@@ -199,10 +214,81 @@ export default function CheckoutPage() {
     if (accion === "nequi") setShowNequiOnline(true); else seguirConElPago();
   };
 
+  /* ── Confirmación de la dirección de envío ───────────────────────────────────
+     Puerta que va ANTES de la de garantía. El orden importa: la de garantía es la
+     última advertencia seria antes de que se mueva la plata, así que conviene que
+     sea lo último que se lee; esta otra es una confirmación de un dato y va primero.
+
+     En EN_PERSONA no se pide: no hay paquete que despachar y sería recoger un dato
+     personal para nada. En AMBOS sí se pide, porque desde aquí no se sabe cuál de
+     las dos formas va a escoger, y es mejor que al vendedor le sobre la dirección
+     a que le falte (mismo criterio que lib/direccionOrden.ts). */
+  const necesitaDireccion = producto?.tipoEntrega !== "EN_PERSONA";
+
+  const conDireccion = (accion: "pago" | "nequi") => {
+    if (!necesitaDireccion || direccionConfirmada) { conGarantia(accion); return; }
+    setAccionDireccion(accion);
+    setDireccionBorrador(direccionPerfil);
+    // Sin dirección guardada entra derecho en modo escritura: la alternativa era
+    // mandarlo al perfil y devolverlo, y ahí es donde la gente abandona la compra.
+    setEditandoDireccion(!direccionPerfil);
+    setErrorDireccion(null);
+    setMostrarDireccion(true);
+  };
+
+  const confirmarDireccion = async () => {
+    const accion = accionDireccion;
+
+    // Confirma la que ya tenía, sin tocarla: no hay nada que guardar.
+    if (!editandoDireccion) {
+      setMostrarDireccion(false);
+      setDireccionConfirmada(true);
+      setAccionDireccion(null);
+      if (accion) conGarantia(accion);
+      return;
+    }
+
+    // La escribió o la corrigió. Se revisa con la MISMA regla que usa el servidor
+    // (lib/direccion.ts) para no mostrarle un error distinto al de siempre.
+    const dir = limpiarDireccion(direccionBorrador).trim();
+    if (!dir) { setErrorDireccion("Escribe la dirección a donde te llega el paquete."); return; }
+    const revision = validarDireccionEnvio(dir);
+    if (!revision.valido) { setErrorDireccion(revision.motivo || "Revisa la dirección."); return; }
+
+    setGuardandoDireccion(true);
+    setErrorDireccion(null);
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ direccionEnvio: dir }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo guardar la dirección.");
+
+      setDireccionPerfil(dir);
+      setGuardandoDireccion(false);
+      setMostrarDireccion(false);
+      setEditandoDireccion(false);
+      setDireccionConfirmada(true);
+      setAccionDireccion(null);
+      if (accion) conGarantia(accion);
+    } catch (e: any) {
+      // Aquí SÍ se bloquea si falla, al revés que en la pantalla de garantía. Allá el
+      // registro es una ayuda para disputas y no vale dejar a nadie sin poder pagar por
+      // un problema de red. Acá es distinto: la orden copia la dirección del perfil, así
+      // que si el guardado no entró, la compra saldría con la dirección vieja (o sin
+      // ninguna) y el paquete se despacharía al lugar equivocado.
+      setGuardandoDireccion(false);
+      setErrorDireccion(e.message || "No se pudo guardar la dirección. Revisa tu conexión e intenta de nuevo.");
+    }
+  };
+
   const handleContinuar = () => {
     if (perfilIncompleto) return;
     if (modoPrueba) return; // el botón ya está deshabilitado; esto es el cinturón
-    conGarantia("pago");
+    conDireccion("pago");
   };
 
   const pctOnline = precio > 0 ? ((online.comisionColbisnes / precio) * 100) : 10;
@@ -453,7 +539,7 @@ export default function CheckoutPage() {
 
         {/* Botón exclusivo de Nequi (pago online): notificación push directa a la app del comprador. */}
         {metodo === "online" && !perfilIncompleto && !TEST_MODE && !modoPrueba && perfilFaltantes !== null && (
-          <button onClick={() => conGarantia("nequi")}
+          <button onClick={() => conDireccion("nequi")}
             style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             💳 Pagar con Nequi (sin salir de la app)
           </button>
@@ -461,6 +547,81 @@ export default function CheckoutPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
           <span style={{ fontSize: 11, color: THEME.muted }}>🔒 SSL cifrado · Pagos protegidos por Colbisnes</span>
         </div>
+
+        {/* ══ CONFIRMAR DIRECCIÓN DE ENVÍO ══════════════════════════════════════
+            No se cierra tocando el fondo ni con una ✕, igual que la de garantía: las
+            únicas salidas son confirmar o corregir. Si se pudiera esquivar, la orden
+            volvería a nacer sin dirección y el vendedor quedaría otra vez a ciegas. */}
+        {mostrarDireccion && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(13,27,42,0.55)", backdropFilter: "blur(12px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div style={{ background: "#fff", borderRadius: 22, padding: "26px 22px", maxWidth: 420, width: "100%", boxShadow: "0 24px 70px rgba(0,0,0,0.3)", maxHeight: "88vh", overflowY: "auto" }}>
+              <div style={{ fontSize: 44, textAlign: "center", marginBottom: 10 }}>📍</div>
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900, color: THEME.text, textAlign: "center", lineHeight: 1.3 }}>
+                Por favor confirma tu dirección de envío
+              </h2>
+
+              {editandoDireccion ? (
+                <>
+                  <p style={{ margin: "14px 0 0", fontSize: 14, color: THEME.textSoft, lineHeight: 1.6 }}>
+                    {direccionPerfil
+                      ? "Escribe la dirección a la que quieres que llegue este pedido."
+                      : "Todavía no tienes una dirección guardada. Escríbela aquí y la dejamos lista en tu perfil para tus próximas compras."}
+                  </p>
+                  <textarea
+                    value={direccionBorrador}
+                    onChange={e => { setDireccionBorrador(limpiarDireccion(e.target.value)); setErrorDireccion(null); }}
+                    maxLength={DIRECCION_LARGO_MAXIMO}
+                    rows={3}
+                    autoFocus
+                    placeholder="Ej: Calle 123 #45-67, Apto 302, Barrio Chapinero, Bogotá"
+                    style={{ width: "100%", marginTop: 12, padding: "12px 14px", borderRadius: 14, border: `1.5px solid ${errorDireccion ? "#ef4444" : THEME.border}`, background: THEME.surfaceAlt, color: THEME.text, fontSize: 15, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }}
+                  />
+                  <p style={{ margin: "6px 0 0", fontSize: 11.5, color: THEME.muted }}>
+                    Incluye el barrio y la ciudad. Si es en el campo, la vereda y un punto de referencia.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: "14px 0 0", fontSize: 14, color: THEME.textSoft, lineHeight: 1.6 }}>
+                    Este es el dato que le va a llegar al vendedor para despachar tu pedido.
+                    Revísalo bien antes de pagar.
+                  </p>
+                  <div style={{ marginTop: 14, background: "#f0f7ff", border: `1px solid ${THEME.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                    {/* overflowWrap:anywhere — una dirección larga pegada sin espacios no
+                        puede ensanchar el recuadro y sacarlo de la pantalla del teléfono. */}
+                    <p style={{ margin: 0, fontSize: 15, color: THEME.text, fontWeight: 700, lineHeight: 1.55, overflowWrap: "anywhere" }}>
+                      {direccionPerfil}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {errorDireccion && (
+                <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 12, padding: "10px 13px", marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <span style={{ fontSize: 15, lineHeight: 1.2 }}>⚠️</span>
+                  <p style={{ margin: 0, color: "#b91c1c", fontSize: 13, fontWeight: 600, lineHeight: 1.45 }}>{errorDireccion}</p>
+                </div>
+              )}
+
+              <button onClick={confirmarDireccion} disabled={guardandoDireccion}
+                style={{ width: "100%", marginTop: 20, padding: 16, borderRadius: 16, border: "none", background: guardandoDireccion ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: guardandoDireccion ? "#64748b" : "#fff", fontSize: 16, fontWeight: 800, cursor: guardandoDireccion ? "default" : "pointer" }}>
+                {guardandoDireccion ? "Guardando…" : editandoDireccion ? "Guardar y continuar" : "Sí, enviar a esta dirección"}
+              </button>
+
+              {!editandoDireccion && (
+                <button onClick={() => { setEditandoDireccion(true); setDireccionBorrador(direccionPerfil); setErrorDireccion(null); }}
+                  style={{ width: "100%", marginTop: 8, padding: 13, borderRadius: 14, border: `1.5px solid ${THEME.border}`, background: "transparent", color: THEME.primary, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>
+                  Cambiar dirección
+                </button>
+              )}
+
+              <button onClick={() => { setMostrarDireccion(false); setAccionDireccion(null); setErrorDireccion(null); setEditandoDireccion(false); }} disabled={guardandoDireccion}
+                style={{ width: "100%", marginTop: 8, padding: 12, borderRadius: 14, border: "none", background: "transparent", color: THEME.muted, fontSize: 14, fontWeight: 700, cursor: guardandoDireccion ? "default" : "pointer" }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ══ DEVOLUCIÓN POR INFORMACIÓN FALSA ══════════════════════════════════
             Sale ANTES de pagar, no después, porque después ya no es un aviso sino
