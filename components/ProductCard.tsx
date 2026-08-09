@@ -427,9 +427,38 @@ export const ProductCard = React.memo(function ProductCard({
                   // flexWrap: si el nombre del vendedor es largo, el badge baja de línea
                   // intacto en vez de aplastarse (era la causa del badge "moneda" partido).
                   flexWrap: "wrap",
+                  // Sin este tope, el nombre largo empuja el ancho de la tarjeta hacia
+                  // afuera en vez de recortarse dentro de ella.
+                  maxWidth: "100%",
                 }}
               >
-                <span>Vendedor: {product.seller.name || "Anónimo"}</span>
+                {/* "Vendedor:" y el nombre van pegados en UN solo renglón. Antes el nombre
+                    se partía a media palabra en la segunda línea (GUSTAVO / OSORIO) y la
+                    tarjeta se veía rota. Ahora, si no cabe, se recorta con puntos
+                    suspensivos: el nombre completo se ve al entrar a la publicación.
+
+                    minWidth:0 es lo que hace que funcione el recorte — un elemento flex
+                    se niega a encogerse por debajo del ancho de su texto a menos que se
+                    le diga esto, y sin él el overflow:hidden no tiene nada que recortar.
+
+                    La mayúscula va por CSS y no con toUpperCase(): así se guarda el nombre
+                    tal como lo escribió la persona (que es como sale en el correo, en el
+                    comprobante y en el chat) y solo cambia lo que se ve aquí. */}
+                <span
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                  }}
+                  title={product.seller.name || "Anónimo"}
+                >
+                  Vendedor:{" "}
+                  <span style={{ textTransform: "uppercase", fontWeight: 700 }}>
+                    {product.seller.name || "Anónimo"}
+                  </span>
+                </span>
                 {product.seller.avgRating ? (
                   <span style={{
                     display: "inline-flex",

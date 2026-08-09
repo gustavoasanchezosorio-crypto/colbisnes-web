@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { normalizarTelefonoCO } from "@/lib/phone";
+import { validarDireccionEnvio, limpiarDireccion } from "@/lib/direccion";
 import { sendEmail } from "@/lib/email";
 import { sendWhatsapp } from "@/lib/whatsapp";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
@@ -44,6 +45,22 @@ export async function PATCH(request: Request) {
     const updateData: any = {};
     for (const campo of campos) {
       if (body[campo] !== undefined) updateData[campo] = body[campo];
+    }
+
+    // Dirección de envío: es a donde va el paquete, así que no puede entrar cualquier
+    // cosa. Antes se guardaba tal cual llegara — la pantalla filtraba unos caracteres al
+    // teclear, pero a este endpoint se le puede llamar directo y ese filtro no existía
+    // aquí. Se podía dejar un correo de dirección. La regla está en lib/direccion.ts y
+    // la comparten las dos partes.
+    if (updateData.direccionEnvio !== undefined) {
+      const dir = typeof updateData.direccionEnvio === "string" ? limpiarDireccion(updateData.direccionEnvio).trim() : "";
+      const revision = validarDireccionEnvio(dir);
+      if (!revision.valido) {
+        return NextResponse.json({ error: revision.motivo }, { status: 400 });
+      }
+      // Vacío se guarda como null y no como "", para que el medidor de perfil completo
+      // (lib/profileCompletion.ts) no cuente una cadena vacía como dirección puesta.
+      updateData.direccionEnvio = dir || null;
     }
 
     // Código anti-phishing: 4–12 alfanuméricos (se normaliza a mayúsculas), o vacío para borrarlo.

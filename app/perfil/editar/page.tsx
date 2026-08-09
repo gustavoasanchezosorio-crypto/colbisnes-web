@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button, OutlineButton } from "@/components/FormComponents";
 import { THEME } from "@/lib/theme";
+import { validarDireccionEnvio, limpiarDireccion, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 
 const AZUL = THEME.primary;
 
@@ -160,6 +161,10 @@ export default function EditarPerfilPage() {
     if (formData.nequiNumber && formData.nequiNumber.length !== 10) { setErrorMsg("El número Nequi debe tener exactamente 10 dígitos"); return; }
     if (formData.phoneWhatsapp && formData.phoneWhatsapp.length < 7) { setErrorMsg("El WhatsApp debe tener al menos 7 dígitos"); return; }
     if (formData.antiPhishingCode && (formData.antiPhishingCode.length < 4 || formData.antiPhishingCode.length > 12)) { setErrorMsg("El código anti fraude debe tener entre 4 y 12 caracteres"); return; }
+    // Misma regla que aplica el servidor (lib/direccion.ts): aquí es solo para avisar
+    // antes de dar el viaje, no es la barrera de verdad.
+    const revDireccion = validarDireccionEnvio(formData.direccionEnvio);
+    if (!revDireccion.valido) { setErrorMsg(revDireccion.motivo || "Revisa la dirección de envío"); return; }
 
     setSaving(true);
     try {
@@ -368,9 +373,9 @@ export default function EditarPerfilPage() {
               <label style={lbl}>Dirección de envío</label>
               <input style={inp} type="text"
                 value={formData.direccionEnvio}
-                onChange={e => setFormData({ ...formData, direccionEnvio: e.target.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚüÜñÑ\s\-\.,#]/g, "") })}
-                placeholder="Calle 123 #45-67, Barrio, Ciudad" maxLength={200} />
-              <p style={hint}>Letras, números, espacios, guiones y comas</p>
+                onChange={e => setFormData({ ...formData, direccionEnvio: limpiarDireccion(e.target.value) })}
+                placeholder="Calle 123 #45-67, Barrio, Ciudad" maxLength={DIRECCION_LARGO_MAXIMO} />
+              <p style={hint}>Aquí es donde te llega el paquete. No pongas tu correo ni tu teléfono.</p>
             </div>
 
             {/* ── SEGURIDAD ── */}
