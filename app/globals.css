@@ -78,6 +78,23 @@ select option {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* Latido de los bloques grises que se ven mientras cargan las publicaciones
+   (components/Skeleton.tsx).
+
+   Estaba invocado pero NO definido aquí: la única definición vivía dentro de un
+   <style> de app/checkout/[id]/page.tsx, que solo existe mientras esa página está
+   montada. En la portada, entonces, el "cargando" eran bloques grises completamente
+   quietos — parecía contenido roto, no algo en camino. Se sube aquí porque lo usan
+   dos archivos distintos.
+
+   A diferencia del caso "slideIn" de más arriba, este sí se puede definir sin miedo:
+   los únicos que piden una animación llamada "pulse" son ese distintivo de PRUEBAS
+   del checkout (que ya la tenía y se ve igual) y el esqueleto. No despierta nada más. */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
 /* ── El chat no cabía en la pantalla del teléfono ──────────────────────────────
    Dos fallos distintos, con la misma consecuencia: la barra de escribir quedaba
    fuera de la pantalla y no había manera de llegar a ella.
