@@ -64,13 +64,11 @@ export default function CheckoutPage() {
         if (!u || u.error) { setPerfilFaltantes([]); return; }
         setNequiPrefill(u.nequiNumber || null);
         setDireccionPerfil(u.direccionEnvio || "");
+        // El código anti fraude ya viene dentro de los críticos (lib/profileCompletion.ts).
+        // Antes se añadía aquí a mano, porque allá no estaba marcado como crítico; ahora sí
+        // lo está, y repetirlo haría que saliera dos veces en la lista de "te falta".
         const { faltantesCriticos } = computeProfileCompletion(u);
-        // El código anti-phishing también es obligatorio para pagar (lo exige el servidor).
-        const faltantes = [...faltantesCriticos];
-        if (!u.antiPhishingCode || String(u.antiPhishingCode).trim().length === 0) {
-          faltantes.push({ key: "antiPhishingCode", label: "Código anti fraude" });
-        }
-        setPerfilFaltantes(faltantes);
+        setPerfilFaltantes(faltantesCriticos);
       })
       .catch(() => setPerfilFaltantes([]));
   }, [id]);

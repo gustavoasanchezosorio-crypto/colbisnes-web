@@ -3,6 +3,7 @@
 **Fecha de apertura: miércoles 12 de agosto de 2026, 10:20 a. m. (hora Colombia).**
 Documento escrito el 2 de agosto de 2026. Diez días de campaña.
 **Revisado el 3 de agosto** — ver el cambio de fondo justo aquí abajo.
+**Revisado el 9 de agosto** — el acceso ya no llega por correo: se entrega en la misma pantalla.
 
 ---
 
@@ -11,14 +12,14 @@ Documento escrito el 2 de agosto de 2026. Diez días de campaña.
 Hasta ayer la campaña vendía una fecha: «apúntate y te aviso el 12». Desde hoy vende otra cosa
 mucho más fácil de decir:
 
-> **Apúntate y entras hoy mismo.** El correo de bienvenida trae tu enlace de acceso anticipado.
+> **Apúntate y entras hoy mismo.** Dejas tu correo y el botón para entrar te sale ahí mismo.
 > Puedes armar tu perfil y publicar desde ya. Lo único que no se puede hacer todavía es pagar y
 > cobrar — eso se activa el 12.
 
 Por qué importa para todo lo que sigue:
 
 - **La lista de espera dejó de ser una lista de espera.** Es la puerta de entrada. Quien deja su
-  correo recibe acceso en el mismo minuto.
+  correo entra en el mismo segundo, sin salir de la página.
 - **El argumento para vendedores se vuelve concreto.** Ya no es «prepárate para el 12»: es «monta
   tu tienda esta semana y el 12 arrancas con clientes, no con una publicación en blanco».
 - **La cuenta regresiva sigue sirviendo, pero cambia de sujeto.** Ya no cuenta para entrar: cuenta
@@ -28,6 +29,27 @@ Por qué importa para todo lo que sigue:
 
 Todos los textos de abajo ya están escritos con esta lógica. Si reciclas algo de una versión
 anterior, revisa que no diga «te aviso cuando abramos».
+
+---
+
+## 🔄 Cambio del 5 de agosto: el acceso ya no viaja por correo
+
+Entre el 3 y el 5 de agosto la promesa era «deja tu correo y te llega el acceso». Esa frase costó
+caro: los **11 primeros apuntados nunca pudieron entrar**. Se habían inscrito antes de que el correo
+llevara enlace (la última, por 23 minutos), y volver a apuntarse no reenviaba nada — el sistema
+callaba porque el correo ya estaba en la lista. Se quedaron mirando una bandeja vacía.
+
+Desde el 5 de agosto funciona así:
+
+> Dejas tu correo en la página. **En esa misma pantalla te aparece el botón para entrar.** No hay
+> que ir al correo, ni esperar, ni buscar en spam.
+
+El correo de bienvenida sigue llegando y sigue trayendo un enlace, pero ya es un respaldo — sirve
+para entrar desde otro teléfono o computador, no para entrar la primera vez.
+
+**Qué cambia en los textos:** ninguna pieza puede decir «te llega el acceso», «te lo mando al
+correo» ni «revisa tu bandeja». Todas dicen **«entras de una»** o **«entras ahí mismo»**. Si una
+sola frase manda a la gente al correo, se repite el problema de los 11.
 
 ---
 
@@ -58,15 +80,18 @@ Tres cosas que descubrí revisando producción y que pueden arruinar la campaña
 ensayo, el destacado— para que lo que se publique de ahora en adelante sea real. Quedaron los 5
 usuarios con su KYC aprobado y los correos de la lista.)*
 
-Hoy el catálogo está vacío. Literalmente cero. Ese es el estado real de la tienda.
+Hoy el catálogo tiene **un solo producto, y es tuyo** (comprobado el 9 de agosto). Ese es el estado
+real de la tienda.
 
 Si el 12 de agosto llegan 200 personas y encuentran una vitrina vacía, se van y no vuelven. En un
 marketplace la primera impresión es de una sola vez: no hay segunda oportunidad para parecer un
 sitio con vida. Por eso la campaña de vendedores no es un accesorio — **es la que decide si la del
 12 sirve de algo**.
 
-La buena noticia es que el acceso anticipado te da nueve días para llenarla, y que ahora puedes
-pedirle a alguien que publique **hoy**, no que espere. Antes no podías.
+La buena noticia es que el acceso anticipado te da hasta el 12 para llenarla, y que ahora puedes
+pedirle a alguien que publique **hoy**, no que espere. Antes no podías. (Cuando se escribió esto
+quedaban nueve días; el 9 de agosto quedan tres, así que el empuje a vendedores es lo más urgente
+que tienes.)
 
 **Meta mínima para el 12: 25 productos publicados.** Con menos de eso, mi consejo honesto es que
 retrases el empuje fuerte de compradores y uses el 12 como apertura discreta.
@@ -180,7 +205,7 @@ lo que ya está escrito.
 > Colbisnes arregla eso. Tu plata entra en custodia y no le llega al vendedor hasta que confirmes
 > que recibiste lo que pediste. Si algo sale mal, el dinero nunca se movió.
 >
-> Ya puedes entrar: deja tu correo en colbisnes.com y te llega el acceso de una. Las compras se
+> Ya puedes entrar: deja tu correo en colbisnes.com y entras de una, ahí mismo. Las compras se
 > activan el 12 👇
 >
 > #Colombia #segundamano #compraventa #confianza #marketplace #Colbisnes #emprendimiento
@@ -203,7 +228,8 @@ lo que ya está escrito.
 
 **⚠️ Ojo, y esto cambió el 3 de agosto:** este guion necesita una compra real de punta a punta, y
 **hasta el 12 no puedes hacerla**. Mientras `COMING_SOON` esté encendido, la única forma de entrar
-es el enlace de acceso anticipado — y ese mismo enlace es el que bloquea el pago. No hay puerta que
+es el acceso anticipado (hoy se entrega al dejar el correo en la página; el enlace del correo es el
+respaldo) — y ese mismo acceso es el que bloquea el pago. No hay puerta que
 te deje entrar *y* pagar al mismo tiempo. Es a propósito: es lo que impide que un desconocido con
 el enlace mueva plata antes de tiempo.
 
@@ -262,8 +288,8 @@ que no publicar el Reel.
 > El miércoles 12 a las 10:20 de la mañana se abren las compras en Colbisnes: segunda mano en
 > Colombia con la plata en custodia.
 >
-> Pero no hay que esperar al miércoles para entrar. Dejas tu correo en colbisnes.com, te llega el
-> acceso y puedes publicar hoy mismo.
+> Pero no hay que esperar al miércoles para entrar. Dejas tu correo en colbisnes.com, entras de
+> una y puedes publicar hoy mismo.
 >
 > Y ahí está la gracia: el que publica ahora, el miércoles ya tiene su producto en vitrina cuando
 > llegue la gente. El que espera, empieza de cero ese día.
@@ -335,7 +361,7 @@ por el hilo.
 > **8/**
 > Las compras se abren el miércoles 12 de agosto a las 10:20 a. m.
 >
-> Pero para entrar y publicar no hay que esperar: dejas tu correo y te llega el acceso hoy 👇
+> Pero para entrar y publicar no hay que esperar: dejas tu correo y entras ahí mismo 👇
 > colbisnes.com
 
 ### Tuit 2 — El dato
@@ -500,7 +526,7 @@ móvil: párrafos de una o dos líneas, sin bloques.
 > Si algo sale mal, la plata nunca se movió.
 >
 > Las compras se abren el **miércoles 12 de agosto**, pero ya te puedes meter a mirar y a publicar.
-> Dejas tu correo acá y te llega el acceso al toque:
+> Dejas tu correo acá y entras al toque:
 > 👉 colbisnes.com
 >
 > Y si tienes cosas que ya no usas y quieres venderlas: publicar es gratis y **recibes completo lo
@@ -518,8 +544,8 @@ móvil: párrafos de una o dos líneas, sin bloques.
 > **Una semana** para que se abran las compras en Colbisnes — segunda mano con la plata en
 > custodia.
 >
-> Pero para entrar no hay que esperar: dejas tu correo en colbisnes.com y te llega el acceso de
-> una. Ya hay gente publicando.
+> Pero para entrar no hay que esperar: dejas tu correo en colbisnes.com y entras de una. El
+> catálogo apenas arranca: lo tuyo puede ser de lo primero que se vea.
 >
 > Si vas a vender algo, hazlo esta semana: los primeros salen en portada gratis y el miércoles,
 > cuando entren los compradores, tu producto ya está arriba. Toma cinco minutos, solo necesitas
@@ -600,8 +626,8 @@ mano. Si mandas cien copias iguales con copia oculta, se nota y no funciona.
 > para comprar y vender de segunda mano en Colombia pero con la plata en custodia — el vendedor no
 > recibe hasta que el comprador confirme que le llegó bien.
 >
-> ¿Me haces un favor de un minuto? Déjame tu correo acá 👉 colbisnes.com — te llega el acceso de
-> una y le echas un ojo. Las compras arrancan el miércoles.
+> ¿Me haces un favor de un minuto? Déjame tu correo acá 👉 colbisnes.com — entras de una y le
+> echas un ojo. Las compras arrancan el miércoles.
 >
 > Y si conoces a alguien que compre o venda usado, pásale el enlace 🙏
 >

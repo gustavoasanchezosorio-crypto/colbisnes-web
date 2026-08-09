@@ -290,11 +290,25 @@ function PageInner() {
   const { unreadTotal, nudgeTick } = useNotifications();
   const [unreadByProduct, setUnreadByProduct] = useState<Record<string, number>>({});
   const [kycPendiente, setKycPendiente] = useState(false);
-  // Aviso contextual: qué le falta al usuario (crítico) para poder vender y RECIBIR pagos.
-  const [faltaVender, setFaltaVender] = useState<{ key: string; label: string }[]>([]);
+  // Aviso contextual: qué le falta al usuario (crítico) para poder operar.
+  // Se llamaba "faltaVender" y ese nombre hacía daño: llevaba a leerlo como cosa de
+  // vendedores, cuando el KYC y el código anti fraude frenan también al COMPRADOR en su
+  // primera oferta. Publicar, en cambio, no lo bloquea nada de esto.
+  const [faltaParaOperar, setFaltaParaOperar] = useState<{ key: string; label: string }[]>([]);
   // Modal emergente para invitar a completar los datos críticos faltantes.
   const [showFaltaModal, setShowFaltaModal] = useState(false);
   const [nudgeActive, setNudgeActive] = useState(false);
+
+  // A dónde mandarlo según lo que le falte. Antes siempre caía en ?falta=pago, que en el
+  // perfil pinta un aviso de Nequi y Bre-B: a quien solo le faltaba el código anti fraude
+  // le salía un mensaje que no tenía nada que ver con lo que iba a hacer.
+  const soloFaltaAntiFraude =
+    faltaParaOperar.length === 1 && faltaParaOperar[0].key === "antiPhishingCode";
+  const destinoFalta = kycPendiente
+    ? "/kyc"
+    : soloFaltaAntiFraude
+    ? "/perfil/editar?falta=antifraude"
+    : "/perfil/editar?falta=pago";
 
   // El sonido/vibración de notificación ahora se dispara de forma global desde
   // NotificationProvider (context/NotificationContext.tsx), montado en app/layout.tsx,
@@ -320,13 +334,16 @@ function PageInner() {
         if (!u) return;
         setKycPendiente(u.kycStatus !== "approved");
         const c = computeProfileCompletion(u);
-        setFaltaVender(c.faltantesCriticos);
+        setFaltaParaOperar(c.faltantesCriticos);
         // Mostrar el modal emergente una vez por sesión si le falta algo crítico.
+        // La clave de sessionStorage cambió de nombre a propósito: el aviso ahora dice otra
+        // cosa y suma el código anti fraude, así que quien ya lo había cerrado con el texto
+        // viejo tiene que volver a verlo una vez con el nuevo.
         if (c.faltantesCriticos.length > 0) {
-          const yaVisto = typeof window !== "undefined" && sessionStorage.getItem("faltaVenderModalVisto") === "1";
+          const yaVisto = typeof window !== "undefined" && sessionStorage.getItem("faltaOperarModalVisto") === "1";
           if (!yaVisto) {
             setShowFaltaModal(true);
-            try { sessionStorage.setItem("faltaVenderModalVisto", "1"); } catch {}
+            try { sessionStorage.setItem("faltaOperarModalVisto", "1"); } catch {}
           }
         }
       })
@@ -518,44 +535,57 @@ function PageInner() {
           100% { transform: translateX(0); }
         }
       `}</style>
-      <header style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,89,159,0.3)" }}>
-        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
-          <img src="/logo-white.svg?v=2" alt="Colbisnes" height={44} style={{ height: 44, width: "auto", display: "block" }} />
+      {/* Las clases "cab-*" no pintan nada por sí solas: existen para que globals.css
+          pueda encoger esta barra en teléfono. Con las medidas de escritorio, la fila
+          suma unos 525 px y el iPhone más común tiene 390: "Salir" se salía por la
+          derecha y no había forma de tocarlo. Ver el bloque comentado en globals.css. */}
+      <header className="cab-inicio" style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,89,159,0.3)" }}>
+        {/* minWidth:0 para que, si algún día no cabe algo, lo que ceda sea el logo y
+            nunca los botones: perder un pedazo de dibujo se aguanta, perder "Salir" no. */}
+        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", minWidth: 0, overflow: "hidden" }}>
+          <img className="cab-inicio-logo" src="/logo-white.svg?v=2" alt="Colbisnes" height={44} style={{ height: 44, width: "auto", display: "block" }} />
           <style>{`@keyframes msgBadgePulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.2); } }`}</style>
         </Link>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div className="cab-inicio-acciones" style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
           {isAuthenticated && session?.user ? (
             <>
-              <button onClick={() => setShowPublishForm(!showPublishForm)} style={{ padding: "7px 16px", borderRadius: 20, background: showPublishForm ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.4)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              <button className="cab-btn" onClick={() => setShowPublishForm(!showPublishForm)} style={{ padding: "7px 16px", borderRadius: 20, background: showPublishForm ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.4)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
                 {showPublishForm ? "✕ Cerrar" : "+ Publicar"}
               </button>
-              <Link href={`/user/${session.user.id}`} style={{ color: "rgba(255,255,255,0.9)", textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, background: "rgba(255,255,255,0.12)", fontSize: 13, fontWeight: 600 }}>
+              <Link className="cab-avatar" href={`/user/${session.user.id}`} style={{ color: "rgba(255,255,255,0.9)", textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, background: "rgba(255,255,255,0.12)", fontSize: 13, fontWeight: 600 }}>
                 <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, border: "1.5px solid rgba(255,255,255,0.4)", overflow: "hidden" }}>
                   {(session.user as any)?.image ? (
                     <img src={(session.user as any).image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (session.user?.name || session.user?.email || "U")[0].toUpperCase()}
                 </span>
               </Link>
-              <Link href="/mensajes" style={{ position:"relative", padding: "7px 14px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.35)", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 600, textDecoration: "none", display:"inline-flex", alignItems:"center", gap:6 }}>
-                Mensajes
+              {/* aria-label fijo porque en teléfono la palabra "Mensajes" se oculta y solo
+                  queda el sobre: quien usa lector de pantalla tiene que oír el nombre igual. */}
+              <Link className="cab-mensajes" href="/mensajes" aria-label="Mensajes" style={{ position:"relative", padding: "7px 14px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.35)", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 600, textDecoration: "none", display:"inline-flex", alignItems:"center", gap:6 }}>
+                <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>✉</span>
+                <span className="cab-etiqueta">Mensajes</span>
                 {unreadTotal > 0 && (
-                  <span style={{ background:"#e53e3e", color:"white", borderRadius:"50%", minWidth:18, height:18, fontSize:"0.65rem", fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px", boxShadow:"0 2px 6px rgba(229,62,62,0.6)", animation:"msgBadgePulse 1.5s ease-in-out infinite" }}>
+                  <span className="cab-badge" style={{ background:"#e53e3e", color:"white", borderRadius:"50%", minWidth:18, height:18, fontSize:"0.65rem", fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px", boxShadow:"0 2px 6px rgba(229,62,62,0.6)", animation:"msgBadgePulse 1.5s ease-in-out infinite" }}>
                     {unreadTotal > 99 ? "99+" : unreadTotal}
                   </span>
                 )}
-              </Link><button onClick={() => signOut()} style={{ padding: "7px 14px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.35)", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Salir</button>
+              </Link><button className="cab-btn" onClick={() => signOut()} style={{ padding: "7px 14px", borderRadius: 20, border: "1.5px solid rgba(255,255,255,0.35)", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>Salir</button>
             </>
           ) : (
             <>
               <Link href="/auth/login" style={{ color: "rgba(255,255,255,0.9)", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Entrar</Link>
-              <Link href="/auth/register" style={{ padding: "7px 16px", borderRadius: 20, background: "rgba(255,255,255,0.2)", color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, border: "1.5px solid rgba(255,255,255,0.4)" }}>Registrarse</Link>
+              <Link className="cab-btn" href="/auth/register" style={{ padding: "7px 16px", borderRadius: 20, background: "rgba(255,255,255,0.2)", color: "white", textDecoration: "none", fontSize: 13, fontWeight: 700, border: "1.5px solid rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>Registrarse</Link>
             </>
           )}
         </div>
       </header>
 
-      {/* Aviso contextual: qué falta para vender y RECIBIR pagos (KYC + Nequi + Bre-B) */}
-      {isAuthenticated && faltaVender.length > 0 && (
+      {/* Aviso contextual: qué falta para poder operar.
+          El texto decía "Para vender y recibir tus pagos", y eso mentía por los dos lados:
+          publicar no exige nada de esta lista (solo el correo verificado), y en cambio el
+          KYC y el código anti fraude frenan al COMPRADOR apenas intenta hacer una oferta.
+          Quien solo venía a comprar leía un aviso de vendedores y lo ignoraba. */}
+      {isAuthenticated && faltaParaOperar.length > 0 && (
         <div
           onClick={() => setShowFaltaModal(true)}
           style={{
@@ -566,10 +596,10 @@ function PageInner() {
           }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
             <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>
-              Para vender y recibir tus pagos te falta:
+              Para comprar o cobrar tus ventas te falta:
             </span>
             <span style={{ color: "#fff", fontSize: 13, fontWeight: 500, opacity: 0.95 }}>
-              {faltaVender.map(f => f.label).join(" · ")}
+              {faltaParaOperar.map(f => f.label).join(" · ")}
             </span>
           </div>
           <span
@@ -585,7 +615,7 @@ function PageInner() {
       )}
 
       {/* Modal emergente para completar los datos críticos faltantes */}
-      {isAuthenticated && showFaltaModal && faltaVender.length > 0 && (
+      {isAuthenticated && showFaltaModal && faltaParaOperar.length > 0 && (
         <div
           onClick={() => setShowFaltaModal(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(13,27,42,0.55)", backdropFilter: "blur(10px)", zIndex: 9600, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
@@ -597,12 +627,12 @@ function PageInner() {
             <div style={{ fontSize: 48, marginBottom: 8 }}>🚀</div>
             <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800, color: THEME.text }}>Completa tu registro</h2>
             <p style={{ margin: "0 0 18px", fontSize: 14, color: THEME.muted, lineHeight: 1.5 }}>
-              Te falta poco para poder <b>vender y recibir tus pagos</b>. Completa estos datos y ningún pago quedará sin destino.
+              Sin estos datos no puedes <b>hacer una oferta</b> ni <b>cobrar tus ventas</b>. Se piden una sola vez.
             </p>
 
             <div style={{ textAlign: "left", background: THEME.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 18, border: `1px solid ${THEME.border}` }}>
               <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 800, color: THEME.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Te falta:</p>
-              {faltaVender.map((f) => (
+              {faltaParaOperar.map((f) => (
                 <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <span style={{ color: "#f59e0b", fontSize: 13 }}>●</span>
                   <span style={{ fontSize: 13, color: THEME.text }}>{f.label}</span>
@@ -611,7 +641,7 @@ function PageInner() {
             </div>
 
             <a
-              href={kycPendiente ? "/kyc" : "/perfil/editar?falta=pago"}
+              href={destinoFalta}
               onClick={() => setShowFaltaModal(false)}
               style={{ display: "block", width: "100%", padding: 15, borderRadius: 15, border: "none", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: `0 8px 28px ${THEME.primary}44`, marginBottom: 10, textDecoration: "none", boxSizing: "border-box" }}
             >

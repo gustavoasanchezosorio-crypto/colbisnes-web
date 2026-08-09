@@ -66,13 +66,16 @@ export default function EditarPerfilPage() {
   });
 
   const [geoErrorMsg, setGeoErrorMsg] = useState("");
-  const [faltaPago, setFaltaPago] = useState(false);
+  // Qué venía a completar, según el ?falta= con el que lo mandaron desde la portada.
+  // Antes solo existía "pago", así que a quien únicamente le faltaba el código anti fraude
+  // le salía un aviso de Nequi y Bre-B que no tenía nada que ver con su caso.
+  const [faltaQue, setFaltaQue] = useState<"pago" | "antifraude" | null>(null);
   const [kycStatus, setKycStatus] = useState<string>("none");
 
   useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("falta") === "pago") {
-      setFaltaPago(true);
-    }
+    if (typeof window === "undefined") return;
+    const falta = new URLSearchParams(window.location.search).get("falta");
+    if (falta === "pago" || falta === "antifraude") setFaltaQue(falta);
   }, []);
 
   const detectarCiudad = () => {
@@ -209,9 +212,15 @@ export default function EditarPerfilPage() {
 
           {successMsg && <div style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#15803d", fontWeight: 700, fontSize: "0.9rem" }}>✅ {successMsg}</div>}
           {errorMsg  && <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "0.7rem 1rem", marginBottom: "1rem", color: "#b91c1c", fontWeight: 700, fontSize: "0.9rem" }}>❌ {errorMsg}</div>}
-          {faltaPago && <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.40)", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: "#b45309", fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5 }}>⚠️ Para comprar o vender necesitas registrar tu <b>número Nequi</b> y tu <b>llave Bre-B</b>. Complétalos abajo y guarda tu perfil.</div>}
+          {faltaQue && <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.40)", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: "#b45309", fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5 }}>
+            {faltaQue === "antifraude"
+              ? <>⚠️ Te falta tu <b>código anti fraude</b>. Sin él no puedes hacer una oferta. Escríbelo abajo (una palabra tuya, de 4 a 12 letras o números) y guarda tu perfil.</>
+              : <>⚠️ Para comprar o cobrar tus ventas necesitas registrar tu <b>número Nequi</b> y tu <b>llave Bre-B</b>. Complétalos abajo y guarda tu perfil.</>}
+          </div>}
 
-          {/* Estado de verificación de identidad (KYC): requisito para publicar y recibir pagos */}
+          {/* Estado de verificación de identidad (KYC).
+              Publicar NO lo exige (POST /api/products solo pide el correo verificado); lo que
+              bloquea es hacer una oferta, pagar y recibir el dinero de una venta. */}
           {(() => {
             const aprobado = kycStatus === "approved";
             const enRevision = kycStatus === "pending";
@@ -219,11 +228,16 @@ export default function EditarPerfilPage() {
             const bd = aprobado ? "rgba(34,197,94,0.35)" : enRevision ? "rgba(59,130,246,0.35)" : "rgba(245,158,11,0.40)";
             const col = aprobado ? "#15803d" : enRevision ? "#1d4ed8" : "#b45309";
             const icono = aprobado ? "✅" : enRevision ? "⏳" : "🪪";
+            // Lo que el servidor exige de verdad: requireKyc() está en el chat, en hacer y
+            // en aceptar ofertas, en los tres checkouts, en confirmar la entrega y en
+            // calificar. Publicar NO lo pide. Decirle a alguien que sin KYC no puede
+            // publicar lo frena por nada — justo lo contrario de lo que se busca ahora,
+            // que la gente llene el catálogo antes de que abran las compras.
             const texto = aprobado
-              ? "Tu identidad está verificada. Puedes vender y recibir pagos."
+              ? "Tu identidad está verificada. Ya puedes escribir, ofertar, comprar y vender."
               : enRevision
                 ? "Tu verificación de identidad está en revisión. Te avisaremos apenas quede lista."
-                : "Verifica tu identidad para poder publicar productos y recibir tus pagos.";
+                : "Publicar puedes hacerlo desde ya. Verifica tu identidad para poder escribir por el chat, ofertar, comprar y vender.";
             return (
               <div style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: col, fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <span>{icono} {texto}</span>

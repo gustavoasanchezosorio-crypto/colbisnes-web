@@ -163,3 +163,50 @@ select option {
     bottom: calc(88px + env(safe-area-inset-bottom)) !important;
   }
 }
+
+/* ── La cabecera de la portada no cabía en un teléfono ─────────────────────────
+   Con las medidas de escritorio la fila suma cerca de 525 px cuando hay sesión
+   iniciada: logo 137 + "+ Publicar" 106 + avatar 50 + "Mensajes" 90 + "Salir" 64,
+   más 48 de margen y 30 de separaciones. El iPhone más común mide 390 px de ancho
+   y el iPhone SE 375. Como la fila es flex y no envuelve, lo que sobra se sale por
+   la derecha — y lo último de la fila es justo "Salir", que quedaba fuera de la
+   pantalla y era imposible de tocar.
+
+   Aquí se recorta cada pieza hasta que la suma baja a ~355 px, que entra hasta en
+   los Android de 360. Las medidas van con !important porque en la portada están
+   escritas en línea (style=) y una hoja de estilos no le gana a eso sin la marca.
+   Si algún día se añade otro botón a esta barra, hay que volver a hacer la cuenta. */
+@media (max-width: 680px) {
+  .cab-inicio {
+    padding: 0 12px !important;
+  }
+  .cab-inicio-logo {
+    height: 30px !important;
+  }
+  .cab-inicio-acciones {
+    gap: 6px !important;
+  }
+  .cab-btn {
+    padding: 6px 11px !important;
+    font-size: 12px !important;
+  }
+  /* El avatar se queda redondo y sin texto: es el único que ya era compacto. */
+  .cab-avatar {
+    padding: 4px !important;
+  }
+  .cab-mensajes {
+    padding: 6px 9px !important;
+  }
+  /* Se va la palabra y queda el sobre. El nombre sigue anunciándose por aria-label. */
+  .cab-etiqueta {
+    display: none;
+  }
+  /* El contador de no leídos deja de empujar en la fila y se monta sobre el sobre,
+     como en cualquier app de mensajería. Si siguiera en línea, sumaría 24 px y la
+     cuenta se volvería a pasar del ancho de un iPhone SE. */
+  .cab-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+  }
+}

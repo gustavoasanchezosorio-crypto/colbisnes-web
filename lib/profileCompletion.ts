@@ -16,17 +16,28 @@ export interface ProfileFields {
 interface CampoPerfil {
   key: keyof ProfileFields;
   label: string;
-  // Campos críticos para poder VENDER y RECIBIR pagos (KYC + datos de cobro).
-  // Se resaltan aparte en los avisos contextuales.
+  // Campos que el SERVIDOR exige de verdad para mover plata. Se resaltan aparte en los
+  // avisos contextuales, así que la lista tiene que calcar lo que bloquean los endpoints
+  // — si un campo bloquea y no está marcado aquí, el usuario se entera cuando ya se
+  // estrelló contra un 403, que es exactamente lo que pasaba con el código anti fraude.
+  //
+  // Quién exige qué, a día de hoy:
+  //   · publicar (POST /api/products) ....... nada de esto; solo el correo verificado
+  //   · hacer una oferta (POST /api/offers) . KYC + código anti fraude
+  //   · pagar (los 3 checkouts) ............. KYC + código anti fraude + Nequi + Bre-B
+  //   · que te compren (tieneDatosDeCobro) .. Nequi + Bre-B del vendedor
   critico?: boolean;
   // Check personalizado: por defecto "tiene algún valor"; el KYC solo cuenta si está aprobado.
   check?: (v: unknown) => boolean;
 }
 
-// Orden = prioridad con la que se le sugiere al usuario completarlos.
+// Orden = prioridad con la que se le sugiere al usuario completarlos. Los críticos van
+// primero y entre ellos manda el orden en que la persona se los va a topar: el código
+// anti fraude frena ya en la primera oferta, antes que los datos de cobro.
 export const CAMPOS_PERFIL: CampoPerfil[] = [
   { key: "name",            label: "Tu nombre" },
   { key: "kycStatus",       label: "Verificación de identidad (KYC)", critico: true, check: (v) => v === "approved" },
+  { key: "antiPhishingCode",label: "Código anti fraude", critico: true },
   { key: "nequiNumber",     label: "Número Nequi", critico: true },
   { key: "brebId",          label: "Llave Bre-B", critico: true },
   { key: "phone",           label: "Teléfono" },
@@ -34,7 +45,6 @@ export const CAMPOS_PERFIL: CampoPerfil[] = [
   { key: "city",            label: "Ciudad" },
   { key: "direccionEnvio",  label: "Dirección de envío" },
   { key: "image",           label: "Foto de perfil" },
-  { key: "antiPhishingCode",label: "Código anti fraude" },
 ];
 
 const lleno = (v: unknown): boolean =>

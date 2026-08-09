@@ -92,6 +92,19 @@ export default function BluWidget() {
   // este return condicional no rompe las reglas de hooks.
   if (pathname === "/coming-soon") return null;
 
+  // En la pantalla de mensajes, el botón "Enviar" del chat con la otra persona queda
+  // pegado a la esquina inferior DERECHA, que es exactamente donde vive este círculo.
+  // Y como el círculo va por encima (z-index 1900), tocar "Enviar" tocaba a Chucho: el
+  // mensaje no salía nunca. No es cosa de móvil —ese chat ocupa todo el ancho, así que
+  // chocaban igual en computador—, por eso se resuelve aquí y no con una media query.
+  // Se sube en lugar de esconderse para no dejar sin salida a quien está negociando y
+  // justo ahí necesita ayuda. Arriba de la barra solo hay hueco: el botón "Enviar" está
+  // alineado abajo, así que aunque el cuadro de escribir crezca, no lo tapa.
+  const enPantallaDeMensajes = pathname === "/mensajes";
+  const alturaLanzador = enPantallaDeMensajes
+    ? "calc(88px + env(safe-area-inset-bottom))"
+    : "calc(18px + env(safe-area-inset-bottom))";
+
   return (
     <>
       {!abierto && (
@@ -102,7 +115,7 @@ export default function BluWidget() {
           // barra de compra fija (solo pasa en la ficha de producto vista en teléfono).
           className="blu-lanzador"
           style={{
-            position: "fixed", right: 18, bottom: "calc(18px + env(safe-area-inset-bottom))", zIndex: 1900,
+            position: "fixed", right: 18, bottom: alturaLanzador, zIndex: 1900,
             width: 62, height: 62, borderRadius: "50%", border: "none", cursor: "pointer",
             background: THEME.surfaceGradient, boxShadow: THEME.cardShadow,
             padding: 4, display: "flex", alignItems: "center", justifyContent: "center",

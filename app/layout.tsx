@@ -25,10 +25,19 @@ export const metadata: Metadata = {
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
     url: SITE_URL,
     locale: "es_CO",
-    images: [{ url: "/logo-google.png", width: 512, height: 512, alt: "Colbisnes" }],
+    // Las medidas TIENEN que ser las reales del archivo. Estaban puestas en 512x512,
+    // pero logo-google.png mide 800x418: WhatsApp y Facebook leen estos números para
+    // decidir el recuadro ANTES de bajarse la imagen, así que reservaban un cuadrado y
+    // le recortaban los lados a la palabra "colbisnes". Comprobado con `sips` sobre el
+    // archivo, no supuesto. Si algún día se cambia el dibujo, hay que volver a medirlo.
+    images: [{ url: "/logo-google.png", width: 800, height: 418, alt: "Colbisnes" }],
   },
   twitter: {
-    card: "summary",
+    // "summary" pinta una miniatura CUADRADA y recorta al centro, que en un logo apaisado
+    // se come el principio y el final de la palabra. Con "summary_large_image" se respeta
+    // el apaisado. Esta tarjeta no la usa solo X: varias apps de mensajería la prefieren
+    // sobre las etiquetas og: cuando existe.
+    card: "summary_large_image",
     title: "Colbisnes",
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
     images: ["/logo-google.png"],
