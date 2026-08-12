@@ -199,6 +199,12 @@ function construirHtml(): string {
               </table>
 
               <p style="${parrafo}">Pagas como quieras: tarjeta, PSE, Nequi, contra-entrega o USDT.</p>
+
+              <p style="${parrafo}">🛡️ En Colbisnes pedimos validación con documento de identidad para evitar fraudes.</p>
+
+              <p style="${parrafo}">🔐 Y puedes ponerle un código anti fraude a tu cuenta: desde ese momento, todos los correos que te mandemos lo llevan escrito. Si te llega uno que dice ser de Colbisnes y no trae tu código, no es nuestro.</p>
+
+              <p style="${parrafo}">Y tampoco le vendemos tu información a ningún call center de las cárceles del país 😬</p>
             </td>
           </tr>
 
@@ -239,6 +245,12 @@ Desde ahora puedes comprar y vender de segunda mano con el dinero en custodia: e
 Si algo sale mal, el dinero nunca se movió.
 
 Pagas como quieras: tarjeta, PSE, Nequi, contra-entrega o USDT.
+
+🛡️ En Colbisnes pedimos validación con documento de identidad para evitar fraudes.
+
+🔐 Y puedes ponerle un código anti fraude a tu cuenta: desde ese momento, todos los correos que te mandemos lo llevan escrito. Si te llega uno que dice ser de Colbisnes y no trae tu código, no es nuestro.
+
+Y tampoco le vendemos tu información a ningún call center de las cárceles del país 😬
 
 Entra ahora -> https://colbisnes.com
 

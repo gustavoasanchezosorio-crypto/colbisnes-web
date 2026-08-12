@@ -8,6 +8,7 @@ import { ToastProvider } from '@/components/Toast';
 import BluWidget from '@/components/BluWidget';
 import ProfileCompletionAlert from '@/components/ProfileCompletionAlert';
 import BannerModoPrueba from '@/components/BannerModoPrueba';
+import CelebracionLanzamiento from '@/components/CelebracionLanzamiento';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -105,6 +106,10 @@ export default function RootLayout({
             de sesión ni de contexto, y así se pinta aunque algo más falle. Solo se
             ve si el navegador entró con el link secreto de prelanzamiento. */}
         <BannerModoPrueba />
+        {/* Globos y pirotecnia del día de la apertura. Va aquí fuera por lo mismo
+            que el banner: no depende de sesión ni de contexto. Se apaga solo
+            cuando termina el 12 de agosto. */}
+        <CelebracionLanzamiento />
         <Providers>
           <AppProvider>
             <ToastProvider>
