@@ -36,7 +36,53 @@ export const OFFER_STATUS = {
   REJECTED: "REJECTED",
 } as const;
 
-export const CITIES = ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena"] as const;
+// Ciudades donde se puede publicar. Es una lista CERRADA a propósito: el filtro
+// "buscar por ciudad" de la portada agrupa por este texto exacto, así que si cada
+// quien escribiera la suya a mano acabaríamos con "Bogota", "bogotá" y "Bogotá D.C."
+// como tres ciudades distintas y el filtro dejaría de servir.
+//
+// Hasta el 2026-08-12 aquí solo había CINCO ciudades (Bogotá, Medellín, Cali,
+// Barranquilla y Cartagena). Eso dejaba fuera a media Colombia — alguien en Ibagué
+// no podía publicar, y ni siquiera escribiendo la ciudad a mano, porque el esquema
+// de utils/validations.ts valida contra esta misma lista. Ahora están las 32
+// capitales de departamento más los municipios más poblados del país.
+//
+// Van en orden alfabético y no por tamaño: en el desplegable del móvil se busca
+// tecleando la primera letra, y eso solo funciona si la lista está ordenada.
+//
+// Si añades una ciudad: escríbela con su tilde y en su sitio alfabético. Y NUNCA
+// borres ni renombres una que ya esté, porque hay publicaciones guardadas con ese
+// texto exacto y la pantalla de editar (app/product/[id]/editar) cambia la ciudad
+// a "Bogotá" en silencio si no encuentra la que traía el producto.
+export const CITIES = [
+  "Acacías", "Aguachica", "Aguazul", "Apartadó", "Arauca", "Arjona", "Armenia",
+  "Barrancabermeja", "Barranquilla", "Bello", "Bogotá", "Bucaramanga", "Buenaventura", "Buga",
+  "Cajicá", "Calarcá", "Cali", "Candelaria", "Cartagena", "Cartago", "Caucasia", "Cereté",
+  "Chía", "Chinchiná", "Chiquinquirá", "Ciénaga", "Copacabana", "Corozal", "Cota", "Cúcuta",
+  "Dosquebradas", "Duitama",
+  "El Banco", "El Carmen de Bolívar", "Envigado", "Espinal",
+  "Facatativá", "Florencia", "Floridablanca", "Funza", "Fusagasugá",
+  "Garzón", "Girardot", "Girón", "Granada",
+  "Honda",
+  "Ibagué", "Inírida", "Ipiales", "Itagüí",
+  "Jamundí",
+  "La Dorada", "La Estrella", "La Tebaida", "Leticia", "Lorica", "Los Patios",
+  "Madrid", "Magangué", "Maicao", "Malambo", "Manizales", "Medellín", "Melgar", "Mitú",
+  "Mocoa", "Montelíbano", "Montería", "Mosquera",
+  "Neiva",
+  "Ocaña",
+  "Paipa", "Palmira", "Pamplona", "Pasto", "Pereira", "Piedecuesta", "Pitalito",
+  "Planeta Rica", "Popayán", "Puerto Asís", "Puerto Carreño", "Puerto Tejada",
+  "Quibdó", "Quimbaya",
+  "Riohacha", "Rionegro",
+  "Sabaneta", "Sahagún", "San Andrés", "San Gil", "San José del Guaviare", "Santa Marta",
+  "Santa Rosa de Cabal", "Santander de Quilichao", "Sincelejo", "Soacha", "Sogamoso", "Soledad",
+  "Tuluá", "Tumaco", "Tunja", "Turbaco", "Turbo",
+  "Ubaté", "Uribia",
+  "Valledupar", "Villa del Rosario", "Villamaría", "Villavicencio",
+  "Yopal", "Yumbo",
+  "Zipaquirá",
+] as const;
 
 export const CATEGORIES = [
   { id: "Vehiculos", label: "Vehiculos", icon: "🚗" },
