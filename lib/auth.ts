@@ -14,6 +14,10 @@ import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
 import { rateLimit } from "@/lib/rateLimit";
 
+// Cada cuánto, como máximo, se vuelve a leer de la base el nombre/foto/rol de
+// quien tiene la sesión abierta. Ver el callback `jwt` para el razonamiento.
+const REFRESCO_SESION_MS = 5 * 60 * 1000;
+
 function getIpFromHeaders(headers: Record<string, string> | Headers | undefined): string {
   if (!headers) return "unknown";
   const get = (h: any, key: string) =>
@@ -68,6 +72,11 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.image = user.image ?? null;
       }
+      // Marca de que los datos de este token ya se leyeron de la base en esta misma
+      // llamada. Al entrar con Google `user` también viene, así que sin esto el
+      // bloque de más abajo repetiría la consulta en el mismo inicio de sesión.
+      let yaLeidoDeLaBase = false;
+
       if (account?.provider === "google") {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email! },
@@ -84,12 +93,32 @@ export const authOptions: NextAuthOptions = {
               data: { emailVerified: new Date() },
             });
           }
+          token.refrescadoEn = Date.now();
+          yaLeidoDeLaBase = true;
         }
       }
-      // Mantenemos imagen/nombre/rol sincronizados con la base de datos en cada
-      // request, para que la nueva foto de perfil aparezca de inmediato en el
-      // header y la página principal sin necesidad de volver a iniciar sesión.
-      if (token.email) {
+      // Mantenemos imagen/nombre/rol sincronizados con la base de datos, pero NO
+      // en cada request. Hasta el 2026-08-25 esto consultaba la base en todas las
+      // peticiones de todo usuario con sesión abierta: una ida y vuelta extra en
+      // cada clic, y la base sin un segundo de silencio.
+      //
+      // Se refresca en tres casos:
+      //   - al iniciar sesión (`user` presente);
+      //   - cuando el cliente lo pide con `update()`. La pantalla de editar perfil
+      //     lo llama al guardar (app/perfil/editar/page.tsx), que es lo que hace
+      //     que la foto nueva salga al instante sin volver a entrar;
+      //   - al vencer el plazo de abajo, como red de seguridad para lo que cambia
+      //     por fuera de esa pantalla (sobre todo el rol, que se toca desde el
+      //     panel de administración).
+      //
+      // El plazo acota cuánto puede tardar un cambio de rol en hacerse efectivo:
+      // si a alguien se le quita el rol de admin, conserva el anterior como mucho
+      // este tiempo. Por eso son minutos y no horas.
+      const refrescoPedido = Boolean(user) || trigger === "update";
+      const ultimoRefresco = typeof token.refrescadoEn === "number" ? token.refrescadoEn : 0;
+      const plazoVencido = Date.now() - ultimoRefresco > REFRESCO_SESION_MS;
+
+      if (token.email && !yaLeidoDeLaBase && (refrescoPedido || plazoVencido)) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           select: { id: true, name: true, image: true, role: true },
@@ -100,6 +129,9 @@ export const authOptions: NextAuthOptions = {
           token.name = dbUser.name ?? token.name;
           token.image = dbUser.image ?? token.picture ?? null;
         }
+        // Se anota incluso si no se encontró al usuario: si no, una sesión huérfana
+        // volvería a consultar en cada request, que es justo lo que se quiere evitar.
+        token.refrescadoEn = Date.now();
       }
       return token;
     },
