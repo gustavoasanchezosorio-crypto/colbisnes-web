@@ -26,23 +26,35 @@ export const metadata: Metadata = {
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
     url: SITE_URL,
     locale: "es_CO",
-    // Las medidas TIENEN que ser las reales del archivo (comprobado con `sips`, no
-    // supuesto). logo-google.png se regeneró el 2026-09-03 a 1440x754 partiendo del
-    // logo.svg actual: el archivo viejo (10 de julio) traía el eslogan "COLOMBIA ·
-    // COMPRA · VENDE" en gris plano, de antes de que el diseño le pusiera los colores
-    // de la bandera a cada palabra — de ahí el reporte de usuarios de "logo viejo".
+    // Las medidas TIENEN que ser las reales del archivo (comprobado con Python/PIL, no
+    // supuesto). logo-google.png se regeneró el 2026-09-03 partiendo del logo.svg actual
+    // (el archivo viejo, del 10 de julio, traía el eslogan "COLOMBIA · COMPRA · VENDE" en
+    // gris plano, de antes de que el diseño le pusiera los colores de la bandera a cada
+    // palabra — de ahí el primer reporte de usuarios de "logo viejo").
     //
-    // Los dos elementos del arreglo NO son redundantes. La tarjeta grande (link suelto,
-    // sin nada más en el mensaje) sí respeta el ancho/alto declarado aquí. Pero la
-    // tarjeta compacta de WhatsApp cuando se REENVÍA un mensaje recorta la miniatura a
-    // cuadrado tomando el centro del archivo, ignorando estos números — reproducido
-    // localmente: un recorte cuadrado al centro de la imagen apaisada le come "C" a
-    // "colbisnes" y "CO"/"E" al eslogan, igual que reportaron los usuarios. Por eso el
-    // segundo archivo es cuadrado de verdad (1080x1080) con el logo achicado al 70% del
-    // ancho y margen amplio en los 4 lados, para que sobreviva ese recorte sin perder
-    // texto. Si algún día se cambia el dibujo, hay que regenerar AMBOS y volver a medir.
+    // SEGUNDO problema, distinto al de los colores: la tarjeta grande (link suelto, sin
+    // nada más en el mensaje) sí respeta el ancho/alto declarado aquí, pero la tarjeta
+    // COMPACTA de WhatsApp cuando se REENVÍA un mensaje recorta la miniatura a cuadrado
+    // tomando el centro del archivo — reproducido localmente, ese recorte le comía "C" a
+    // "colbisnes" y "CO"/"E" al eslogan.
+    //
+    // Primer intento (fallido): agregar una segunda imagen cuadrada al arreglo, asumiendo
+    // que WhatsApp la elegiría para la tarjeta compacta. NO fue así: capturas reales del
+    // usuario mostraron que WhatsApp sigue recortando la PRIMERA imagen sin importar qué
+    // más haya en el arreglo. Queda la cuadrada como segundo elemento por si algún otro
+    // cliente (no WhatsApp) sí la aprovecha, pero no depende de ella la solución real.
+    //
+    // Arreglo real: la imagen PRIMARIA (logo-google.png) ahora se generó con mucho más
+    // margen — el contenido (texto) mide ~1280px de ancho contra un alto de canvas de
+    // 1882px, es decir ancho_contenido ≤ alto_canvas. Como el recorte de WhatsApp es un
+    // cuadrado centrado de lado = alto de la imagen, esa condición geométrica garantiza
+    // que el logo completo (con el eslogan) quede siempre DENTRO del cuadrado recortado,
+    // sin depender de qué imagen elija la app. Simulado localmente antes de publicar
+    // (recorte cuadrado al centro → el texto queda con margen de sobra en los 4 lados).
+    // Si algún día se cambia el dibujo, hay que regenerar y volver a medir con esta misma
+    // regla: ancho del contenido ≤ alto del canvas.
     images: [
-      { url: "/logo-google.png", width: 1440, height: 754, alt: "Colbisnes" },
+      { url: "/logo-google.png", width: 3595, height: 1882, alt: "Colbisnes" },
       { url: "/logo-og-square.png", width: 1080, height: 1080, alt: "Colbisnes" },
     ],
   },
