@@ -48,3 +48,6 @@ scripts/.launch-emails-sent.log
 
 # Igual para el envío de reverificación de identidad (scripts/enviar-reverificacion.ts).
 scripts/.reverificacion-sent.log
+
+# Igual para el envío de reactivación (scripts/enviar-reactivacion.ts).
+scripts/.reactivacion-sent.log

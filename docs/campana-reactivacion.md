@@ -287,19 +287,32 @@ Verifiqué `middleware.ts`: lo único que lee de la URL es el parámetro `acceso
 parámetro (`d`, o el que sea) pasa sin tocarse y sin romper nada. Es seguro repartir estos enlaces
 ya mismo, hoy, sin ningún cambio de código.
 
-## 2. Cloudflare Web Analytics — sigue sin implementarse
+## 2. Cloudflare Web Analytics — implementado y confirmado funcionando (3 de septiembre)
 
-Confirmé (otra vez, con `grep` sobre todo el repo) que no existe ningún código de analytics
-todavía — sigue pendiente desde que se anotó en la campaña original. Es la opción correcta para tu
-caso: gratis, sin cookies, sin banner de consentimiento, y ya usas Cloudflare para DNS. Activarlo
-requiere:
+Hecho el mismo día que se escribió esto. Snippet manual en `app/layout.tsx` (gratis, sin cookies,
+sin banner de consentimiento). Se encontró y corrigió un bug real en el camino: el
+Content-Security-Policy de producción bloqueaba tanto la carga del script como su reporte de datos
+(`next.config.ts`, commit `0345d96`). Verificado de punta a punta contra el dashboard real de
+Cloudflare — visitas y vistas de página ya están llegando. Ver [[project-colbisnes-reactivation-campaign]]
+para el detalle completo.
 
-- Prender la opción desde el panel de Cloudflare (sin código), **o**
-- Agregar una etiqueta de script en el layout de la app (cambio de código pequeño, una línea)
+## 3. Enlaces con UTM-lite por canal — listos para repartir
 
-**¿Quieres que la agregue ahora?** Es un cambio mínimo y reversible, pero toca código de producción
-y prefiero tu confirmación explícita antes de tocarlo, como con cualquier cambio a lo que ya está
-en vivo.
+Usando el esquema `?d=` verificado seguro contra `middleware.ts` (sección 1 arriba), estos son los
+enlaces ya armados, uno por canal de la Fase 1:
+
+| Canal | Enlace |
+|---|---|
+| WhatsApp | `https://colbisnes.com/?d=wa` |
+| Instagram / Facebook | `https://colbisnes.com/?d=ig` |
+| TikTok | `https://colbisnes.com/?d=tt` |
+| Reddit / comunidades | `https://colbisnes.com/?d=rd` |
+| LinkedIn | `https://colbisnes.com/?d=li` |
+| Correo de reactivación | `https://colbisnes.com/?d=email` |
+| X (Twitter) | `https://colbisnes.com/?d=x` |
+
+El parámetro queda en la URL y Cloudflare Web Analytics lo captura como parte de la página vista —
+no hace falta configurar nada adicional para empezar a diferenciar de dónde viene cada visita.
 
 ---
 
