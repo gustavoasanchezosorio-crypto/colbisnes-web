@@ -26,12 +26,25 @@ export const metadata: Metadata = {
     description: "El marketplace colombiano de segunda mano con pagos protegidos.",
     url: SITE_URL,
     locale: "es_CO",
-    // Las medidas TIENEN que ser las reales del archivo. Estaban puestas en 512x512,
-    // pero logo-google.png mide 800x418: WhatsApp y Facebook leen estos números para
-    // decidir el recuadro ANTES de bajarse la imagen, así que reservaban un cuadrado y
-    // le recortaban los lados a la palabra "colbisnes". Comprobado con `sips` sobre el
-    // archivo, no supuesto. Si algún día se cambia el dibujo, hay que volver a medirlo.
-    images: [{ url: "/logo-google.png", width: 800, height: 418, alt: "Colbisnes" }],
+    // Las medidas TIENEN que ser las reales del archivo (comprobado con `sips`, no
+    // supuesto). logo-google.png se regeneró el 2026-09-03 a 1440x754 partiendo del
+    // logo.svg actual: el archivo viejo (10 de julio) traía el eslogan "COLOMBIA ·
+    // COMPRA · VENDE" en gris plano, de antes de que el diseño le pusiera los colores
+    // de la bandera a cada palabra — de ahí el reporte de usuarios de "logo viejo".
+    //
+    // Los dos elementos del arreglo NO son redundantes. La tarjeta grande (link suelto,
+    // sin nada más en el mensaje) sí respeta el ancho/alto declarado aquí. Pero la
+    // tarjeta compacta de WhatsApp cuando se REENVÍA un mensaje recorta la miniatura a
+    // cuadrado tomando el centro del archivo, ignorando estos números — reproducido
+    // localmente: un recorte cuadrado al centro de la imagen apaisada le come "C" a
+    // "colbisnes" y "CO"/"E" al eslogan, igual que reportaron los usuarios. Por eso el
+    // segundo archivo es cuadrado de verdad (1080x1080) con el logo achicado al 70% del
+    // ancho y margen amplio en los 4 lados, para que sobreviva ese recorte sin perder
+    // texto. Si algún día se cambia el dibujo, hay que regenerar AMBOS y volver a medir.
+    images: [
+      { url: "/logo-google.png", width: 1440, height: 754, alt: "Colbisnes" },
+      { url: "/logo-og-square.png", width: 1080, height: 1080, alt: "Colbisnes" },
+    ],
   },
   twitter: {
     // "summary" pinta una miniatura CUADRADA y recorta al centro, que en un logo apaisado
