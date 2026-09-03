@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { THEME } from "@/lib/theme";
-import { DESCUENTO_COMISION_POR_NIVEL } from "@/lib/pricing";
+import { DESCUENTO_COMISION_POR_NIVEL, nivelParaDescuento } from "@/lib/pricing";
 
 interface TrustScoreData {
   score: number;
@@ -49,7 +49,13 @@ export default function TrustBadge({ userId, compact = false, showDiscountHint =
   const color = COLOR_POR_LABEL[data.label] || THEME.primary;
   // Descuento sobre la comisión de Colbisnes por el buen nivel del vendedor. Como la comisión
   // la paga el comprador, un nivel alto hace que a él le cueste menos comprarle a este vendedor.
-  const descuentoNivel = DESCUENTO_COMISION_POR_NIVEL[data.label] ?? 0;
+  //
+  // Se pasa por nivelParaDescuento con los pedidos completados para que la insignia diga lo
+  // mismo que va a cobrar el checkout: sin negocios cerrados no hay descuento, así que tampoco
+  // se anuncia. Antes se leía el descuento del nivel a secas y se le prometía al comprador un
+  // −10% que el servidor no aplicaba.
+  const nivelConDescuento = nivelParaDescuento(data.label, data.completedOrdersCount);
+  const descuentoNivel = nivelConDescuento ? (DESCUENTO_COMISION_POR_NIVEL[nivelConDescuento] ?? 0) : 0;
   const pctDescuento   = Math.round(descuentoNivel * 100);
 
   return (

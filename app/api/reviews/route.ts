@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireKyc } from "@/lib/requireKyc";
+import { requireSesion } from "@/lib/requireKyc";
 
 export async function GET(request: Request) {
   try {
@@ -35,8 +35,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { session, response: kycError } = await requireKyc();
-    if (kycError) return kycError;
+    // Calificar no necesita el candado del documento: para llegar aquí ya tuviste que pasar
+    // por un checkout, que sí lo exige. Volver a pedirlo solo lograría que a alguien se le
+    // caiga la posibilidad de calificar si su verificación cambia de estado después.
+    const { session, response: authError } = await requireSesion();
+    if (authError) return authError;
 
     const { productId, rating, comment } = await request.json();
     if (!productId || !rating || rating < 1 || rating > 5) {

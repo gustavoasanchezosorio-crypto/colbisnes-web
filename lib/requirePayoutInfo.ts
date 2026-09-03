@@ -31,6 +31,38 @@ export async function tieneDatosDeCobro(userId: string): Promise<boolean> {
 }
 
 /**
+ * ¿Este vendedor puede recibir una venta AHORA MISMO? Junta las dos condiciones que hay
+ * que cumplir para que entre plata a su nombre: identidad verificada y destino de cobro.
+ *
+ * Por qué está junto y no en dos llamadas sueltas (2026-09-02): publicar exige el
+ * documento, pero esa comprobación se hace UNA vez, cuando se publica. Si después la
+ * verificación deja de estar aprobada —porque se revocó, porque se descubrió que se había
+ * aprobado a mano sin mirar nada, o porque la persona tiene que rehacerla— la publicación
+ * vieja seguía viva y podía seguir recibiendo dinero. El candado de publicar no cubre lo
+ * ya publicado; este sí. Al ser una sola función, además, es imposible añadir un cuarto
+ * método de pago y acordarse de la mitad de las comprobaciones.
+ *
+ * El mensaje que se le muestra al comprador es deliberadamente vago y el mismo en los dos
+ * casos: al comprador no le incumbe si al vendedor le falta la cédula o el número de Nequi,
+ * y distinguirlo sería contarle en qué estado tiene el perfil un tercero.
+ */
+export async function vendedorPuedeRecibirVentas(sellerId: string): Promise<boolean> {
+  const vendedor = await prisma.user.findUnique({
+    where: { id: sellerId },
+    select: { kycStatus: true, nequiNumber: true, brebId: true },
+  });
+  if (!vendedor) return false;
+  if (vendedor.kycStatus !== "approved") return false;
+
+  const tieneNequi = !!vendedor.nequiNumber && vendedor.nequiNumber.trim().length > 0;
+  const tieneBreb = !!vendedor.brebId && vendedor.brebId.trim().length > 0;
+  return tieneNequi && tieneBreb;
+}
+
+export const MENSAJE_VENDEDOR_NO_LISTO =
+  "Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos.";
+
+/**
  * Igual que tieneDatosDeCobro, pero devuelve directamente el 403 para el
  * usuario de la sesión. Se usa en el checkout con el COMPRADOR: si le hay que
  * devolver la plata (reembolso, disputa), el reembolso necesita destino.

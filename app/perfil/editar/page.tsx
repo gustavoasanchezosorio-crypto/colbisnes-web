@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Button, OutlineButton } from "@/components/FormComponents";
 import { THEME } from "@/lib/theme";
 import { validarDireccionEnvio, limpiarDireccion, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
+import { validarBreb, limpiarBreb, LARGO_MAX_BREB } from "@/lib/breb";
 
 const AZUL = THEME.primary;
 
@@ -209,6 +210,10 @@ export default function EditarPerfilPage() {
     // antes de dar el viaje, no es la barrera de verdad.
     const revDireccion = validarDireccionEnvio(formData.direccionEnvio);
     if (!revDireccion.valido) return fallo("direccionEnvio", revDireccion.motivo || "Revisa la dirección de envío");
+    // Igual que la dirección: la regla de verdad vive en lib/breb.ts y la aplica el
+    // servidor. Esto es solo para no dar el viaje en vano.
+    const revBreb = validarBreb(formData.brebId);
+    if (!revBreb.valido) return fallo("brebId", revBreb.motivo || "Revisa tu llave Bre-B");
 
     setSaving(true);
     try {
@@ -382,19 +387,25 @@ export default function EditarPerfilPage() {
             </div>
 
             {/* BRE-B */}
-            <div style={box}>
+            <div style={box} id="campo-brebId">
               <label style={lbl}>Llave Bre-B</label>
               <div style={{ display: "flex", alignItems: "stretch" }}>
                 <div style={{ padding: "0.65rem 0.85rem", background: "#fff7e6", border: "1.5px solid #fbbf24", borderRight: "none", borderRadius: "10px 0 0 10px", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   <img src="/logos/breb.svg" alt="Bre-B" style={{ height: 26, width: "auto", borderRadius: 6 }} />
                 </div>
-                <input style={{ ...inp, borderRadius: "0 10px 10px 0", flex: 1 }} type="tel" inputMode="numeric"
+                {/* Texto libre a propósito. Una llave Bre-B NO es siempre un número:
+                    puede ser el celular, el correo, la cédula o una alfanumérica del
+                    tipo @juanperez. Filtrar a dígitos dejaba fuera dos de las cuatro
+                    formas, y peor: al pegar "@juanperez" no salía ningún error, la
+                    casilla se quedaba vacía sin explicar por qué. */}
+                <input style={{ ...inp, borderRadius: "0 10px 10px 0", flex: 1 }} type="text"
+                  autoCapitalize="none" autoCorrect="off" spellCheck={false}
                   value={formData.brebId}
-                  onChange={e => setFormData({ ...formData, brebId: soloNumeros(e.target.value) })}
-                  onPaste={e => { e.preventDefault(); const p = soloNumeros(e.clipboardData.getData("text")).slice(0,20); setFormData(f => ({...f, brebId: p})); }}
-                  placeholder="Ej: 3001234567" maxLength={20} />
+                  onChange={e => setFormData({ ...formData, brebId: limpiarBreb(e.target.value) })}
+                  placeholder="@juanperez, 3001234567 o tu correo" maxLength={LARGO_MAX_BREB} />
               </div>
-              <p style={hint}>Solo dígitos</p>
+              <p style={hint}>Tu celular, correo, cédula o llave @ — como la tengas registrada en tu banco</p>
+              {errorDe("brebId")}
             </div>
 
             {/* USDT */}

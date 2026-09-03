@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
+import { documentosAdjuntos } from "@/lib/kycDocumentos";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -38,14 +39,14 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Parse kycDocumentId JSON for each user
-    const result = usuarios.map((u) => {
-      let docs: { selfieUrl?: string; cedulaUrl?: string } = {};
-      try {
-        if (u.kycDocumentId) docs = JSON.parse(u.kycDocumentId);
-      } catch {}
-      return { ...u, kycDocumentId: undefined, docs };
-    });
+    // Las fotos archivadas, si las hay. El MISMO parseo que usa el endpoint de aprobar
+    // (lib/kycDocumentos.ts), para que el panel no muestre un botón activo sobre algo
+    // que el servidor va a rechazar.
+    const result = usuarios.map((u) => ({
+      ...u,
+      kycDocumentId: undefined,
+      docs: documentosAdjuntos(u.kycDocumentId),
+    }));
 
     return NextResponse.json({ usuarios: result });
   } catch (err: any) {

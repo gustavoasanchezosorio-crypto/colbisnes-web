@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { calcularPrecioOnline, calcularExtrasCheckout } from "@/lib/pricing";
+import { calcularPrecioOnline, calcularExtrasCheckout, nivelParaDescuento } from "@/lib/pricing";
 import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
-import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
+import { requirePayoutInfo, vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
@@ -67,15 +67,13 @@ export async function prepararOrdenOnline(
     return { ok: false, code: "seller_blocked", status: 403, message: "Este vendedor tiene su cuenta bloqueada temporalmente y no puede recibir ventas" };
   }
 
-  // El vendedor tiene que tener a dónde cobrar ANTES de que entre plata en custodia.
-  // Esta comprobación se movió aquí desde POST /api/products (publicar): allí no
-  // servía de nada, porque los campos se pueden vaciar después desde el perfil.
-  // Aquí sí es una garantía real — ninguna orden puede quedar sin destino de pago.
-  //
-  // El mensaje no menciona a Nequi ni a Bre-B: al comprador no le incumben los datos
-  // bancarios del vendedor, y decírselo sería filtrar en qué estado tiene su perfil.
-  if (!(await tieneDatosDeCobro(producto.sellerId))) {
-    return { ok: false, code: "seller_payout", status: 409, message: "Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos." };
+  // El vendedor tiene que estar verificado Y tener a dónde cobrar ANTES de que entre plata
+  // en custodia. Lo de "a dónde cobrar" se movió aquí desde POST /api/products (publicar):
+  // allí no servía de nada, porque los campos se pueden vaciar después desde el perfil.
+  // Lo de la identidad se sumó por el mismo motivo — publicar la comprueba una sola vez, y
+  // una publicación vieja de alguien que ya no está verificado seguía cobrando igual.
+  if (!(await vendedorPuedeRecibirVentas(producto.sellerId))) {
+    return { ok: false, code: "seller_payout", status: 409, message: MENSAJE_VENDEDOR_NO_LISTO };
   }
 
   let acceptedOfferId = producto.acceptedOfferId;
@@ -137,7 +135,9 @@ export async function prepararOrdenOnline(
   }
 
   const trust = await computeTrustScore(producto.sellerId);
-  const pricing = calcularPrecioOnline(precioBase, trust.label);
+  // El descuento por nivel se gana vendiendo, no verificándose (ver nivelParaDescuento
+  // en lib/pricing.ts). Sin negocios cerrados el vendedor paga la comisión completa.
+  const pricing = calcularPrecioOnline(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount));
   const extras = calcularExtrasCheckout(producto, proteccionExtendida);
   const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
 

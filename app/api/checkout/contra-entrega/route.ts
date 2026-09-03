@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { calcularPrecioContraEntrega, calcularExtrasCheckout } from "@/lib/pricing";
+import { calcularPrecioContraEntrega, calcularExtrasCheckout, nivelParaDescuento } from "@/lib/pricing";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireKyc } from "@/lib/requireKyc";
@@ -8,7 +8,7 @@ import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { calcularFechaLimiteEnvio } from "@/lib/businessHours";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
-import { requirePayoutInfo, tieneDatosDeCobro } from "@/lib/requirePayoutInfo";
+import { requirePayoutInfo, vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
@@ -50,11 +50,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Este vendedor tiene su cuenta bloqueada temporalmente y no puede recibir ventas" }, { status: 403 });
     }
 
-    // El vendedor tiene que tener a dónde cobrar antes de que arranque la venta
-    // (ver el comentario largo en lib/requirePayoutInfo.ts). Sin esto, la orden
-    // podía quedar sin destino de pago.
-    if (!(await tieneDatosDeCobro(producto.sellerId))) {
-      return NextResponse.json({ error: "Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos." }, { status: 409 });
+    // El vendedor tiene que estar verificado y tener a dónde cobrar antes de que arranque
+    // la venta (ver el comentario largo en lib/requirePayoutInfo.ts).
+    if (!(await vendedorPuedeRecibirVentas(producto.sellerId))) {
+      return NextResponse.json({ error: MENSAJE_VENDEDOR_NO_LISTO }, { status: 409 });
     }
 
     if (producto.status !== "AVAILABLE" && producto.status !== "PAYMENT_PENDING") {
@@ -111,7 +110,9 @@ export async function POST(req: NextRequest) {
     }
 
     const trust = await computeTrustScore(producto.sellerId);
-    const pricing = calcularPrecioContraEntrega(precioBase, trust.label);
+    // El descuento por nivel se gana vendiendo, no verificándose (ver nivelParaDescuento
+    // en lib/pricing.ts). Sin negocios cerrados el vendedor paga la comisión completa.
+    const pricing = calcularPrecioContraEntrega(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount));
     // Contra entrega NO ofrece protección extendida: el único cargo electrónico aquí es la
     // comisión de reserva por Nequi y el efectivo al mensajero es solo precio + envío, así que
     // la protección no tendría por dónde cobrarse (antes se sumaba a totalPagado sin cobrarse

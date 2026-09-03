@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { rateLimit, getIP } from "@/lib/rateLimit";
-import { requireKyc } from "@/lib/requireKyc";
+import { requireSesion } from "@/lib/requireKyc";
 import { sendEmail } from '@/lib/email';
 import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
@@ -62,8 +62,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { session, response: kycError } = await requireKyc();
-    if (kycError) return kycError;
+    // Ofertar no compromete plata todavía: es el paso de negociar. El documento se pide
+    // después, al pagar (ver lib/requireKyc.ts). Sigue en pie el bloqueo por mala conducta
+    // y el código anti-phishing, que sí tienen que ver con esta acción en concreto.
+    const { session, response: authError } = await requireSesion();
+    if (authError) return authError;
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;
@@ -152,8 +155,12 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: Request) {
   try {
-    const { session, response: kycError } = await requireKyc();
-    if (kycError) return kycError;
+    // Aceptar o rechazar una oferta la hace el vendedor, que para haber publicado ya pasó
+    // por el documento. La autorización que importa aquí es la de más abajo: que el producto
+    // sea suyo. Exigir el KYC de nuevo solo lo dejaría sin poder manejar sus propias ofertas
+    // si su verificación cambia de estado después de publicar.
+    const { session, response: authError } = await requireSesion();
+    if (authError) return authError;
 
     const body = await request.json();
     const { offerId, status } = body;

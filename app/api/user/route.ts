@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { normalizarTelefonoCO } from "@/lib/phone";
 import { validarDireccionEnvio, limpiarDireccion } from "@/lib/direccion";
+import { validarBreb, limpiarBreb } from "@/lib/breb";
 import { sendEmail } from "@/lib/email";
 import { sendWhatsapp } from "@/lib/whatsapp";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
@@ -61,6 +62,20 @@ export async function PATCH(request: Request) {
       // Vacío se guarda como null y no como "", para que el medidor de perfil completo
       // (lib/profileCompletion.ts) no cuente una cadena vacía como dirección puesta.
       updateData.direccionEnvio = dir || null;
+    }
+
+    // Llave Bre-B: es a dónde le llega la plata al vendedor, así que no puede entrar
+    // cualquier cosa. Hasta ahora se copiaba tal cual del cuerpo, sin mirarla. La regla
+    // está en lib/breb.ts y la comparten las dos partes.
+    if (updateData.brebId !== undefined) {
+      const llave = typeof updateData.brebId === "string" ? limpiarBreb(updateData.brebId).trim() : "";
+      const revision = validarBreb(llave);
+      if (!revision.valido) {
+        return NextResponse.json({ error: revision.motivo }, { status: 400 });
+      }
+      // Vacío se guarda como null y no como "", para que requirePayoutInfo no cuente
+      // una cadena vacía como llave puesta y deje vender a quien no tiene a dónde cobrar.
+      updateData.brebId = llave || null;
     }
 
     // Código anti-phishing: 4–12 alfanuméricos (se normaliza a mayúsculas), o vacío para borrarlo.

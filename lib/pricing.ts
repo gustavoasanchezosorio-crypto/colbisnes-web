@@ -41,6 +41,28 @@ export function multiplicadorPorNivel(nivelVendedor?: string | null): number {
   return 1 - descuento;
 }
 
+/**
+ * El nivel que cuenta PARA EL DESCUENTO, que no siempre es el nivel que se muestra.
+ *
+ * Por qué existe (2026-09-02): solo con abrir cuenta (20 pts) y verificar identidad (30 pts)
+ * ya se llegaba a 50, que es "Confiable" y −10% de comisión. Resultado real en producción:
+ * 16 de 17 usuarios tenían descuento y NINGUNO había cerrado un solo negocio. El descuento
+ * existe para premiar a quien ya vendió aquí y no se llevó la relación por fuera; darlo de
+ * entrada no premia nada, solo regala margen. Y el checkout le decía al comprador
+ * "comisión reducida por buen historial" sobre alguien sin historial: era falso.
+ *
+ * Regla: sin al menos un negocio cerrado no hay descuento, tenga el nivel que tenga. El
+ * nivel y el sello de verificado se siguen mostrando igual; lo único que se aplaza es la
+ * plata. Al primer negocio completado el descuento entra solo, sin que nadie haga nada.
+ */
+export function nivelParaDescuento(
+  nivelVendedor: string | null | undefined,
+  negociosCerrados: number
+): string | null {
+  if (!negociosCerrados || negociosCerrados < 1) return null;
+  return nivelVendedor ?? null;
+}
+
 export interface PricingBreakdown {
   precioBase: number;
   comisionColbisnes: number;

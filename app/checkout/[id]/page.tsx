@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
+import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, nivelParaDescuento, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
 import { computeProfileCompletion } from "@/lib/profileCompletion";
 import { limpiarDireccion, validarDireccionEnvio, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 import { THEME } from "@/lib/theme";
@@ -20,7 +20,7 @@ export default function CheckoutPage() {
   const [tasa, setTasa]             = useState<number>(4200);
   const [loading, setLoading]       = useState(false);
   const [showPopup, setShowPopup]   = useState(false);
-  const [nivelVendedor, setNivelVendedor] = useState<string | null>(null);
+  const [nivelConDescuento, setNivelConDescuento] = useState<string | null>(null);
   const [proteccionExtendida, setProteccionExtendida] = useState(false);
   const [errorPago, setErrorPago]   = useState<string | null>(null);
   // Datos de perfil que faltan para poder pagar/recibir (KYC, Nequi, Bre-B, anti-phishing).
@@ -91,7 +91,10 @@ export default function CheckoutPage() {
     if (!sellerId) return;
     fetch("/api/trust-score/" + sellerId)
       .then(r => r.json())
-      .then(d => { if (d && !d.error && d.label) setNivelVendedor(d.label); })
+      // Se guarda el nivel que da DESCUENTO, no el que se muestra: sin negocios cerrados
+      // nivelParaDescuento devuelve null y el checkout cobra la comisión completa, igual que
+      // el servidor. El nivel visible lo pinta <TrustBadge/> aparte.
+      .then(d => { if (d && !d.error && d.label) setNivelConDescuento(nivelParaDescuento(d.label, d.completedOrdersCount)); })
       .catch(() => {});
   }, [producto]);
 
@@ -111,14 +114,14 @@ export default function CheckoutPage() {
     ? producto.offers?.find((o: any) => o.id === producto.acceptedOfferId)
     : null;
   const precio = ofertaAceptada ? ofertaAceptada.amountCOP : producto.priceCOP;
-  const online = calcularPrecioOnline(precio, nivelVendedor);
-  const contra = calcularPrecioContraEntrega(precio, nivelVendedor);
-  const usdt   = calcularPrecioUSDT(precio, tasa, nivelVendedor);
+  const online = calcularPrecioOnline(precio, nivelConDescuento);
+  const contra = calcularPrecioContraEntrega(precio, nivelConDescuento);
+  const usdt   = calcularPrecioUSDT(precio, tasa, nivelConDescuento);
   const extras = calcularExtrasCheckout(producto, proteccionExtendida);
   const extrasUSD = extras.extraTotal > 0 ? parseFloat((extras.extraTotal / tasa).toFixed(2)) : 0;
   const fmt    = (n: number) => "$" + n.toLocaleString("es-CO", { maximumFractionDigits: 0 });
-  const tieneDescuento = !!nivelVendedor && (nivelVendedor === "Confiable" || nivelVendedor === "Muy confiable" || nivelVendedor === "Élite");
-  const notaDescuento = tieneDescuento ? `Vendedor ${nivelVendedor} — comisión reducida por buen historial.` : undefined;
+  const tieneDescuento = !!nivelConDescuento && (nivelConDescuento === "Confiable" || nivelConDescuento === "Muy confiable" || nivelConDescuento === "Élite");
+  const notaDescuento = tieneDescuento ? `Vendedor ${nivelConDescuento} — comisión reducida por buen historial.` : undefined;
   // Comisión "sin descuento" (nivel neutro) para mostrarle al comprador cuánto se ahorra por
   // comprarle a un vendedor de buen nivel. USDT no aplica descuento por nivel, así que no entra.
   const onlineSinDesc = calcularPrecioOnline(precio, null);
@@ -312,8 +315,8 @@ export default function CheckoutPage() {
   ];
 
   const metodos = [
-    { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelVendedor}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
-    { id: "contraentrega" as MetodoPago, icon: "📦", titulo: "Contra entrega", sub: "Efectivo al recibir + reserva por Nequi", badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelVendedor}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: "Total al mensajero", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para despachar el producto.", "Mensajería entrega el producto — lo revisas al recibir.", "Confirmas la entrega en la app para liberar el pago al vendedor.", "Si el vendedor no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."], nota: ["La comisión de reserva se paga aparte por Nequi, antes del envío.", notaDescuento].filter(Boolean).join(" — ") },
+    { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
+    { id: "contraentrega" as MetodoPago, icon: "📦", titulo: "Contra entrega", sub: "Efectivo al recibir + reserva por Nequi", badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: "Total al mensajero", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para despachar el producto.", "Mensajería entrega el producto — lo revisas al recibir.", "Confirmas la entrega en la app para liberar el pago al vendedor.", "Si el vendedor no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."], nota: ["La comisión de reserva se paga aparte por Nequi, antes del envío.", notaDescuento].filter(Boolean).join(" — ") },
     { id: "usdt" as MetodoPago, icon: "🪙", titulo: "Pagar con USDT", sub: "BNB Chain BEP20 · Sin bancos", badge: fmtPct(pctUsdt), total: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", desglose: [{ label: "Precio producto", val: fmt(precio) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctUsdt)})`, val: TEST_MODE ? "0.01 USDT" : usdt.comisionUSD + " USDT" }, ...(TEST_MODE ? [] : desgloseExtrasUSD)], totalLabel: "Total USDT", totalVal: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", nota: "Tasa: 1 USD = " + fmt(tasa) + " COP" },
   ];
 

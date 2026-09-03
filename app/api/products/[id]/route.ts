@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { registrarAuditoria } from "@/lib/audit";
+import { normalizarEntrega } from "@/lib/entrega";
 import {
   categoriaPideDatosDeDispositivo,
   validarImeisDeclarados,
@@ -115,6 +116,7 @@ export async function PATCH(
     const body = await req.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
     const { imei, imei2, saludBateria, piezasReemplazadas } = body;
+    const { tipoEntrega, precioEnvio } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -143,6 +145,24 @@ export async function PATCH(
     }
     if (!city || typeof city !== "string" || city.length > 100) {
       return NextResponse.json({ error: "Ciudad inválida" }, { status: 400 });
+    }
+
+    // ── Cómo se entrega y cuánto vale mandarlo ─────────────────────────────────
+    // Se valida con las MISMAS reglas que al crear, por lo mismo que el piso de
+    // precio: una regla que solo se comprueba al publicar se esquiva editando un
+    // minuto después.
+    //
+    // Si el cuerpo no trae `tipoEntrega` se conserva el que ya tenía. Esto es un
+    // PATCH: no mandar un campo significa "no lo toques", no "bórralo". Además así
+    // las publicaciones anteriores a este cambio (todas quedaron en ENVIO sin costo,
+    // que es un estado válido: "envío, a coordinar por el chat") se pueden seguir
+    // editando sin obligar a tocar algo que el vendedor no vino a cambiar.
+    const entrega = normalizarEntrega(
+      tipoEntrega === undefined ? product.tipoEntrega : tipoEntrega,
+      tipoEntrega === undefined ? product.precioEnvio : precioEnvio
+    );
+    if (!entrega.ok) {
+      return NextResponse.json({ error: entrega.error }, { status: 400 });
     }
 
     // ── Datos declarados del dispositivo ───────────────────────────────────────
@@ -228,6 +248,8 @@ export async function PATCH(
           city: city.trim(),
           condition: finalCondition,
           category: finalCategory,
+          tipoEntrega: entrega.tipoEntrega,
+          precioEnvio: entrega.precioEnvio,
           imei: imeiFinal,
           imei2: imei2Final,
           saludBateria: bateriaFinal,

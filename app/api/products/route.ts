@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
+import { normalizarEntrega } from "@/lib/entrega";
 import {
   categoriaPideDatosDeDispositivo,
   validarImeisDeclarados,
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
     const { imei, imei2, saludBateria, piezasReemplazadas } = body;
+    const { tipoEntrega, precioEnvio } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -205,6 +207,15 @@ export async function POST(request: Request) {
     }
     if (!city || typeof city !== "string" || city.length > 100) {
       return NextResponse.json({ error: "Ciudad inválida" }, { status: 400 });
+    }
+
+    // ── Cómo se entrega y cuánto vale mandarlo ─────────────────────────────────
+    // Obligatorio y sin valor por defecto: el `@default("ENVIO")` del schema es
+    // justo lo que hizo que un carro de $46 millones apareciera ofreciendo
+    // despacho a domicilio. Si el formulario no lo manda, esto rebota.
+    const entrega = normalizarEntrega(tipoEntrega, precioEnvio);
+    if (!entrega.ok) {
+      return NextResponse.json({ error: entrega.error }, { status: 400 });
     }
 
     // ── Datos declarados del dispositivo (solo categoría Tecnologia) ────────────
@@ -274,6 +285,8 @@ export async function POST(request: Request) {
         category: finalCategory,
         status: "AVAILABLE",
         sellerId: session.user.id,
+        tipoEntrega: entrega.tipoEntrega,
+        precioEnvio: entrega.precioEnvio,
         imei: imeiFinal,
         imei2: imei2Final,
         saludBateria: bateriaFinal,

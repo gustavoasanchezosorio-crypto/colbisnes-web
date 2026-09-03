@@ -5,11 +5,28 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
 
+// Cuánto se espera antes de dejar reintentar una verificación que quedó a medias.
+//
+// /api/kyc/start marca "pending" en el momento en que genera el enlace de Didit, o sea
+// ANTES de que la persona haga nada. Si cierra la pestaña, se le va la cámara o
+// simplemente no termina, queda en "pending" para siempre — y esta pantalla le decía
+// "estamos procesando tu verificación", que no era cierto, con un único botón de
+// "Revisar estado" que nunca iba a cambiar nada. Sin salida, la gente escribía al
+// admin pidiendo que la aprobara a mano, y así es como 9 de 16 cuentas verificadas
+// quedaron sin que nadie les mirara el documento.
+//
+// La verificación toma un par de minutos y mientras tanto la persona está en el sitio
+// de Didit, no aquí, así que 20 minutos no le corta el proceso a nadie que sí lo esté
+// haciendo. Reintentar es seguro: start crea una sesión nueva y ya tiene su propio
+// tope de 5 intentos por hora.
+const MINUTOS_PARA_REINTENTAR = 20;
+
 export default function KycPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   const [kycStatus, setKycStatus] = useState<string>("none");
+  const [kycPedidoEn, setKycPedidoEn] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [iniciando, setIniciando] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +39,7 @@ export default function KycPage() {
     if (session) {
       fetch("/api/kyc/status", { credentials: "include" })
         .then((r) => r.json())
-        .then((d) => { setKycStatus(d.kycStatus || "none"); setLoading(false); })
+        .then((d) => { setKycStatus(d.kycStatus || "none"); setKycPedidoEn(d.kycRequestedAt || null); setLoading(false); })
         .catch(() => setLoading(false));
     }
   }, [session]);
@@ -68,8 +85,15 @@ export default function KycPage() {
     </Wrapper>
   );
 
+  // Sin fecha del intento no hay forma de saber si lleva trabado, y ante la duda se
+  // deja reintentar: dejar salir a alguien que sí estaba a mitad de camino solo le
+  // cuesta empezar de nuevo; dejarlo encerrado le cuesta la cuenta.
+  const intentoAbandonado =
+    kycStatus === "pending" &&
+    (!kycPedidoEn || Date.now() - new Date(kycPedidoEn).getTime() > MINUTOS_PARA_REINTENTAR * 60 * 1000);
+
   // ────────────── Pendiente de revisión (esperando webhook de Didit) ──────────────
-  if (kycStatus === "pending") return (
+  if (kycStatus === "pending" && !intentoAbandonado) return (
     <Wrapper router={router}>
       <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 20, padding: "36px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 56, marginBottom: 12 }}>⏳</div>
@@ -116,6 +140,15 @@ export default function KycPage() {
               </div>
             ))}
           </div>
+
+          {intentoAbandonado && (
+            <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.3)", marginBottom: 20 }}>
+              <p style={{ fontSize: 13, color: "#b45309", fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+                Tu verificación anterior quedó a medias y no llegó a completarse. Puedes
+                empezarla de nuevo desde aquí — solo toma un par de minutos.
+              </p>
+            </div>
+          )}
 
           {kycStatus === "rejected" && (
             <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)", marginBottom: 20 }}>

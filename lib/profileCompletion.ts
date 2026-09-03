@@ -24,9 +24,13 @@ interface CampoPerfil {
   // Quién exige qué, a día de hoy (verificado abriendo cada ruta, no buscando el nombre
   // del ayudante requireKyc: publicar hace la comprobación a mano y no lo usa):
   //   · publicar (POST /api/products) ....... KYC + código anti fraude
-  //   · hacer una oferta (POST /api/offers) . KYC + código anti fraude
+  //   · hacer una oferta (POST /api/offers) . código anti fraude
   //   · pagar (los 3 checkouts) ............. KYC + código anti fraude + Nequi + Bre-B
-  //   · que te compren (tieneDatosDeCobro) .. Nequi + Bre-B del vendedor
+  //   · que te compren (vendedorPuedeRecibirVentas) .. KYC + Nequi + Bre-B del vendedor
+  //
+  // Ojo con el significado de "crítico": marca lo que bloquea ALGUNA acción, no lo que hay
+  // que tener para entrar. Desde el 2026-09-02 esta lista ya no se usa para recibir a nadie
+  // con un modal al llegar (ver app/page.tsx); se muestra donde la persona se va a estrellar.
   critico?: boolean;
   // Check personalizado: por defecto "tiene algún valor"; el KYC solo cuenta si está aprobado.
   check?: (v: unknown) => boolean;

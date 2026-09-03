@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
+import { documentosAdjuntos, puedeAprobarseAMano, MOTIVO_SIN_DOCUMENTOS } from "@/lib/kycDocumentos";
 
 function esAdmin(email: string) {
   return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
@@ -28,6 +29,18 @@ export async function PATCH(req: NextRequest) {
     }
     if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
       return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
+    }
+
+    // Sin cédula archivada no se aprueba, ni siquiera siendo admin con 2FA. Ser admin
+    // dice QUIÉN aprueba, no que haya algo que revisar. La comprobación va aquí y no
+    // solo en el panel porque el panel se salta llamando a este endpoint directo.
+    const objetivo = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { kycDocumentId: true },
+    });
+    if (!objetivo) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+    if (!puedeAprobarseAMano(documentosAdjuntos(objetivo.kycDocumentId))) {
+      return NextResponse.json({ error: MOTIVO_SIN_DOCUMENTOS }, { status: 409 });
     }
 
     const usuario = await prisma.user.update({

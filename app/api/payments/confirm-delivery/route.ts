@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireKyc } from "@/lib/requireKyc";
+import { requireSesion } from "@/lib/requireKyc";
 import { sendEmail } from '@/lib/email';
 import { sendWhatsapp } from '@/lib/whatsapp';
 import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
@@ -29,8 +29,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const { session, response: kycError } = await requireKyc();
-    if (kycError) return kycError;
+    // Aquí NO va el candado del documento, y es a propósito. Para llegar a este punto el
+    // comprador ya pagó, y pagar sí lo exige. Volver a pedirlo abriría una trampa fea: si su
+    // verificación cambia de estado entre que paga y que recibe, no podría confirmar y su
+    // plata quedaría atrapada en custodia. Más abajo se comprueba que sea el comprador de
+    // esta orden en concreto, que es la autorización que de verdad importa acá.
+    const { session, response: authError } = await requireSesion();
+    if (authError) return authError;
 
     const { productId } = await request.json();
     if (!productId) {

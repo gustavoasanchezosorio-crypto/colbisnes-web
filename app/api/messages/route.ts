@@ -3,13 +3,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
-import { requireKyc } from "@/lib/requireKyc";
+import { requireSesion } from "@/lib/requireKyc";
 import { limpiarContenidoMensaje } from "@/lib/contactFilter";
 
 export async function POST(req: NextRequest) {
   try {
-    const { session, response: kycError } = await requireKyc();
-    if (kycError) return kycError;
+    // Escribirle a un vendedor no mueve plata: basta con estar registrado. El candado del
+    // documento vive en publicar y en los checkouts (ver lib/requireKyc.ts). El contenido
+    // igual pasa por limpiarContenidoMensaje y por el límite de 30/min de más abajo.
+    const { session, response: authError } = await requireSesion();
+    if (authError) return authError;
 
     const ip = getIP(req);
     const rl = rateLimit(`messages:${session.user.id}:${ip}`, { limit: 30, windowSeconds: 60 });

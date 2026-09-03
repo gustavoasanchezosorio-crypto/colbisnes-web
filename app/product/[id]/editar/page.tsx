@@ -18,6 +18,13 @@ import {
   pisoDePrecio,
   mensajePisoDePrecio,
 } from "@/lib/dispositivos";
+import {
+  TIPOS_ENTREGA,
+  ETIQUETAS_ENTREGA,
+  permiteCostoFijoDeEnvio,
+  PISO_PRECIO_ENVIO,
+  TECHO_PRECIO_ENVIO,
+} from "@/lib/entrega";
 
 const MAX_FOTOS = 10;
 
@@ -44,6 +51,13 @@ export default function EditarProductoPage() {
   const [category, setCategory] = useState<string>("Otros");
   const [condition, setCondition] = useState<string>("NUEVO");
   const [description, setDescription] = useState("");
+
+  // Cómo se entrega. Aquí importa más que al publicar: los productos que ya
+  // existen nacieron todos con "ENVIO" puesto por el schema sin que nadie lo
+  // eligiera, y esta pantalla es el único sitio donde su dueño puede corregirlo.
+  const [tipoEntrega, setTipoEntrega] = useState<string>("");
+  const [modoEnvio, setModoEnvio] = useState<"COORDINAR" | "FIJO">("COORDINAR");
+  const [envioDisplay, setEnvioDisplay] = useState("");
 
   // Ficha del dispositivo (solo categoría Tecnologia)
   const [imei, setImei] = useState("");
@@ -82,6 +96,16 @@ export default function EditarProductoPage() {
         setCategory(data.category || "Otros");
         setCondition(data.condition || "NUEVO");
         setDescription(data.description || "");
+        // precioEnvio null es un valor con significado ("lo coordino por el chat"),
+        // no un campo vacío. Por eso se mira el número y no si viene o no viene.
+        setTipoEntrega((TIPOS_ENTREGA as readonly string[]).includes(data.tipoEntrega) ? data.tipoEntrega : "");
+        if (typeof data.precioEnvio === "number" && data.precioEnvio > 0) {
+          setModoEnvio("FIJO");
+          setEnvioDisplay(Number(data.precioEnvio).toLocaleString("es-CO"));
+        } else {
+          setModoEnvio("COORDINAR");
+          setEnvioDisplay("");
+        }
         setImagenesExistentes(((data.images || []) as any[]).map((im) => im.url).filter(Boolean));
         setMeta({ sellerId: data.sellerId, status: data.status });
         setSaludBateria(data.saludBateria != null ? String(data.saludBateria) : "");
@@ -155,6 +179,25 @@ export default function EditarProductoPage() {
     // atajo para dejar un carro en $1 después de haberlo publicado en su precio real.
     const piso = pisoDePrecio(category);
     if (priceCOP < piso) { showToast(mensajePisoDePrecio(category, piso), "warning"); return; }
+
+    // Las mismas reglas de lib/entrega.ts, adelantadas aquí solo para avisar bonito.
+    // Quien manda sigue siendo el servidor: si esto se saltara, PATCH lo rechaza igual.
+    if (!(TIPOS_ENTREGA as readonly string[]).includes(tipoEntrega)) {
+      showToast("Dinos cómo entregas el producto: por envío, en persona, o las dos.", "warning"); return;
+    }
+    const cobraEnvio = permiteCostoFijoDeEnvio(tipoEntrega) && modoEnvio === "FIJO";
+    const precioEnvio = cobraEnvio
+      ? (parseInt(envioDisplay.replace(/\./g, "").replace(/,/g, "")) || 0)
+      : null;
+    if (cobraEnvio) {
+      if (!precioEnvio) { showToast("Escribe cuánto cuesta el envío.", "warning"); return; }
+      if (precioEnvio < PISO_PRECIO_ENVIO) {
+        showToast(`El costo del envío no puede ser menor a $${PISO_PRECIO_ENVIO.toLocaleString("es-CO")}. Si prefieres no fijarlo, escoge "lo coordino con el comprador".`, "warning"); return;
+      }
+      if (precioEnvio > TECHO_PRECIO_ENVIO) {
+        showToast(`El costo del envío no puede superar $${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}. Revisa que no te haya sobrado un cero.`, "warning"); return;
+      }
+    }
     if (esDispositivo) {
       // El parcial (con •) significa "no lo cambié"; el servidor lo entiende así.
       const tocado = (v: string) => v.trim() !== "" && !v.includes("•");
@@ -202,6 +245,7 @@ export default function EditarProductoPage() {
         credentials: "include",
         body: JSON.stringify({
           title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images,
+          tipoEntrega, precioEnvio,
           imei: esDispositivo ? imei.trim() : "",
           imei2: esDispositivo ? imei2.trim() : "",
           saludBateria: esDispositivo ? saludBateria.trim() : "",
@@ -312,6 +356,64 @@ export default function EditarProductoPage() {
             <option value="USADO">Usado</option>
             <option value="REACONDICIONADO">Reacondicionado</option>
           </Select>
+        </div>
+
+        {/* Mismas dos preguntas que al publicar. Ver app/page.tsx. */}
+        <div style={{ border: `1.5px solid ${THEME.border}`, borderRadius: 12, padding: "14px 14px 12px", background: THEME.surfaceAlt }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark }}>¿Cómo lo entregas? *</p>
+          <p style={{ margin: "4px 0 12px", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+            Esto es lo que ve el comprador antes de pagar. Si solo lo entregas en
+            persona, no se le pide dirección ni se le cobra envío.
+          </p>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            <Select value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
+              <option value="">Escoge una opción…</option>
+              {TIPOS_ENTREGA.map((t) => <option key={t} value={t}>{ETIQUETAS_ENTREGA[t]}</option>)}
+            </Select>
+
+            {tipoEntrega === "AMBOS" && (
+              <p style={{ margin: 0, fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                El costo del envío lo acuerdas por el chat. Como el comprador puede
+                escoger recogerlo, no se le puede cobrar un flete fijo por adelantado.
+                Si quieres cobrar un valor fijo, escoge "solo envío".
+              </p>
+            )}
+
+            {permiteCostoFijoDeEnvio(tipoEntrega) && (
+              <>
+                <Select value={modoEnvio} onChange={(e) => setModoEnvio(e.target.value as "COORDINAR" | "FIJO")}>
+                  <option value="COORDINAR">El envío lo coordino con el comprador por el chat</option>
+                  <option value="FIJO">Cobro un valor fijo por el envío</option>
+                </Select>
+
+                {modoEnvio === "FIJO" && (
+                  <div>
+                    <Input
+                      placeholder="Cuánto cuesta el envío (COP) *"
+                      type="text"
+                      inputMode="numeric"
+                      value={envioDisplay}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\./g, "").replace(/,/g, "");
+                        const num = parseInt(raw) || 0;
+                        setEnvioDisplay(num > 0 ? num.toLocaleString("es-CO") : "");
+                      }}
+                      onKeyDown={(e) => {
+                        const nav = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"].includes(e.key);
+                        if (nav) return;
+                        if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                      }}
+                    />
+                    <p style={{ margin: "4px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                      Entre ${PISO_PRECIO_ENVIO.toLocaleString("es-CO")} y ${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}.
+                      Al comprador se le suma aparte del precio, con un 10% de manejo.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Misma ficha que en el formulario de publicar. Ver app/page.tsx. */}

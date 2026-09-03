@@ -8,18 +8,23 @@ export const KYC_ERROR = {
   kycRequired: true,
 };
 
+type SesionConUsuario = Awaited<ReturnType<typeof getServerSession>> & {
+  user: { id: string; email: string; name?: string | null };
+};
+
+type Resultado =
+  | { session: SesionConUsuario; response?: undefined }
+  | { response: NextResponse; session?: undefined };
+
 /**
- * Verifica que el usuario esté autenticado Y tenga KYC aprobado.
- * Retorna { session } si todo está bien, o { response } con el error HTTP listo para retornar.
+ * Solo exige estar con sesión iniciada. NO mira la verificación de identidad.
  *
- * Uso:
- *   const { session, response } = await requireKyc();
- *   if (response) return response;
+ * Existe desde el 2026-09-02, cuando se movió el candado del documento (ver abajo). Antes
+ * la única forma de pedir sesión era llamar a requireKyc(), que de paso exigía el KYC — así
+ * que quitar el KYC de un endpoint significaba dejarlo sin autenticación por accidente.
+ * Separarlo hace que ese error sea imposible de cometer en silencio.
  */
-export async function requireKyc(): Promise<
-  | { session: Awaited<ReturnType<typeof getServerSession>> & { user: { id: string; email: string; name?: string | null } }; response?: undefined }
-  | { response: NextResponse; session?: undefined }
-> {
+export async function requireSesion(): Promise<Resultado> {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id || !session?.user?.email) {
@@ -28,8 +33,34 @@ export async function requireKyc(): Promise<
     };
   }
 
+  return { session: session as SesionConUsuario };
+}
+
+/**
+ * Exige sesión iniciada Y verificación de identidad aprobada.
+ *
+ * DÓNDE VA ESTE CANDADO (decisión del 2026-09-02): solo donde hay plata o donde alguien
+ * se expone públicamente como vendedor. Hoy son dos sitios:
+ *
+ *   · Publicar un producto  — quien ofrece algo a la comunidad y va a recibir un pago
+ *                             nuestro tiene nombre y cédula. Sin excepción.
+ *   · Los checkouts         — online, contra entrega y USDT.
+ *
+ * Y explícitamente NO va en mirar, ofertar, escribir mensajes, calificar ni confirmar la
+ * entrega. Antes estaba en todos, y el efecto era que alguien que apenas llegaba a curiosear
+ * se topaba de entrada con un muro de cédula y selfie. Pedir todo por adelantado no protege
+ * más: solo espanta a quien todavía no ha hecho nada que proteger.
+ *
+ * Uso:
+ *   const { session, response } = await requireKyc();
+ *   if (response) return response;
+ */
+export async function requireKyc(): Promise<Resultado> {
+  const base = await requireSesion();
+  if (base.response) return base;
+
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: base.session.user.id },
     select: { kycStatus: true },
   });
 
@@ -39,5 +70,5 @@ export async function requireKyc(): Promise<
     };
   }
 
-  return { session: session as any };
+  return { session: base.session };
 }

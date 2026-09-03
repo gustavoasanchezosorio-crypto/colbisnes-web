@@ -31,6 +31,13 @@ import {
   pisoDePrecio,
   mensajePisoDePrecio,
 } from "@/lib/dispositivos";
+import {
+  TIPOS_ENTREGA,
+  ETIQUETAS_ENTREGA,
+  permiteCostoFijoDeEnvio,
+  PISO_PRECIO_ENVIO,
+  TECHO_PRECIO_ENVIO,
+} from "@/lib/entrega";
 
 // El precio se valida contra el piso de SU categoría, no contra un número fijo.
 // Por eso se pisa el `priceCOP` de productSchema (que traía un min(1000) plano) y
@@ -41,6 +48,12 @@ const extendedSchema = productSchema
   .extend({
     condition: z.enum(["NUEVO", "USADO"]),
     priceCOP: z.number().min(1, "Escribe el precio"),
+    // Se validan a mano en el superRefine y no con z.enum para no depender de la
+    // forma exacta en que cada versión de zod deja personalizar el mensaje de un
+    // enum inválido. Aquí el mensaje importa: es la casilla que nadie llenaba.
+    tipoEntrega: z.string(),
+    modoEnvio: z.string(),
+    precioEnvio: z.number().optional(),
     imei: z.string().optional(),
     imei2: z.string().optional(),
     saludBateria: z.string().optional(),
@@ -51,6 +64,37 @@ const extendedSchema = productSchema
     if (typeof data.priceCOP === "number" && data.priceCOP > 0 && data.priceCOP < piso) {
       ctx.addIssue({ code: "custom", path: ["priceCOP"], message: mensajePisoDePrecio(data.category, piso) });
     }
+
+    // ── Entrega ───────────────────────────────────────────────────────────────
+    // Sin valor por defecto a propósito. El `@default("ENVIO")` de la base es lo
+    // que hacía que hasta un carro apareciera ofreciendo despacho a domicilio.
+    if (!(TIPOS_ENTREGA as readonly string[]).includes(data.tipoEntrega)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tipoEntrega"],
+        message: "Dinos cómo entregas el producto: por envío, en persona, o las dos.",
+      });
+    } else if (permiteCostoFijoDeEnvio(data.tipoEntrega) && data.modoEnvio === "FIJO") {
+      // "A coordinar" es una respuesta válida y no pide número. Solo se le exige el
+      // precio a quien dijo explícitamente que tiene uno fijo.
+      const p = data.precioEnvio;
+      if (typeof p !== "number" || !Number.isFinite(p) || p <= 0) {
+        ctx.addIssue({ code: "custom", path: ["precioEnvio"], message: "Escribe cuánto cuesta el envío." });
+      } else if (p < PISO_PRECIO_ENVIO) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["precioEnvio"],
+          message: `Mínimo $${PISO_PRECIO_ENVIO.toLocaleString("es-CO")}. Si prefieres no fijarlo, escoge "lo coordino con el comprador".`,
+        });
+      } else if (p > TECHO_PRECIO_ENVIO) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["precioEnvio"],
+          message: `Máximo $${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}. Revisa que no te haya sobrado un cero.`,
+        });
+      }
+    }
+
     // Los datos del dispositivo son opcionales; si se escriben, deben ser creíbles.
     if (!categoriaPideDatosDeDispositivo(data.category)) return;
     const hayUno = !!data.imei && data.imei.trim() !== "";
@@ -287,6 +331,9 @@ function PageInner() {
     })();
   }, [imageFiles]);
   const [precioDisplay, setPrecioDisplay] = useState("");
+  // El costo del envío se escribe con puntos de mil igual que el precio, así que
+  // necesita su propio texto en pantalla aparte del número que ve el formulario.
+  const [envioDisplay, setEnvioDisplay] = useState("");
   const { unreadTotal, nudgeTick } = useNotifications();
   const [unreadByProduct, setUnreadByProduct] = useState<Record<string, number>>({});
   const [kycPendiente, setKycPendiente] = useState(false);
@@ -325,6 +372,25 @@ function PageInner() {
     return () => clearTimeout(t);
   }, [nudgeTick]);
 
+  // Publicar es el momento en que pedimos el documento, y este botón es ese momento.
+  //
+  // Antes el aviso llegaba tardísimo: el vendedor escribía título, descripción y precio,
+  // escogía la entrega, subía las fotos una por una (cada foto es una subida real a
+  // Cloudinary, así que había esperado de verdad) y SOLO ahí el servidor contestaba
+  // "verifica tu identidad" y se lo llevaba a /kyc. Al volver, el formulario estaba en
+  // blanco y tocaba subir todo otra vez. Se corta aquí, antes de que escriba la primera
+  // letra. El servidor lo sigue comprobando igual en POST /api/products: esto es
+  // cortesía, no seguridad — va después de kycPendiente porque lo lee.
+  const abrirFormularioPublicar = useCallback(() => {
+    if (showPublishForm) { setShowPublishForm(false); return; }
+    if (sessionStatus === "authenticated" && kycPendiente) {
+      showToast("Para publicar necesitamos verificar tu identidad. Son 2 minutos.", "warning");
+      setTimeout(() => { window.location.href = "/kyc"; }, 1800);
+      return;
+    }
+    setShowPublishForm(true);
+  }, [showPublishForm, sessionStatus, kycPendiente, showToast]);
+
   // Verificar KYC + datos de cobro del usuario logueado. Con /api/user obtenemos todo
   // (incluye kycStatus) y calculamos qué le falta CRÍTICO para vender y recibir pagos.
   useEffect(() => {
@@ -336,17 +402,13 @@ function PageInner() {
         setKycPendiente(u.kycStatus !== "approved");
         const c = computeProfileCompletion(u);
         setFaltaParaOperar(c.faltantesCriticos);
-        // Mostrar el modal emergente una vez por sesión si le falta algo crítico.
-        // La clave de sessionStorage cambió de nombre a propósito: el aviso ahora dice otra
-        // cosa y suma el código anti fraude, así que quien ya lo había cerrado con el texto
-        // viejo tiene que volver a verlo una vez con el nuevo.
-        if (c.faltantesCriticos.length > 0) {
-          const yaVisto = typeof window !== "undefined" && sessionStorage.getItem("faltaOperarModalVisto") === "1";
-          if (!yaVisto) {
-            setShowFaltaModal(true);
-            try { sessionStorage.setItem("faltaOperarModalVisto", "1"); } catch {}
-          }
-        }
+        // Aquí ANTES saltaba un modal apenas cargaba el home, pidiendo cédula, selfie,
+        // código anti fraude, Nequi y Bre-B. Se quitó el 2026-09-02: recibir a alguien que
+        // apenas está mirando con una lista de cinco requisitos no protege nada, porque
+        // todavía no ha hecho nada que proteger — solo lo espanta. Ahora cada cosa se pide
+        // en el momento en que hace falta: el documento al publicar y al pagar, el código
+        // anti fraude al ofertar, los datos de cobro al cobrar. El banner de más abajo
+        // sigue ahí, discreto, para quien sí quiera dejar todo listo de una.
       })
       .catch(() => {});
   }, [sessionStatus]);
@@ -376,12 +438,25 @@ function PageInner() {
   const abortRef = useRef<AbortController | null>(null);
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(extendedSchema),
-    defaultValues: { city: "Bogotá", condition: "NUEVO" },
+    // tipoEntrega arranca vacío A PROPÓSITO. Es justo la casilla que nunca se
+    // preguntó y que por el `@default("ENVIO")` del schema hacía que hasta un
+    // carro de $46 millones naciera ofreciendo despacho a domicilio. Si aquí se
+    // preselecciona algo, volvemos al mismo problema con otra ropa: el vendedor
+    // le da enviar sin leerlo. Vacío obliga a que alguien lo escoja.
+    defaultValues: { city: "Bogotá", condition: "NUEVO", tipoEntrega: "", modoEnvio: "COORDINAR" },
     mode: "onChange",
   });
   // Las casillas de IMEI, batería y piezas solo existen para dispositivos.
   const categoriaElegida = watch("category");
   const esDispositivo = categoriaPideDatosDeDispositivo(categoriaElegida);
+
+  // El costo del envío solo tiene sentido si el producto se despacha. Si es solo
+  // en persona no se pregunta, y el servidor además lo descarta (lib/entrega.ts),
+  // para que nadie termine cobrándole un flete a quien va a recoger el producto.
+  const tipoEntregaElegido = watch("tipoEntrega");
+  const modoEnvioElegido = watch("modoEnvio");
+  const puedeCobrarEnvio = permiteCostoFijoDeEnvio(tipoEntregaElegido || "");
+  const pideCostoDeEnvio = puedeCobrarEnvio && modoEnvioElegido === "FIJO";
 
   // El dígito de control NO bloquea (ver lib/dispositivos.ts): se avisa aparte de
   // los errores del formulario, en ámbar y no en rojo, porque no impide publicar.
@@ -431,7 +506,25 @@ function PageInner() {
           if (upData.urls && upData.urls.length) imageUrls.push(upData.urls[0]);
         }
       }
-      const res = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ ...data, images: imageUrls }) });
+      // `modoEnvio` es una pregunta de pantalla, no una columna: existe solo para
+      // decidir si se muestra la casilla del costo. Lo que la base entiende es
+      // precioEnvio = null → "a coordinar por el chat". Si se mandara el modo tal
+      // cual, el servidor lo ignoraría y el número quedaría pegado aunque el
+      // vendedor hubiera cambiado de opinión a "lo coordino".
+      const { modoEnvio, ...datosProducto } = data;
+      const res = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({
+        ...datosProducto,
+        images: imageUrls,
+        // Se vuelve a mirar el tipo de entrega y no solo el modo: si alguien escoge
+        // "solo envío" con valor fijo y después se arrepiente y pasa a "ambos", el
+        // modo se queda en FIJO aunque la casilla ya no esté a la vista. El servidor
+        // igual lo descarta, pero mandar un número que no se va a usar es pedir que
+        // algún día alguien lo use.
+        precioEnvio:
+          permiteCostoFijoDeEnvio(data.tipoEntrega) && modoEnvio === "FIJO"
+            ? data.precioEnvio ?? null
+            : null,
+      }) });
       const resp = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (resp.kycRequired) {
@@ -449,7 +542,7 @@ function PageInner() {
         // POST /api/products no puede devolver esa bandera y el bloque quedaba muerto.
         throw new Error(resp.error || resp.message || `Error ${res.status}`);
       }
-      reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); setPrecioDisplay("");
+      reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); setPrecioDisplay(""); setEnvioDisplay("");
       await refetch(); showToast("Producto publicado exitosamente!", "success");
     } catch (err: any) { showToast(err.message || "Error al publicar", "error"); }
     finally { setUploadingImages(false); }
@@ -550,7 +643,7 @@ function PageInner() {
         <div className="cab-inicio-acciones" style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
           {isAuthenticated && session?.user ? (
             <>
-              <button className="cab-btn" onClick={() => setShowPublishForm(!showPublishForm)} style={{ padding: "7px 16px", borderRadius: 20, background: showPublishForm ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.4)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+              <button className="cab-btn" onClick={abrirFormularioPublicar} style={{ padding: "7px 16px", borderRadius: 20, background: showPublishForm ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.4)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
                 {showPublishForm ? "✕ Cerrar" : "+ Publicar"}
               </button>
               <Link className="cab-avatar" href={`/user/${session.user.id}`} style={{ color: "rgba(255,255,255,0.9)", textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, background: "rgba(255,255,255,0.12)", fontSize: 13, fontWeight: 600 }}>
@@ -581,12 +674,11 @@ function PageInner() {
         </div>
       </header>
 
-      {/* Aviso contextual: qué falta para poder operar.
-          El texto decía "Para vender y recibir tus pagos", y eso se leía como cosa de
-          vendedores: quien venía solo a comprar lo ignoraba, y después el KYC y el código
-          anti fraude lo frenaban apenas intentaba hacer su primera oferta. Ahora nombra las
-          tres cosas que de verdad se bloquean —publicar, comprar y cobrar—, comprobadas
-          leyendo las rutas del servidor una por una. */}
+      {/* Invitación a dejar la cuenta lista. NO es un muro: desde que el documento se pide
+          solo al publicar y al pagar (2026-09-02), esto es un atajo opcional para quien
+          quiera adelantar el trámite, no un requisito de entrada. Por eso el texto avisa en
+          futuro ("te vamos a pedir") en vez de en presente ("no puedes"): mirar, ofertar y
+          escribir funcionan sin nada de esto. */}
       {isAuthenticated && faltaParaOperar.length > 0 && (
         <div
           onClick={() => setShowFaltaModal(true)}
@@ -598,7 +690,7 @@ function PageInner() {
           }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
             <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>
-              Para publicar, comprar o cobrar tus ventas te falta:
+              Cuando vayas a publicar o a pagar te vamos a pedir:
             </span>
             <span style={{ color: "#fff", fontSize: 13, fontWeight: 500, opacity: 0.95 }}>
               {faltaParaOperar.map(f => f.label).join(" · ")}
@@ -627,13 +719,15 @@ function PageInner() {
             style={{ background: "#fff", borderRadius: 26, padding: "30px 26px", maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 20px 70px rgba(10,46,107,0.30)" }}
           >
             <div style={{ fontSize: 48, marginBottom: 8 }}>🚀</div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800, color: THEME.text }}>Completa tu registro</h2>
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800, color: THEME.text }}>Deja tu cuenta lista</h2>
             <p style={{ margin: "0 0 18px", fontSize: 14, color: THEME.muted, lineHeight: 1.5 }}>
-              Sin estos datos no puedes <b>publicar</b>, ni <b>hacer una oferta</b>, ni <b>cobrar tus ventas</b>. Se piden una sola vez.
+              Mirar, ofertar y escribirle a un vendedor no necesita nada de esto. Te lo vamos a
+              pedir cuando vayas a <b>publicar</b>, a <b>pagar</b> o a <b>cobrar una venta</b> — y se
+              pide una sola vez. Si prefieres, adelántalo ahora.
             </p>
 
             <div style={{ textAlign: "left", background: THEME.surfaceAlt, borderRadius: 14, padding: "12px 14px", marginBottom: 18, border: `1px solid ${THEME.border}` }}>
-              <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 800, color: THEME.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Te falta:</p>
+              <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 800, color: THEME.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Te queda pendiente:</p>
               {faltaParaOperar.map((f) => (
                 <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <span style={{ color: "#f59e0b", fontSize: 13 }}>●</span>
@@ -705,6 +799,80 @@ function PageInner() {
                   <Select {...register("city")}>{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</Select>
                   <Select {...register("category")}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</Select>
                   <Select {...register("condition")}><option value="NUEVO">Nuevo</option><option value="USADO">Usado</option></Select>
+                </div>
+
+                {/* Cómo se entrega. Va en su propio recuadro y no dentro del
+                    renglón de arriba porque son dos preguntas encadenadas: la
+                    segunda solo aparece según lo que se conteste en la primera,
+                    y metida en una rejilla de dos columnas el formulario brincaba.
+
+                    Antes esta pregunta no existía y el schema asumía "ENVIO" para
+                    todo. Por eso la ficha decía "envío a coordinar" hasta en cosas
+                    que nadie manda por transportadora. */}
+                <div style={{ border: `1.5px solid ${THEME.border}`, borderRadius: 12, padding: "14px 14px 12px", background: THEME.surfaceAlt }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark }}>¿Cómo lo entregas? *</p>
+                  <p style={{ margin: "4px 0 12px", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                    Esto es lo que ve el comprador antes de pagar. Si solo lo entregas
+                    en persona, no se le pide dirección ni se le cobra envío.
+                  </p>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <div>
+                      <Select {...register("tipoEntrega")}>
+                        <option value="">Escoge una opción…</option>
+                        {TIPOS_ENTREGA.map(t => <option key={t} value={t}>{ETIQUETAS_ENTREGA[t]}</option>)}
+                      </Select>
+                      {errors.tipoEntrega && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.tipoEntrega.message}</p>}
+                    </div>
+
+                    {tipoEntregaElegido === "AMBOS" && (
+                      <p style={{ margin: 0, fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                        El costo del envío lo acuerdas por el chat. Como el comprador
+                        puede escoger recogerlo, no se le puede cobrar un flete fijo por
+                        adelantado. Si quieres cobrar un valor fijo, escoge "solo envío".
+                      </p>
+                    )}
+
+                    {puedeCobrarEnvio && (
+                      <>
+                        <Select {...register("modoEnvio")}>
+                          <option value="COORDINAR">El envío lo coordino con el comprador por el chat</option>
+                          <option value="FIJO">Cobro un valor fijo por el envío</option>
+                        </Select>
+
+                        {pideCostoDeEnvio && (
+                          <div>
+                            <Input
+                              placeholder="Cuánto cuesta el envío (COP) *"
+                              type="text"
+                              inputMode="numeric"
+                              value={envioDisplay}
+                              onChange={e => {
+                                // Mismo truco que el precio: en pantalla se ve "25.000"
+                                // y al formulario le llega el número pelado.
+                                const raw = e.target.value.replace(/\./g, "").replace(/,/g, "");
+                                const num = parseInt(raw) || 0;
+                                setEnvioDisplay(num > 0 ? num.toLocaleString("es-CO") : "");
+                                const syntheticEvent = { target: { value: num, name: "precioEnvio" } };
+                                register("precioEnvio").onChange(syntheticEvent as any);
+                              }}
+                              onKeyDown={e => {
+                                const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
+                                if (nav) return;
+                                if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                              }}
+                            />
+                            {errors.precioEnvio
+                              ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.precioEnvio.message}</p>
+                              : <p style={{ margin: "4px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                                  Entre ${PISO_PRECIO_ENVIO.toLocaleString("es-CO")} y ${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}.
+                                  Al comprador se le suma aparte del precio, con un 10% de manejo.
+                                </p>}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Ficha del dispositivo. Aparece SOLO en Tecnologia y es toda
@@ -888,7 +1056,7 @@ function PageInner() {
               </div>
               <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                 <Button type="submit" disabled={isSubmitting || uploadingImages}>{uploadingImages ? "Subiendo..." : isSubmitting ? "Publicando..." : "Publicar"}</Button>
-                <OutlineButton type="button" onClick={() => { reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); setPrecioDisplay(""); }}>Cancelar</OutlineButton>
+                <OutlineButton type="button" onClick={() => { reset(); setImageFiles([]); setImagePreviews([]); setShowPublishForm(false); setPrecioDisplay(""); setEnvioDisplay(""); }}>Cancelar</OutlineButton>
               </div>
             </form>
           </div>

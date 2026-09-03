@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
+import { puedeAprobarseAMano, MOTIVO_SIN_DOCUMENTOS } from "@/lib/kycDocumentos";
 
 interface KycUser {
   id: string;
@@ -142,10 +143,19 @@ export default function AdminKycPage() {
                         onChange={e => setCodigos2FA(prev => ({ ...prev, [u.id]: e.target.value.replace(/\D/g, "") }))}
                         style={{ width: 104, padding: "10px 10px", borderRadius: 12, border: `1px solid ${THEME.border}`, fontSize: 13 }}
                       />
+                      {/* Aprobar exige tener la cédula archivada para mirarla. El
+                          servidor lo vuelve a comprobar (lib/kycDocumentos.ts): esto
+                          es para no ofrecer un botón que va a devolver error. */}
                       <button
                         onClick={() => aprobar(u.id)}
-                        disabled={!!actionLoading}
-                        style={{ padding: "10px 22px", borderRadius: 12, background: "#10B981", color: "#fff", border: "none", fontWeight: 800, fontSize: 14, cursor: "pointer" }}
+                        disabled={!!actionLoading || !puedeAprobarseAMano(u.docs)}
+                        title={!puedeAprobarseAMano(u.docs) ? MOTIVO_SIN_DOCUMENTOS : undefined}
+                        style={{
+                          padding: "10px 22px", borderRadius: 12,
+                          background: puedeAprobarseAMano(u.docs) ? "#10B981" : "#cbd5e1",
+                          color: "#fff", border: "none", fontWeight: 800, fontSize: 14,
+                          cursor: puedeAprobarseAMano(u.docs) ? "pointer" : "not-allowed",
+                        }}
                       >
                         {actionLoading === u.id + "_ok" ? "..." : "✅ Aprobar"}
                       </button>
@@ -185,7 +195,14 @@ export default function AdminKycPage() {
                     </div>
                   )}
                   {!u.docs.selfieUrl && !u.docs.cedulaUrl && (
-                    <p style={{ color: THEME.muted, fontSize: 13 }}>Sin documentos adjuntos</p>
+                    <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                      <p style={{ color: "#b45309", fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Sin documentos adjuntos</p>
+                      <p style={{ color: THEME.muted, fontSize: 12, margin: 0, lineHeight: 1.5 }}>
+                        Esta persona pasó por Didit, que guarda las fotos de su lado — aquí
+                        no hay nada que revisar. No se puede aprobar a mano: pídele que
+                        reintente la verificación desde colbisnes.com/kyc.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
