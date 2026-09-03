@@ -140,14 +140,20 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
     const verifyUrl = baseUrl + "/auth/verify?token=" + rawVerifyToken;
 
-    // Welcome email (non-blocking). El botón AHORA sí verifica el correo de verdad.
-    // Sigue siendo deliberadamente "dispara y olvida": el usuario no debe esperar
-    // a que Resend conteste para que su registro termine. La diferencia es que
-    // ahora reintenta y, si aun así falla, deja rastro (ver arriba).
+    // Correo de CONFIRMACIÓN DE DIRECCIÓN (no es la bienvenida). Sigue siendo
+    // deliberadamente "dispara y olvida": el usuario no debe esperar a que Resend
+    // conteste para que su registro termine. Reintenta y, si aun así falla, deja
+    // rastro (ver arriba).
+    //
+    // El asunto decía "Bienvenido a Colbisnes", que era mentira a medias y ahora
+    // sería confuso de verdad: desde el 2026-09-02 la bienvenida de verdad sale
+    // al confirmar la dirección (app/api/auth/verify), y dos correos seguidos
+    // con asunto parecido se leen como un reenvío. Se usa el mismo asunto que
+    // ya usaba /api/auth/resend-verification, que es el mismo correo.
     void enviarVerificacionConReintentos(emailLower, {
       from: "Colbisnes <hola@colbisnes.com>",
       to: emailLower,
-      subject: "Bienvenido a Colbisnes",
+      subject: "Confirma tu correo en Colbisnes",
       html: colbisnesEmailTemplate({
         preheader: "Confirma tu correo para activar tu cuenta",
         titulo: "Que bien, ya eres parte de Colbisnes! 🎉",

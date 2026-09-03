@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rateLimit";
+import { sendEmail } from "@/lib/email";
+import {
+  ASUNTO_BIENVENIDA,
+  CONTACTO_BIENVENIDA,
+  htmlBienvenida,
+  textoBienvenida,
+} from "@/lib/correoBienvenida";
 import crypto from "crypto";
 
 // POST /api/auth/verify — confirma el correo de un usuario a partir del token del email.
@@ -33,6 +40,37 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data: { emailVerified: new Date(), emailVerifyToken: null, emailVerifyTokenExpiry: null },
     });
+
+    // BIENVENIDA (2026-09-02). Este es el momento en que alguien queda de verdad
+    // dentro, y hasta hoy era el momento en que no pasaba nada: el correo de
+    // bienvenida solo salía por el formulario de la lista de espera, que era la
+    // puerta de antes de abrir. Ocho de diecisiete registrados no lo recibieron
+    // nunca. Ver el comentario de cabecera de lib/correoBienvenida.ts.
+    //
+    // NO PUEDE TUMBAR LA CONFIRMACIÓN. La dirección ya quedó confirmada arriba;
+    // si el correo falla, la persona igual entró. Por eso va después del update,
+    // sin await sobre la respuesta y con su propio try/catch (sendEmail ya se
+    // traga sus errores, pero se envuelve por si eso cambia).
+    //
+    // NO SE DUPLICA: solo se llega aquí con un token válido, y el update de
+    // arriba lo borra en la misma petición. Un segundo clic en el mismo enlace
+    // no encuentra usuario y sale por el 400 de antes de llegar hasta acá.
+    void (async () => {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: ASUNTO_BIENVENIDA,
+          html: htmlBienvenida("registro"),
+          text: textoBienvenida("registro"),
+          replyTo: CONTACTO_BIENVENIDA,
+          headers: {
+            "List-Unsubscribe": `<mailto:${CONTACTO_BIENVENIDA}?subject=BAJA>`,
+          },
+        });
+      } catch (e) {
+        console.error("[BIENVENIDA FALLIDA] usuario", user.id, e);
+      }
+    })();
 
     return NextResponse.json({ ok: true });
   } catch {

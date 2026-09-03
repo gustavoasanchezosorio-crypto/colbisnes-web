@@ -45,3 +45,6 @@ next-env.d.ts
 # Registro de envíos del correo de lanzamiento (scripts/send-launch-emails.ts).
 # Lleva direcciones reales de suscriptores: no debe salir del equipo donde se corre.
 scripts/.launch-emails-sent.log
+
+# Igual para el envío de reverificación de identidad (scripts/enviar-reverificacion.ts).
+scripts/.reverificacion-sent.log

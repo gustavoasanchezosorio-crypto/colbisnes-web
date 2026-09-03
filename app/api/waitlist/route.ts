@@ -24,7 +24,6 @@ import {
   CONTACTO_BIENVENIDA,
   htmlBienvenida,
   textoBienvenida,
-  urlEntrarAnticipado,
 } from "@/lib/correoBienvenida";
 import {
   COOKIE_BYPASS,
@@ -127,15 +126,15 @@ export async function POST(request: Request) {
     // el futuro cambia ese comportamiento.
     if (esAltaNueva) {
       try {
-        // El enlace de acceso anticipado se calcula UNA vez y se pasa a las dos
-        // versiones del correo, para que el HTML y el texto plano no puedan
-        // acabar apuntando a sitios distintos.
-        const urlEntrar = urlEntrarAnticipado();
+        // Mismo correo que recibe quien se registra y confirma su dirección; lo
+        // único que cambia es la línea del pie que explica por qué le llega.
+        // Ya no lleva enlace de acceso anticipado: el candado de prelanzamiento
+        // se levantó el 12 de agosto (ver lib/correoBienvenida.ts).
         await sendEmail({
           to: email,
           subject: ASUNTO_BIENVENIDA,
-          html: htmlBienvenida(urlEntrar),
-          text: textoBienvenida(urlEntrar),
+          html: htmlBienvenida("lista"),
+          text: textoBienvenida("lista"),
           replyTo: CONTACTO_BIENVENIDA,
           // Gmail y Outlook puntúan mejor el correo no transaccional que ofrece
           // una salida clara. Es el mismo mecanismo de baja que usa el envío del
