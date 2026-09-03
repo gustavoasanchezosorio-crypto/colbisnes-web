@@ -100,6 +100,14 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
+        {/* Cloudflare Web Analytics: gratis, sin cookies, sin banner de consentimiento.
+            colbisnes.com no está proxiado por Cloudflare (confirmado: sin header cf-ray),
+            así que no hay inyección automática — este snippet manual es el único camino. */}
+        <script
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon='{"token": "76b8e7f07ad94e219b19ac6a892ccaf4"}'
+        />
       </head>
       <body className={inter.className}>
         {/* Aviso de MODO PRUEBA. Va fuera de los providers a propósito: no depende
