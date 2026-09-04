@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
         select: { productId: true },
       });
       const products = await prisma.product.findMany({
-        where: { id: { in: favProductIds.map(f => f.productId) } },
+        // Un producto ELIMINADO (soft-delete del perfil MASTER) no debe seguir apareciendo
+        // en la lista de favoritos de nadie, aunque alguien ya lo hubiera marcado antes.
+        where: { id: { in: favProductIds.map(f => f.productId) }, status: { not: "ELIMINADO" } },
         select: {
           id: true, title: true, description: true,
           priceCOP: true, city: true, status: true,

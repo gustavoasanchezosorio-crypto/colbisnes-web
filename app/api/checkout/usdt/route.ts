@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
+import { esCuentaMaster } from "@/lib/adminAuth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
@@ -50,7 +51,10 @@ export async function POST(req: NextRequest) {
       console.error("POST /api/checkout/usdt: creando orden con tasa de respaldo (4200), no se pudo obtener tasa en vivo. productoId:", productoId);
     }
 
-    const producto = await prisma.product.findUnique({ where: { id: productoId } });
+    const producto = await prisma.product.findUnique({
+      where: { id: productoId },
+      include: { seller: { select: { role: true, email: true } } },
+    });
     if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
     if (producto.sellerId === session.user.id) {
@@ -142,8 +146,16 @@ export async function POST(req: NextRequest) {
 
     const trust = await computeTrustScore(producto.sellerId);
 
-    const pricing = calcularPrecioUSDT(precioBase, tasaCOP, trust.label);
-    const extras = calcularExtrasCheckout(producto, !!proteccionExtendida);
+    // Perfil MASTER (ver lib/adminAuth.ts): exento de la comisión de Colbisnes si el
+    // COMPRADOR o el VENDEDOR es la cuenta master. A diferencia de contra-entrega, en USDT
+    // no hay un cobro aparte que saltarse ni un piso tipo WOMPI_MIN_TX_COP — comisionUSD ya
+    // va sumado dentro de totalUSDT, así que exento=true simplemente baja ese total; el
+    // resto del flujo (confirmación por /api/usdt/verificar contra la blockchain) no cambia.
+    const exentoComprador = esCuentaMaster(session);
+    const exentoVendedor  = esCuentaMaster({ user: { role: producto.seller?.role, email: producto.seller?.email } });
+    const exento = exentoComprador || exentoVendedor;
+    const pricing = calcularPrecioUSDT(precioBase, tasaCOP, trust.label, exento);
+    const extras = calcularExtrasCheckout(producto, !!proteccionExtendida, exentoComprador);
     const extrasUSD = parseFloat((extras.extraTotal / tasaCOP).toFixed(2));
     const totalUSDFinal = parseFloat((pricing.totalUSD + extrasUSD).toFixed(2));
 

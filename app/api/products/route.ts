@@ -56,6 +56,12 @@ export async function GET(request: Request) {
     }
     if (statusParam && (VALID_STATUSES as readonly string[]).includes(statusParam)) {
       where.status = statusParam;
+    } else {
+      // Un producto ELIMINADO (soft-delete del perfil MASTER, ver DELETE en
+      // app/api/products/[id]/route.ts) nunca debe aparecer en el catálogo público, ni
+      // siquiera pidiéndolo explícito por query string: "ELIMINADO" a propósito NO está en
+      // VALID_STATUSES, así que ?status=ELIMINADO cae aquí igual que no mandar status.
+      where.status = { not: "ELIMINADO" };
     }
 
     const products = await prisma.product.findMany({

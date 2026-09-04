@@ -3,20 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
-
-function esAdmin(session: any) {
-  return (
-    session?.user?.role === "ADMIN" ||
-    session?.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()
-  );
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // Endpoint de admin para corregir manualmente el status de un producto
 // Útil cuando un pago fue rechazado pero el producto quedó en estado incorrecto
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !esAdmin(session)) {
+    if (!session?.user || !esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

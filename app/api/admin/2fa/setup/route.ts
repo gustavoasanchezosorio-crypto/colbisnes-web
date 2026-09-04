@@ -4,17 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generarSecretoTOTP, generarOtpauthUri, verificarCodigoTOTP } from "@/lib/totp";
 import { registrarAuditoria } from "@/lib/audit";
-
-function esAdmin(email?: string | null) {
-  return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // GET: devuelve el estado actual del 2FA. Si aún no está activado, genera (o reutiliza) un secreto
 // pendiente para que el admin lo ingrese manualmente en Microsoft Authenticator.
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
+    if (!esAdminSession(session) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -43,7 +40,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
+    if (!esAdminSession(session) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

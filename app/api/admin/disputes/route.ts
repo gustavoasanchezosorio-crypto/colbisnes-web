@@ -4,16 +4,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
-
-function esAdmin(email?: string | null) {
-  return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // GET: lista disputas para el panel admin, filtrable por estado
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email)) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (!esAdminSession(session)) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -54,7 +51,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
+    if (!esAdminSession(session) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

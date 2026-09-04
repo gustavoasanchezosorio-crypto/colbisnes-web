@@ -6,16 +6,13 @@ import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { documentosAdjuntos } from "@/lib/kycDocumentos";
-
-function esAdmin(email: string) {
-  return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // GET: listar solicitudes KYC pendientes (y aprobadas/rechazadas recientes)
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !esAdmin(session.user.email)) {
+    if (!session?.user?.email || !esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -58,7 +55,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !session.user.id || !esAdmin(session.user.email)) {
+    if (!session?.user?.email || !session.user.id || !esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

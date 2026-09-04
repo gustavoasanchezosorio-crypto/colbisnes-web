@@ -17,17 +17,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { comingSoonActivo } from "@/lib/launch";
-
-// Mismo criterio que el resto de endpoints de admin: o el rol es ADMIN, o el
-// correo coincide con ADMIN_EMAIL. Se repite en cada ruta a propósito, para que
-// ninguna dependa de que otra haya comprobado antes.
-function esAdmin(session: unknown) {
-  const s = session as { user?: { role?: string; email?: string } } | null;
-  return (
-    s?.user?.role === "ADMIN" ||
-    s?.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()
-  );
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // Tope de filas. La lista de espera hoy son 11 direcciones, pero si la campaña
 // funciona esto puede crecer rápido y el panel no debe intentar pintar miles de
@@ -38,7 +28,7 @@ const MAX_FILAS = 500;
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !esAdmin(session)) {
+    if (!session || !esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

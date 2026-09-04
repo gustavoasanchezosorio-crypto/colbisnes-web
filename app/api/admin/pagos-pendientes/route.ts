@@ -2,19 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-function esAdmin(session: { user?: { email?: string | null; role?: string | null } } | null) {
-  if (!session?.user) return false;
-  return (
-    session.user.role === "ADMIN" ||
-    session.user.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()
-  );
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session)) {
+    if (!esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

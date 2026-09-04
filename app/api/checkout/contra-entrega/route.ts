@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
+import { esCuentaMaster } from "@/lib/adminAuth";
+import { registrarAuditoria } from "@/lib/audit";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { calcularFechaLimiteEnvio } from "@/lib/businessHours";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
@@ -38,7 +40,10 @@ export async function POST(req: NextRequest) {
     const { productoId } = await req.json();
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });
 
-    const producto = await prisma.product.findUnique({ where: { id: productoId } });
+    const producto = await prisma.product.findUnique({
+      where: { id: productoId },
+      include: { seller: { select: { role: true, email: true } } },
+    });
     if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
     if (producto.sellerId === session.user.id) {
@@ -112,7 +117,16 @@ export async function POST(req: NextRequest) {
     const trust = await computeTrustScore(producto.sellerId);
     // El descuento por nivel se gana vendiendo, no verificándose (ver nivelParaDescuento
     // en lib/pricing.ts). Sin negocios cerrados el vendedor paga la comisión completa.
-    const pricing = calcularPrecioContraEntrega(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount));
+    //
+    // Perfil MASTER (ver lib/adminAuth.ts): exento de la comisión de Colbisnes si el
+    // COMPRADOR o el VENDEDOR es la cuenta master. calcularPrecioContraEntrega, con
+    // exento=true, devuelve comisionColbisnes=0 SIN el piso de WOMPI_MIN_TX_COP a propósito
+    // (ver comentario ahí) — es la señal que usamos más abajo para saltarnos el cobro por
+    // Nequi por completo, porque Wompi no puede procesar una transacción de $0.
+    const exentoComprador = esCuentaMaster(session);
+    const exentoVendedor  = esCuentaMaster({ user: { role: producto.seller?.role, email: producto.seller?.email } });
+    const exento = exentoComprador || exentoVendedor;
+    const pricing = calcularPrecioContraEntrega(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount), exento);
     // Contra entrega NO ofrece protección extendida: el único cargo electrónico aquí es la
     // comisión de reserva por Nequi y el efectivo al mensajero es solo precio + envío, así que
     // la protección no tendría por dónde cobrarse (antes se sumaba a totalPagado sin cobrarse
@@ -134,6 +148,12 @@ export async function POST(req: NextRequest) {
     // dejar el producto SOLD para siempre sin pagar nada (bug encontrado en auditoría 2026-07-06).
     // Solo /api/admin/confirmar-comision-nequi debe pasar el producto a IN_ESCROW, una vez el
     // admin confirma manualmente que la comisión sí se transfirió.
+    //
+    // EXCEPCIÓN — orden exenta (master): no hay comisión que cobrar por Nequi ni comprobante
+    // que esperar, así que dejarla en ESPERANDO_COMISION/PAYMENT_PENDING la dejaría colgada
+    // para siempre (nadie va a confirmar un pago que nunca se hizo). Se crea directo en el
+    // mismo estado al que llegaría después de que un admin la confirmara manualmente —ver
+    // /api/admin/confirmar-comision-nequi—, sin pasar por ese paso intermedio.
     const PLAZO_COMISION_MS = 24 * 60 * 60 * 1000; // 24h para subir comprobante y que el admin lo confirme
     const [orden] = await prisma.$transaction([
       prisma.order.create({
@@ -141,7 +161,7 @@ export async function POST(req: NextRequest) {
           productId:      producto.id,
           buyerEmail:     session.user.email,
           metodoPago:     "CONTRA_ENTREGA",
-          estado:         "ESPERANDO_COMISION",
+          estado:         exento ? "ESPERANDO_ENVIO" : "ESPERANDO_COMISION",
           totalPagado:    pricing.totalComprador + extras.extraTotal,
           comision:       pricing.comisionColbisnes,
           recibeVendedor: pricing.recibeVendedor,
@@ -153,13 +173,37 @@ export async function POST(req: NextRequest) {
           margenEnvio:    extras.margenEnvio,
           comisionReservaCOP: pricing.comisionColbisnes,
           fechaLimiteEnvio: calcularFechaLimiteEnvio(ahora),
+          ...(exento ? { comisionReservaPagada: true, comisionReservaConfirmadaAt: ahora } : {}),
         },
       }),
       prisma.product.update({
         where: { id: productoId },
-        data: { status: "PAYMENT_PENDING", paymentExpiresAt: new Date(Date.now() + PLAZO_COMISION_MS) },
+        data: exento
+          ? { status: "IN_ESCROW", paidAt: ahora, paymentExpiresAt: null }
+          : { status: "PAYMENT_PENDING", paymentExpiresAt: new Date(Date.now() + PLAZO_COMISION_MS) },
       }),
     ]);
+
+    if (exento) {
+      // Traza de auditoría: esta orden se saltó el cobro de comisión por Nequi por ser
+      // cuenta master (comprador, vendedor, o ambos). Dinero real que se dejó de cobrar,
+      // así que queda registro de por qué.
+      await registrarAuditoria({
+        userId: session.user.id,
+        action: "EXENCION_MASTER_COMISION_CE",
+        entity: "Order",
+        entityId: orden.id,
+        metadata: { productId: producto.id, exentoComprador, exentoVendedor },
+        request: req,
+      });
+      // Aviso en tiempo real: igual que hace /api/admin/confirmar-comision-nequi al
+      // confirmar manualmente, la factura en vivo pasa directo a "Reservado — pendiente
+      // de despacho" sin que nadie tenga que refrescar la página.
+      try {
+        const io = (global as any).io;
+        if (io) io.to(`product-${producto.id}`).emit("product-status-changed", { productId: producto.id, status: "IN_ESCROW" });
+      } catch {}
+    }
 
     return NextResponse.json({
       ok: true,

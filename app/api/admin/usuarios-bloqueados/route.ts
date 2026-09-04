@@ -4,16 +4,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
-
-function esAdmin(email?: string | null) {
-  return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // Lista usuarios bloqueados (por tiempo) o con deuda pendiente por envío tardío en contraentrega.
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email)) {
+    if (!esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -44,7 +41,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
+    if (!esAdminSession(session) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

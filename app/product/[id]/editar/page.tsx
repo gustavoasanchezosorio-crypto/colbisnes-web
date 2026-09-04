@@ -6,6 +6,7 @@ import Link from "next/link";
 import { THEME, CITIES, CATEGORIES } from "@/lib/theme";
 import { Button, OutlineButton, Input, Select, TextArea } from "@/components/FormComponents";
 import { useToast } from "@/components/Toast";
+import { esCuentaMaster } from "@/lib/adminAuth";
 import { normalizarHeic, comprimirImagen } from "@/lib/imagen";
 import {
   PIEZAS,
@@ -38,6 +39,11 @@ export default function EditarProductoPage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const { showToast } = useToast();
+  // Perfil MASTER (ver lib/adminAuth.ts): puede editar CUALQUIER publicación, sea de quien sea
+  // y esté en el estado que esté — el backend (PATCH /api/products/[id]) ya lo permite desde
+  // que existe el rol master; estos dos candados de abajo eran solo de cara al usuario normal
+  // y sin este bypass client-side el master nunca llegaba a ver el formulario.
+  const esMaster = esCuentaMaster(session);
 
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
@@ -292,15 +298,16 @@ export default function EditarProductoPage() {
     );
   }
 
-  // Candados: solo el dueño y solo mientras esté DISPONIBLE
-  if (meta && session?.user?.id && meta.sellerId !== session.user.id) {
+  // Candados: solo el dueño y solo mientras esté DISPONIBLE — salvo el perfil MASTER, que
+  // los salta por diseño (ver esMaster arriba).
+  if (meta && session?.user?.id && meta.sellerId !== session.user.id && !esMaster) {
     return wrap(
       <div style={{ background: THEME.surfaceGradient, borderRadius: 16, padding: 24, boxShadow: THEME.cardShadow, textAlign: "center" }}>
         <p style={{ color: THEME.text, fontWeight: 700, margin: 0 }}>Esta publicación no es tuya, no puedes editarla.</p>
       </div>
     );
   }
-  if (meta && meta.status !== "AVAILABLE") {
+  if (meta && meta.status !== "AVAILABLE" && !esMaster) {
     return wrap(
       <div style={{ background: THEME.surfaceGradient, borderRadius: 16, padding: 24, boxShadow: THEME.cardShadow, textAlign: "center" }}>
         <p style={{ color: THEME.text, fontWeight: 700, margin: "0 0 6px" }}>Esta publicación ya tiene una venta en curso.</p>
@@ -314,6 +321,11 @@ export default function EditarProductoPage() {
   return wrap(
     <div style={{ background: THEME.surfaceGradient, borderRadius: 20, padding: "24px 20px", boxShadow: THEME.cardShadow, scrollMarginTop: 80 }}>
       <h1 style={{ fontSize: 18, fontWeight: 800, color: THEME.text, margin: "0 0 18px", textAlign: "center" }}>Editar publicación</h1>
+      {esMaster && meta && meta.sellerId !== session?.user?.id && (
+        <p style={{ background: "#fff7e6", color: "#92660a", fontSize: 12.5, fontWeight: 700, padding: "8px 12px", borderRadius: 10, margin: "0 0 14px", textAlign: "center" }}>
+          ⚠️ Estás editando la publicación de otro vendedor como perfil master{meta.status !== "AVAILABLE" ? ` (estado actual: ${meta.status})` : ""}.
+        </p>
+      )}
       <div style={{ display: "grid", gap: 12 }}>
         <Input
           placeholder="Título del producto *"

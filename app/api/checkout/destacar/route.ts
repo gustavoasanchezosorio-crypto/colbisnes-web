@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import crypto from "crypto";
 import { DESTACADO_PRECIO, DESTACADO_DIAS } from "@/lib/pricing";
+import { esCuentaMaster } from "@/lib/adminAuth";
+import { registrarAuditoria } from "@/lib/audit";
 import { enModoPrueba, bloqueadoPorModoPruebaHtml, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 
 // GET /api/checkout/destacar?productoId=X — el vendedor paga para destacar su producto
@@ -23,8 +25,46 @@ export async function GET(req: NextRequest) {
     const producto = await prisma.product.findUnique({ where: { id: productoId } });
     if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-    if (producto.sellerId !== session.user.id) {
+    // Perfil MASTER (ver lib/adminAuth.ts): puede destacar cualquier producto, no solo los
+    // propios — control total incluye impulsar cualquier publicación de la web, no solo
+    // eximirse de pagar por las suyas.
+    const esMaster = esCuentaMaster(session);
+    if (producto.sellerId !== session.user.id && !esMaster) {
       return NextResponse.json({ error: "Solo el dueño del producto puede destacarlo" }, { status: 403 });
+    }
+
+    // Perfil MASTER: activa el destacado de inmediato, sin pasar por Wompi ni cobrar nada.
+    // Mismo resultado final que deja procesarWebhookDestacado() en
+    // app/api/webhooks/wompi/route.ts cuando Wompi aprueba el pago (FeaturedListing en
+    // PAGADO + Product.featuredUntil), solo que sin el pago — precio:0 registra fielmente
+    // que no se cobró nada, en vez de simular un cobro que no ocurrió.
+    if (esMaster) {
+      const ahora = new Date();
+      const expiraAt = new Date(ahora.getTime() + DESTACADO_DIAS * 24 * 60 * 60 * 1000);
+      const featuredGratis = await prisma.featuredListing.create({
+        data: {
+          productId: producto.id,
+          userId: session.user.id,
+          precio: 0,
+          dias: DESTACADO_DIAS,
+          estado: "PAGADO",
+          activadoAt: ahora,
+          expiraAt,
+        },
+      });
+      await prisma.product.update({ where: { id: productoId }, data: { featuredUntil: expiraAt } });
+
+      await registrarAuditoria({
+        userId: session.user.id,
+        action: "EXENCION_MASTER_DESTACAR",
+        entity: "Product",
+        entityId: producto.id,
+        metadata: { featuredListingId: featuredGratis.id, dias: DESTACADO_DIAS, vendedorOriginalId: producto.sellerId },
+        request: req,
+      });
+
+      const baseUrl = process.env.NEXT_PUBLIC_URL || "https://colbisnes.com";
+      return NextResponse.redirect(baseUrl + "/product/" + productoId + "?destacado=ok");
     }
 
     // Idempotencia: reutilizar una solicitud pendiente reciente si existe

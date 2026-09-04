@@ -8,10 +8,7 @@ import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { getIP } from "@/lib/rateLimit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { enModoPrueba, bloqueadoPorModoPrueba } from "@/lib/modoPrueba";
-
-function esAdmin(email: string) {
-  return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // Libera manualmente el pago al vendedor (flujo genérico: transferencia bancaria/Nequi/USDT
 // hecha a mano por el admin fuera de la plataforma; txHash aquí es solo una referencia libre,
@@ -37,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !esAdmin(session.user.email || "")) {
+    if (!session?.user?.id || !esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

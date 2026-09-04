@@ -6,15 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { documentosAdjuntos, puedeAprobarseAMano, MOTIVO_SIN_DOCUMENTOS } from "@/lib/kycDocumentos";
-
-function esAdmin(email: string) {
-  return email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !session.user.id || !esAdmin(session.user.email)) {
+    if (!session?.user?.email || !session.user.id || !esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     const { userId, code } = await req.json();

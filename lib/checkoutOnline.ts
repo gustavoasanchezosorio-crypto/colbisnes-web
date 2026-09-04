@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { calcularPrecioOnline, calcularExtrasCheckout, nivelParaDescuento } from "@/lib/pricing";
+import { esCuentaMaster } from "@/lib/adminAuth";
 import { requireKyc } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
@@ -51,7 +52,10 @@ export async function prepararOrdenOnline(
 
   if (!productoId) return { ok: false, code: "not_found", status: 400, message: "productoId requerido" };
 
-  const producto = await prisma.product.findUnique({ where: { id: productoId } });
+  const producto = await prisma.product.findUnique({
+    where: { id: productoId },
+    include: { seller: { select: { role: true, email: true } } },
+  });
   if (!producto) return { ok: false, code: "not_found", status: 404, message: "Producto no encontrado" };
 
   if (producto.status !== "AVAILABLE" && producto.status !== "PAYMENT_PENDING") {
@@ -137,8 +141,16 @@ export async function prepararOrdenOnline(
   const trust = await computeTrustScore(producto.sellerId);
   // El descuento por nivel se gana vendiendo, no verificándose (ver nivelParaDescuento
   // en lib/pricing.ts). Sin negocios cerrados el vendedor paga la comisión completa.
-  const pricing = calcularPrecioOnline(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount));
-  const extras = calcularExtrasCheckout(producto, proteccionExtendida);
+  //
+  // Perfil MASTER (ver lib/adminAuth.ts): esta orden queda exenta de la comisión propia de
+  // Colbisnes si el COMPRADOR o el VENDEDOR es la cuenta master — control total incluye no
+  // pagarle a Colbisnes ni cuando master compra ni cuando master vende. Wompi/GMF se cobran
+  // igual (son costos reales de un tercero, ver comentario en calcularPrecioOnline).
+  const exentoComprador = esCuentaMaster(session);
+  const exentoVendedor  = esCuentaMaster({ user: { role: producto.seller?.role, email: producto.seller?.email } });
+  const exento = exentoComprador || exentoVendedor;
+  const pricing = calcularPrecioOnline(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount), exento);
+  const extras = calcularExtrasCheckout(producto, proteccionExtendida, exentoComprador);
   const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
 
   const orden =

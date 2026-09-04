@@ -84,9 +84,14 @@ export interface USDTPricing {
   testMode: boolean;
 }
 
-export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string | null): PricingBreakdown {
+// exento (perfil MASTER, ver lib/adminAuth.ts): salta ÚNICAMENTE la comisión propia de
+// Colbisnes, cuando el comprador o el vendedor de la orden es la cuenta master. Wompi/GMF
+// siguen cobrándose completos —son costos reales de un tercero, no algo que Colbisnes pueda
+// "regalar"— así que el comprador master sigue pagando el mismo costo de pasarela que
+// pagaría cualquiera; lo único que desaparece es la ganancia de Colbisnes sobre esa venta.
+export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string | null, exento: boolean = false): PricingBreakdown {
   if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gmfSalida: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
-  const comisionColbisnes = Math.round(precioBase * COLBISNES_PCT_ONLINE * multiplicadorPorNivel(nivelVendedor));
+  const comisionColbisnes = exento ? 0 : Math.round(precioBase * COLBISNES_PCT_ONLINE * multiplicadorPorNivel(nivelVendedor));
 
   // El comprador cubre el costo de Wompi + GMF, además de la comisión de Colbisnes.
   // Como el fee de Wompi es un % del propio total, hay que despejar el total (gross-up):
@@ -115,13 +120,21 @@ export function calcularPrecioOnline(precioBase: number, nivelVendedor?: string 
   return { precioBase, comisionColbisnes, totalComprador, costoWompi, gmf, gmfSalida, gananciaColbisnes, recibeVendedor: precioBase - gmfSalida, testMode: false };
 }
 
-export function calcularPrecioContraEntrega(precioBase: number, nivelVendedor?: string | null): PricingBreakdown {
+// exento: igual que en calcularPrecioOnline, pero acá tiene una consecuencia extra. La
+// comisión de contra entrega se cobra por adelantado vía Nequi/Wompi, y Wompi rechaza
+// cualquier transacción por debajo de $1.500 — por eso el resto de la función pone un piso
+// de WOMPI_MIN_TX_COP. Un comisionColbisnes de $0 literal NO puede cobrarse por Nequi, así
+// que cuando exento=true se deja en 0 sin piso a propósito: es la señal que usa
+// app/api/checkout/contra-entrega/route.ts para saltarse el cobro de comisión por completo
+// (en vez de intentar cobrar $0 y fallar) y confirmar la orden directo, como si el admin ya
+// hubiera validado el pago en /api/admin/confirmar-comision-nequi.
+export function calcularPrecioContraEntrega(precioBase: number, nivelVendedor?: string | null, exento: boolean = false): PricingBreakdown {
   if (TEST_MODE) return { precioBase, comisionColbisnes: 0, totalComprador: TEST_AMOUNT, costoWompi: 0, gmf: 0, gmfSalida: 0, gananciaColbisnes: 0, recibeVendedor: precioBase, testMode: true };
   // La comisión de reserva se cobra por Nequi (Wompi), que exige un mínimo de $1.500 por transacción.
   // En productos baratos el 3% queda por debajo y el cobro fallaba con "El monto mínimo es $1,500".
   // Piso al mínimo de Wompi para que el pago por Nequi funcione siempre; el monto mostrado, el
   // guardado (comisionReservaCOP) y el cobrado quedan idénticos, así el webhook verifica sin desfase.
-  const comisionColbisnes = Math.max(WOMPI_MIN_TX_COP, Math.round(precioBase * COLBISNES_PCT_CE * multiplicadorPorNivel(nivelVendedor)));
+  const comisionColbisnes = exento ? 0 : Math.max(WOMPI_MIN_TX_COP, Math.round(precioBase * COLBISNES_PCT_CE * multiplicadorPorNivel(nivelVendedor)));
   const totalComprador    = precioBase + comisionColbisnes;
   // Contra entrega: el comprador paga el producto en efectivo al mensajero, no hay transferencia
   // de Colbisnes al vendedor, así que no aplica GMF de salida — el vendedor recibe el 100%.
@@ -145,10 +158,15 @@ export const USDT_COLCHON_USD_POR_MILLON = 2;
 export const USDT_COLCHON_MAX_USD        = 500;
 export const USDT_COLCHON_TOPE_COP       = (USDT_COLCHON_MAX_USD / USDT_COLCHON_USD_POR_MILLON) * 1_000_000; // 250,000,000
 
-export function calcularPrecioUSDT(precioBaseCOP: number, tasaCOP: number, nivelVendedor?: string | null): USDTPricing {
+// exento: solo apaga comisionUSD (la ganancia de Colbisnes). El colchón NO se toca aunque
+// haya exención: no es ganancia, cubre el riesgo real de variación cambiaria entre que se
+// genera el cobro y se confirma en blockchain, más el costo real de red — cobrárselo de
+// menos al comprador master no le ahorra nada a Colbisnes, simplemente deja el pago corto
+// frente a lo que de verdad cuesta liquidarlo.
+export function calcularPrecioUSDT(precioBaseCOP: number, tasaCOP: number, nivelVendedor?: string | null, exento: boolean = false): USDTPricing {
   if (TEST_MODE) return { precioBaseUSD: 0.01, comisionUSD: 0, totalUSD: 0.01, wallet: process.env.NEXT_PUBLIC_USDT_WALLET!, red: "BNB Chain (BEP20)", testMode: true };
   const colchonVariable = parseFloat((Math.min(precioBaseCOP, USDT_COLCHON_TOPE_COP) / 1_000_000 * USDT_COLCHON_USD_POR_MILLON).toFixed(2));
-  const comisionUSD     = parseFloat((Math.min(precioBaseCOP, USDT_EXTRA_TOPE_COP) / 1_000_000 * USDT_EXTRA_USD_POR_MILLON).toFixed(2));
+  const comisionUSD     = exento ? 0 : parseFloat((Math.min(precioBaseCOP, USDT_EXTRA_TOPE_COP) / 1_000_000 * USDT_EXTRA_USD_POR_MILLON).toFixed(2));
   const precioBaseUSD   = parseFloat((precioBaseCOP / tasaCOP).toFixed(2)) + USDT_COLCHON_FIJO_USD + colchonVariable;
   // Redondeado hacia arriba a múltiplos de 0.10 USDT: más fácil de escribir sin errores
   // de tipeo en la wallet del comprador que un monto con dos decimales cualquiera.
@@ -166,14 +184,21 @@ export interface ExtrasCheckout {
 // Calcula los add-ons opcionales del checkout: protección de compra extendida y margen de envío.
 // El "costo de envío" usado es el que el propio vendedor declaró en producto.precioEnvio
 // (no existe una API pública de cotización en tiempo real de las transportadoras colombianas).
+//
+// exentoComprador (perfil MASTER): solo apaga proteccionCosto, y solo cuando el COMPRADOR es
+// la cuenta master (protección es un add-on que paga quien compra, no depende de quién vende).
+// El margen de envío NO se toca aquí a propósito: no está confirmado si el vendedor se
+// reembolsa contra envioCobrado o contra producto.precioEnvio, así que tocarlo a ciegas podría
+// cambiar sin querer cuánto le llega al vendedor por el envío. Queda pendiente si se confirma.
 export function calcularExtrasCheckout(
   producto: { tipoEntrega: string; precioEnvio?: number | null },
-  proteccionExtendida: boolean
+  proteccionExtendida: boolean,
+  exentoComprador: boolean = false
 ): ExtrasCheckout {
   // En modo pruebas el cobro total siempre es TEST_AMOUNT — no se suman extras
   if (TEST_MODE) return { proteccionCosto: 0, envioCobrado: 0, margenEnvio: 0, extraTotal: 0 };
 
-  const proteccionCosto = proteccionExtendida ? PROTECCION_EXTENDIDA_PRECIO : 0;
+  const proteccionCosto = (proteccionExtendida && !exentoComprador) ? PROTECCION_EXTENDIDA_PRECIO : 0;
 
   let envioCobrado = 0;
   let margenEnvio  = 0;

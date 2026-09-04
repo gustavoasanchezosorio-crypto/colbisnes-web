@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { registrarAuditoria } from "@/lib/audit";
+import { esCuentaMaster } from "@/lib/adminAuth";
 import { normalizarEntrega } from "@/lib/entrega";
 import {
   categoriaPideDatosDeDispositivo,
@@ -41,6 +42,13 @@ export async function GET(
       },
     });
     if (!product) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+
+    // Un producto ELIMINADO (soft-delete, ver DELETE más abajo) no debe ser visible para
+    // nadie que no sea la cuenta master — para todo el mundo más se comporta exactamente
+    // como si no existiera, aunque el registro siga completo en la base.
+    if (product.status === "ELIMINADO" && !esCuentaMaster(session)) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
 
     // El monto, mensaje e identidad de cada oferta son información sensible entre
     // comprador y vendedor (un competidor podía ver cuánto ofrecía cada quien, o
@@ -103,10 +111,16 @@ export async function PATCH(
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-    if (product.sellerId !== session.user.id) {
+    const esMaster = esCuentaMaster(session);
+    if (product.sellerId !== session.user.id && !esMaster) {
       return NextResponse.json({ error: "No puedes editar una publicación que no es tuya" }, { status: 403 });
     }
-    if (product.status !== "AVAILABLE") {
+    // El perfil MASTER puede editar cualquier publicación de cualquiera, en cualquier
+    // estado —incluso con una venta en curso— control total explícito (ver
+    // lib/adminAuth.ts). Para el dueño normal la regla de siempre no cambia: el precio y
+    // la descripción quedan congelados apenas hay una compra pactada, porque tocarlos
+    // después afectaría algo que la otra parte ya aceptó.
+    if (product.status !== "AVAILABLE" && !esMaster) {
       return NextResponse.json(
         { error: "Solo puedes editar la publicación mientras esté disponible. Ya tiene una venta en curso." },
         { status: 409 }
@@ -272,6 +286,10 @@ export async function PATCH(
       // "batería 100 %, ninguna pieza cambiada" y lo editó a "80 %, pantalla" después
       // de que el comprador reclamara, aquí queda con fecha, IP y navegador.
       metadata: {
+        // true cuando quien edita es la cuenta master y el producto es de otro vendedor —
+        // distingue una edición normal del dueño de una intervención de control total.
+        edicionMaster: esMaster && product.sellerId !== session.user.id,
+        vendedorId: product.sellerId,
         antes: {
           title: product.title, priceCOP: product.priceCOP, city: product.city,
           condition: product.condition, category: product.category,
@@ -292,6 +310,53 @@ export async function PATCH(
     return NextResponse.json({ ok: true, producto: actualizado });
   } catch (error: any) {
     console.error("PATCH /api/products/[id] error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// Elimina una publicación. Solo el perfil MASTER (ver lib/adminAuth.ts) — no existe borrado
+// para dueños normales, que solo pueden dejar de publicar retirando la oferta/contactando
+// soporte. Esto NO es un delete real de Prisma: el producto tiene ofertas, mensajes, reseñas,
+// órdenes y destacados que lo referencian por id, y un delete real las rompería (o las
+// arrastraría en cascada, según la FK) — ninguna de las dos cosas es aceptable para historial
+// de ventas o una disputa abierta. "Eliminar" acá pone status:"ELIMINADO": desaparece del
+// catálogo público (ver GET de arriba y el listado en app/api/products/route.ts) pero el
+// registro y todo su historial quedan intactos en la base, y es reversible con
+// /api/admin/corregir-producto si hiciera falta deshacerlo.
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    if (!esCuentaMaster(session)) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    if (product.status === "ELIMINADO") {
+      return NextResponse.json({ ok: true, yaEliminado: true, producto: product });
+    }
+
+    const actualizado = await prisma.product.update({
+      where: { id },
+      data: { status: "ELIMINADO" },
+    });
+
+    await registrarAuditoria({
+      userId: session!.user!.id,
+      action: "ELIMINAR_PRODUCTO_MASTER",
+      entity: "Product",
+      entityId: id,
+      metadata: { statusAnterior: product.status, vendedorId: product.sellerId, title: product.title },
+      request: req,
+    });
+
+    return NextResponse.json({ ok: true, producto: actualizado });
+  } catch (error: any) {
+    console.error("DELETE /api/products/[id] error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

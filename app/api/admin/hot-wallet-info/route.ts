@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { obtenerSaldoUSDT, obtenerSaldoBNB } from "@/lib/hotWallet";
-
-function esAdmin(email?: string | null) {
-  return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 // GET: información pública de la hot wallet (dirección + saldos) para que el admin
 // sepa a dónde depositar fondos para habilitar los desembolsos automáticos.
@@ -13,7 +10,7 @@ function esAdmin(email?: string | null) {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email)) {
+    if (!esAdminSession(session)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

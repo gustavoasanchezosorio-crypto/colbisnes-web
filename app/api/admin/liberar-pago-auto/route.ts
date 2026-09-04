@@ -6,10 +6,7 @@ import { verificarCodigoTOTP } from "@/lib/totp";
 import { enviarUSDT, esDireccionValida } from "@/lib/hotWallet";
 import { obtenerTasaUSDT } from "@/lib/tasaUsdt";
 import { enModoPrueba, bloqueadoPorModoPrueba } from "@/lib/modoPrueba";
-
-function esAdmin(email?: string | null) {
-  return !!email && email.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
-}
+import { esAdminSession } from "@/lib/adminAuth";
 
 const CAP_DIARIO_USD = parseFloat(process.env.HOT_WALLET_DAILY_CAP_USD || "500");
 
@@ -31,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     const session = await getServerSession(authOptions);
-    if (!esAdmin(session?.user?.email) || !session?.user?.id) {
+    if (!esAdminSession(session) || !session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

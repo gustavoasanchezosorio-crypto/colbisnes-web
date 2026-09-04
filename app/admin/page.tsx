@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
 import { LAUNCH_AT_MS } from "@/lib/launch";
 import { COOKIE_MODO_PRUEBA_UI } from "@/lib/modoPrueba";
+import { esCuentaMaster } from "@/lib/adminAuth";
 
 type Seccion = "resumen" | "lista" | "usuarios" | "productos" | "pagos" | "bloqueos" | "auditoria" | "urls";
 
@@ -91,6 +92,18 @@ const GRUPOS_URLS: { grupo: string; enlaces: { nombre: string; url: string; nota
   },
 ];
 
+// Colores del estado en la tabla de productos del panel. Aparte porque ELIMINADO (soft-delete
+// del perfil MASTER, ver DELETE en app/api/products/[id]/route.ts) necesita distinguirse de un
+// producto sano — antes cualquier estado que no fuera SOLD recibía el mismo verde de
+// "disponible", lo cual sería engañoso ahora que ELIMINADO puede aparecer en esta lista.
+const ESTADO_PRODUCTO_COLOR: Record<string, { bg: string; fg: string }> = {
+  AVAILABLE: { bg: "#dcfce7", fg: "#15803d" },
+  PAYMENT_PENDING: { bg: "#fff7e6", fg: "#92660a" },
+  IN_ESCROW: { bg: "#e0e7ff", fg: "#4338ca" },
+  SOLD: { bg: "#fee2e2", fg: "#b91c1c" },
+  ELIMINADO: { bg: "#f1f5f9", fg: "#64748b" },
+};
+
 export default function AdminPanel() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -110,6 +123,19 @@ export default function AdminPanel() {
       setTimeout(() => setCopiado(null), 1500);
     } catch {}
   };
+
+  // Edición master de usuarios (control total, ver memory/project_colbisnes.md). El botón que
+  // dispara esto ni siquiera se pinta si no es master (más abajo), y aunque alguien forzara la
+  // llamada, el servidor (PATCH /api/admin/usuarios/[id]) vuelve a exigir esCuentaMaster + 2FA
+  // por su cuenta — este estado es solo para la UI, no es el candado real.
+  const [editandoUsuario, setEditandoUsuario] = useState<string | null>(null);
+  const [formUsuario, setFormUsuario] = useState<any>(null);
+  const [cargandoFormUsuario, setCargandoFormUsuario] = useState(false);
+  const [guardandoUsuario, setGuardandoUsuario] = useState(false);
+
+  // Eliminar (soft-delete) un producto ajeno como master. Ver DELETE en
+  // app/api/products/[id]/route.ts — nunca es un borrado real.
+  const [eliminandoProducto, setEliminandoProducto] = useState<string | null>(null);
 
   // Lista de espera y estado del candado. Se cargan UNA vez al entrar, aparte del
   // resto: la franja de estado y el contador de la pestaña tienen que estar
@@ -331,6 +357,119 @@ export default function AdminPanel() {
     }
   };
 
+  // Trae el perfil completo de un usuario (la lista de la pestaña "usuarios" solo trae name/
+  // email/city/role/kycStatus — nada de phone/dirección/bloqueo/deuda) y abre su panel de
+  // edición master. Un solo panel abierto a la vez: abrir otro reemplaza el anterior.
+  const abrirEdicionUsuario = async (userId: string) => {
+    setEditandoUsuario(userId);
+    setFormUsuario(null);
+    setCargandoFormUsuario(true);
+    try {
+      const res = await fetch(`/api/admin/usuarios/${userId}`, { credentials: "include" });
+      const data = await res.json();
+      if (res.ok) {
+        setFormUsuario(data.usuario);
+      } else {
+        alert(data.error || "Error al cargar el usuario");
+        setEditandoUsuario(null);
+      }
+    } catch {
+      alert("Error de red");
+      setEditandoUsuario(null);
+    } finally {
+      setCargandoFormUsuario(false);
+    }
+  };
+
+  const cerrarEdicionUsuario = () => {
+    setEditandoUsuario(null);
+    setFormUsuario(null);
+  };
+
+  // Envío crudo del PATCH, sin confirm(): cada acción que lo llama (guardar / desactivar /
+  // reactivar) pide su propia confirmación con un mensaje específico antes de llegar aquí.
+  const enviarPatchUsuario = async (userId: string, cambios: Record<string, unknown>) => {
+    const code = codigos2FA["master-" + userId];
+    if (!code || code.length < 6) {
+      alert("Ingresa el código de 6 dígitos de tu app autenticadora");
+      return;
+    }
+    setGuardandoUsuario(true);
+    try {
+      const res = await fetch(`/api/admin/usuarios/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...cambios, code }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMensaje("Usuario actualizado");
+        setTimeout(() => setMensaje(""), 4000);
+        cerrarEdicionUsuario();
+        cargarDatos("usuarios");
+      } else {
+        alert(data.error || "Error al actualizar el usuario");
+      }
+    } catch {
+      alert("Error de red");
+    } finally {
+      setGuardandoUsuario(false);
+    }
+  };
+
+  const handleGuardarUsuario = (u: any) => {
+    if (!formUsuario) return;
+    if (!confirm(`¿Guardar los cambios del perfil de ${u.name || u.email}?`)) return;
+    const cambios: Record<string, unknown> = {
+      name: formUsuario.name,
+      phone: formUsuario.phone,
+      phoneWhatsapp: formUsuario.phoneWhatsapp,
+      city: formUsuario.city,
+      direccionEnvio: formUsuario.direccionEnvio,
+      blockedUntil: formUsuario.blockedUntil,
+      blockedReason: formUsuario.blockedReason,
+      deudaPendienteCOP: Number(formUsuario.deudaPendienteCOP) || 0,
+      penalizacionScorePts: Number(formUsuario.penalizacionScorePts) || 0,
+    };
+    // El rol de una cuenta MASTER nunca se toca desde este formulario (el selector de rol de
+    // más abajo directamente no se pinta cuando formUsuario.role === "MASTER"). Esto evita tanto
+    // una autodegradación accidental como el 400 que devolvería el servidor si se reenviara
+    // "MASTER" tal cual — esa vía solo admite USER/ADMIN, a propósito (ver la ruta).
+    if (formUsuario.role !== "MASTER") cambios.role = formUsuario.role;
+    enviarPatchUsuario(u.id, cambios);
+  };
+
+  const handleDesactivarUsuario = (u: any) => {
+    if (!confirm(`¿Desactivar la cuenta de ${u.name || u.email}? Queda bloqueada para comprar y vender; su historial (ventas, reseñas, mensajes) no se toca, y es reversible con "Reactivar".`)) return;
+    enviarPatchUsuario(u.id, { accion: "desactivar" });
+  };
+
+  const handleReactivarUsuario = (u: any) => {
+    if (!confirm(`¿Reactivar la cuenta de ${u.name || u.email}?`)) return;
+    enviarPatchUsuario(u.id, { accion: "reactivar" });
+  };
+
+  const handleEliminarProducto = async (productId: string, titulo: string) => {
+    if (!confirm(`¿Eliminar "${titulo}"? Se oculta del catálogo y de favoritos, pero el registro y su historial quedan intactos en la base — es reversible (no es un borrado real).`)) return;
+    setEliminandoProducto(productId);
+    try {
+      const res = await fetch(`/api/products/${productId}`, { method: "DELETE", credentials: "include" });
+      const data = await res.json();
+      if (res.ok) {
+        setMensaje("Producto eliminado (oculto del catálogo)");
+        setTimeout(() => setMensaje(""), 4000);
+        cargarDatos("productos");
+      } else {
+        alert(data.error || "Error al eliminar el producto");
+      }
+    } catch {
+      alert("Error de red");
+    } finally {
+      setEliminandoProducto(null);
+    }
+  };
+
   const usuariosFiltrados = datos?.usuarios?.filter((u: any) =>
     u.name?.toLowerCase().includes(busqueda.toLowerCase()) ||
     u.email?.toLowerCase().includes(busqueda.toLowerCase())
@@ -341,6 +480,12 @@ export default function AdminPanel() {
     blue: THEME.primary, green: "#10B981", gold: THEME.gold,
     text: THEME.text, muted: THEME.muted,
   };
+
+  // Deriva del rol que trae la sesión, no del respaldo por ADMIN_EMAIL (esa variable es
+  // server-only y en el navegador siempre llega vacía — ver lib/adminAuth.ts). Es SOLO para
+  // mostrar u ocultar botones; el candado real vive en el servidor, en cada ruta que este
+  // panel llama (PATCH/DELETE de productos, PATCH de /api/admin/usuarios/[id]).
+  const esMaster = esCuentaMaster(session);
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, color: T.text, fontFamily: "sans-serif" }}>
@@ -520,8 +665,16 @@ export default function AdminPanel() {
                     </thead>
                     <tbody>
                       {usuariosFiltrados.map((u: any) => (
-                        <tr key={u.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                          <td style={{ padding: "12px 16px", fontWeight: 600 }}>{u.name || "Sin nombre"}</td>
+                        <Fragment key={u.id}>
+                        <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <td style={{ padding: "12px 16px", fontWeight: 600 }}>
+                            {u.name || "Sin nombre"}
+                            {u.role && u.role !== "USER" && (
+                              <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, padding: "1px 6px", borderRadius: 8, background: u.role === "MASTER" ? "#111827" : "#e0e7ff", color: u.role === "MASTER" ? "#fbbf24" : "#4338ca" }}>
+                                {u.role}
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: "12px 16px", color: T.muted, fontSize: 13 }}>{u.email}</td>
                           <td style={{ padding: "12px 16px", color: T.muted }}>{u.city || "—"}</td>
                           <td style={{ padding: "12px 16px" }}>
@@ -532,7 +685,7 @@ export default function AdminPanel() {
                           <td style={{ padding: "12px 16px", textAlign: "center" as const }}>{u._count?.products || 0}</td>
                           <td style={{ padding: "12px 16px", color: T.muted, fontSize: 13 }}>{new Date(u.createdAt).toLocaleDateString("es-CO")}</td>
                           <td style={{ padding: "12px 16px" }}>
-                            <div style={{ display: "flex", gap: 6 }}>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                               {u.kycStatus !== "approved" && (
                                 <>
                                   <input
@@ -551,9 +704,119 @@ export default function AdminPanel() {
                                 style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontSize: 12, textDecoration: "none", display: "inline-block" }}>
                                 Ver perfil
                               </a>
+                              {esMaster && (
+                                <button onClick={() => editandoUsuario === u.id ? cerrarEdicionUsuario() : abrirEdicionUsuario(u.id)}
+                                  style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${T.blue}`, background: editandoUsuario === u.id ? T.blue : "transparent", color: editandoUsuario === u.id ? "white" : T.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                  {editandoUsuario === u.id ? "✕ Cerrar" : "✏️ Master"}
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
+                        {esMaster && editandoUsuario === u.id && (
+                          <tr>
+                            <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${T.border}` }}>
+                              <div style={{ background: THEME.surfaceAlt, padding: 18 }}>
+                                {cargandoFormUsuario || !formUsuario ? (
+                                  <p style={{ color: T.muted, margin: 0 }}>Cargando datos del usuario…</p>
+                                ) : (
+                                  <>
+                                    <p style={{ margin: "0 0 12px", fontSize: 12.5, fontWeight: 700, color: T.blue }}>
+                                      ✏️ Edición master — {formUsuario.email}
+                                      {formUsuario.role === "MASTER" && (
+                                        <span style={{ marginLeft: 8, color: "#b91c1c", fontWeight: 700 }}>(cuenta MASTER: el rol no se toca desde aquí)</span>
+                                      )}
+                                    </p>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
+                                      {([
+                                        ["name", "Nombre"],
+                                        ["phone", "Teléfono"],
+                                        ["phoneWhatsapp", "WhatsApp"],
+                                        ["city", "Ciudad"],
+                                        ["direccionEnvio", "Dirección de envío"],
+                                      ] as const).map(([campo, label]) => (
+                                        <div key={campo}>
+                                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 3 }}>{label}</label>
+                                          <input type="text" value={formUsuario[campo] || ""}
+                                            onChange={e => setFormUsuario((prev: any) => ({ ...prev, [campo]: e.target.value }))}
+                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13, boxSizing: "border-box" as const }} />
+                                        </div>
+                                      ))}
+                                      {formUsuario.role !== "MASTER" && (
+                                        <div>
+                                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 3 }}>Rol</label>
+                                          <select value={formUsuario.role || "USER"}
+                                            onChange={e => setFormUsuario((prev: any) => ({ ...prev, role: e.target.value }))}
+                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13, boxSizing: "border-box" as const }}>
+                                            <option value="USER">USER</option>
+                                            <option value="ADMIN">ADMIN</option>
+                                          </select>
+                                        </div>
+                                      )}
+                                      <div>
+                                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 3 }}>Deuda pendiente (COP)</label>
+                                        <input type="number" min={0} value={formUsuario.deudaPendienteCOP ?? 0}
+                                          onChange={e => setFormUsuario((prev: any) => ({ ...prev, deudaPendienteCOP: e.target.value }))}
+                                          style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13, boxSizing: "border-box" as const }} />
+                                      </div>
+                                      <div>
+                                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 3 }}>Penalización (pts)</label>
+                                        <input type="number" min={0} value={formUsuario.penalizacionScorePts ?? 0}
+                                          onChange={e => setFormUsuario((prev: any) => ({ ...prev, penalizacionScorePts: e.target.value }))}
+                                          style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13, boxSizing: "border-box" as const }} />
+                                      </div>
+                                      <div>
+                                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 3 }}>Bloqueado hasta</label>
+                                        <input type="datetime-local"
+                                          value={formUsuario.blockedUntil ? new Date(formUsuario.blockedUntil).toISOString().slice(0, 16) : ""}
+                                          onChange={e => setFormUsuario((prev: any) => ({ ...prev, blockedUntil: e.target.value ? new Date(e.target.value).toISOString() : null }))}
+                                          style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13, boxSizing: "border-box" as const }} />
+                                      </div>
+                                      <div>
+                                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 3 }}>Motivo del bloqueo</label>
+                                        <input type="text" value={formUsuario.blockedReason || ""}
+                                          onChange={e => setFormUsuario((prev: any) => ({ ...prev, blockedReason: e.target.value }))}
+                                          style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13, boxSizing: "border-box" as const }} />
+                                      </div>
+                                    </div>
+                                    <p style={{ margin: "0 0 10px", fontSize: 11, color: T.muted, lineHeight: 1.4 }}>
+                                      No editable aquí, a propósito: email, contraseña, 2FA, Nequi/Bre-B/USDT de cobro, y verificación KYC
+                                      (esos tienen sus propios flujos). Ver el comentario en app/api/admin/usuarios/[id]/route.ts.
+                                    </p>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
+                                      <input type="text" inputMode="numeric" maxLength={6} placeholder="Código 2FA"
+                                        value={codigos2FA["master-" + u.id] || ""}
+                                        onChange={e => setCodigos2FA(prev => ({ ...prev, ["master-" + u.id]: e.target.value.replace(/\D/g, "") }))}
+                                        style={{ width: 110, padding: "8px 10px", borderRadius: 8, border: "1px solid " + T.border, fontSize: 13 }} />
+                                      <button onClick={() => handleGuardarUsuario(u)} disabled={guardandoUsuario}
+                                        style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: T.blue, color: "white", fontSize: 12.5, fontWeight: 700, cursor: "pointer", opacity: guardandoUsuario ? 0.6 : 1 }}>
+                                        {guardandoUsuario ? "Guardando…" : "💾 Guardar cambios"}
+                                      </button>
+                                      {formUsuario.id !== session?.user?.id && (
+                                        formUsuario.blockedUntil && new Date(formUsuario.blockedUntil) > new Date() ? (
+                                          <button onClick={() => handleReactivarUsuario(formUsuario)} disabled={guardandoUsuario}
+                                            style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.green, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                                            Reactivar cuenta
+                                          </button>
+                                        ) : (
+                                          <button onClick={() => handleDesactivarUsuario(formUsuario)} disabled={guardandoUsuario}
+                                            style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #fca5a5", background: "transparent", color: "#b91c1c", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                                            Desactivar cuenta
+                                          </button>
+                                        )
+                                      )}
+                                      <button onClick={cerrarEdicionUsuario}
+                                        style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -568,7 +831,7 @@ export default function AdminPanel() {
                   <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
                     <thead>
                       <tr>
-                        {["Título", "Vendedor", "Estado", "Precio", "Fecha"].map(h => (
+                        {["Título", "Vendedor", "Estado", "Precio", "Fecha", "Acciones"].map(h => (
                           <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, color: T.muted, borderBottom: `1px solid ${T.border}` }}>{h}</th>
                         ))}
                       </tr>
@@ -578,9 +841,27 @@ export default function AdminPanel() {
                         <tr key={p.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                           <td style={{ padding: "10px 14px" }}>{p.title}</td>
                           <td style={{ padding: "10px 14px", color: T.muted, fontSize: 13 }}>{p.seller?.name || p.seller?.email || "—"}</td>
-                          <td style={{ padding: "10px 14px" }}><span style={{ padding: "2px 8px", borderRadius: 12, background: p.status === "SOLD" ? "#fee2e2" : "#dcfce7", color: p.status === "SOLD" ? "#b91c1c" : "#15803d", fontSize: 11, fontWeight: 700 }}>{p.status}</span></td>
+                          <td style={{ padding: "10px 14px" }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 12, background: ESTADO_PRODUCTO_COLOR[p.status]?.bg || "#f1f5f9", color: ESTADO_PRODUCTO_COLOR[p.status]?.fg || "#64748b", fontSize: 11, fontWeight: 700 }}>{p.status}</span>
+                          </td>
                           <td style={{ padding: "10px 14px", color: T.green }}>${p.priceCOP?.toLocaleString("es-CO")}</td>
                           <td style={{ padding: "10px 14px", color: T.muted, fontSize: 13 }}>{new Date(p.createdAt).toLocaleDateString("es-CO")}</td>
+                          <td style={{ padding: "10px 14px" }}>
+                            {esMaster ? (
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                                <a href={`/product/${p.id}/editar`} target="_blank"
+                                  style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid ${T.blue}`, color: T.blue, fontSize: 12, fontWeight: 700, textDecoration: "none", display: "inline-block" }}>
+                                  ✏️ Editar
+                                </a>
+                                {p.status !== "ELIMINADO" && (
+                                  <button onClick={() => handleEliminarProducto(p.id, p.title)} disabled={eliminandoProducto === p.id}
+                                    style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #fca5a5", background: "transparent", color: "#b91c1c", fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: eliminandoProducto === p.id ? 0.6 : 1 }}>
+                                    {eliminandoProducto === p.id ? "…" : "🗑️ Eliminar"}
+                                  </button>
+                                )}
+                              </div>
+                            ) : "—"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
