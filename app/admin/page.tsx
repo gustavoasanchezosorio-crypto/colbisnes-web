@@ -365,7 +365,10 @@ export default function AdminPanel() {
     setFormUsuario(null);
     setCargandoFormUsuario(true);
     try {
-      const res = await fetch(`/api/admin/usuarios/${userId}`, { credentials: "include" });
+      // cache: "no-store" además del Cache-Control que ya manda el propio endpoint (defensa en
+      // profundidad): este es justo el fetch que dispara "abrir panel de edición", el caso exacto
+      // que describe el comentario de arriba del GET en app/api/admin/usuarios/[id]/route.ts.
+      const res = await fetch(`/api/admin/usuarios/${userId}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (res.ok) {
         setFormUsuario(data.usuario);

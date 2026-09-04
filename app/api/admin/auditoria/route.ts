@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que en app/api/admin/usuarios/[id]/route.ts: sin esto el navegador puede servir un
+// registro de auditoría viejo, ocultando la actividad más reciente.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -72,7 +76,7 @@ export async function GET() {
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50);
 
-    return NextResponse.json({ logs });
+    return NextResponse.json({ logs }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -6,6 +6,13 @@ import { generarSecretoTOTP, generarOtpauthUri, verificarCodigoTOTP } from "@/li
 import { registrarAuditoria } from "@/lib/audit";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que en app/api/admin/usuarios/[id]/route.ts: sin esto el navegador puede quedarse con
+// una respuesta vieja (ej. mostrar "2FA no activado" después de ya haberlo activado en otra
+// pestaña, o reutilizar un secreto pendiente que ya fue reemplazado).
+export const dynamic = "force-dynamic";
+
+const NO_STORE = { headers: { "Cache-Control": "no-store, max-age=0" } };
+
 // GET: devuelve el estado actual del 2FA. Si aún no está activado, genera (o reutiliza) un secreto
 // pendiente para que el admin lo ingrese manualmente en Microsoft Authenticator.
 export async function GET() {
@@ -19,7 +26,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
     if (user.totpEnabled) {
-      return NextResponse.json({ enabled: true });
+      return NextResponse.json({ enabled: true }, NO_STORE);
     }
 
     let secret = user.totpSecret;
@@ -29,7 +36,7 @@ export async function GET() {
     }
 
     const otpauthUri = generarOtpauthUri(secret, user.email);
-    return NextResponse.json({ enabled: false, secret, otpauthUri });
+    return NextResponse.json({ enabled: false, secret, otpauthUri }, NO_STORE);
   } catch (error) {
     console.error("Error en 2fa/setup GET:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

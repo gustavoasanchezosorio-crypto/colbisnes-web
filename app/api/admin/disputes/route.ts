@@ -6,6 +6,10 @@ import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que en app/api/admin/usuarios/[id]/route.ts: sin esto el navegador puede servir un
+// listado viejo de disputas — el admin podría resolver sobre datos que ya cambiaron.
+export const dynamic = "force-dynamic";
+
 // GET: lista disputas para el panel admin, filtrable por estado
 export async function GET(req: NextRequest) {
   try {
@@ -40,7 +44,7 @@ export async function GET(req: NextRequest) {
       return { ...d, order, product };
     });
 
-    return NextResponse.json({ disputes: enriquecidas });
+    return NextResponse.json({ disputes: enriquecidas }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
     console.error("Error listando disputas admin:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

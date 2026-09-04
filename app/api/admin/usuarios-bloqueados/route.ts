@@ -6,6 +6,9 @@ import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que el resto de rutas admin — ver el comentario en app/api/admin/usuarios/[id]/route.ts.
+export const dynamic = "force-dynamic";
+
 // Lista usuarios bloqueados (por tiempo) o con deuda pendiente por envío tardío en contraentrega.
 export async function GET() {
   try {
@@ -28,7 +31,7 @@ export async function GET() {
       orderBy: { blockedUntil: "desc" },
     });
 
-    return NextResponse.json({ usuarios });
+    return NextResponse.json({ usuarios }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (err: any) {
     console.error("GET /api/admin/usuarios-bloqueados error:", err.message);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

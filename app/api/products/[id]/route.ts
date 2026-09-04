@@ -79,14 +79,22 @@ export async function GET(
     // IMEIs del catálogo para clonarlos, queda un rastro con nombre propio.
     const { imei, imei2, ...productoSinImei } = product;
 
-    return NextResponse.json({
-      ...productoSinImei,
-      offers,
-      imeiParcial: enmascararImei(imei),
-      imei2Parcial: enmascararImei(imei2),
-      tieneImei: !!imei,
-      tieneImei2: !!imei2,
-    });
+    return NextResponse.json(
+      {
+        ...productoSinImei,
+        offers,
+        imeiParcial: enmascararImei(imei),
+        imei2Parcial: enmascararImei(imei2),
+        tieneImei: !!imei,
+        tieneImei2: !!imei2,
+      },
+      // `revalidate = 0` arriba solo controla el cache INTERNO de Next.js — no evita que el
+      // navegador (u otro intermediario) guarde esta respuesta si no viaja Cache-Control. Sin
+      // este header, alguien podía editar/eliminar un producto desde master y seguir viendo la
+      // versión vieja en /product/[id] hasta forzar un refresh. La página de un producto
+      // (precio, estado, ofertas) es dato mutable por definición: nunca debe quedar en caché.
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
   } catch (error: any) {
     console.error("GET /api/products/[id] error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

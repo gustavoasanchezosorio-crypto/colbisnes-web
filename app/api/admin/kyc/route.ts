@@ -8,6 +8,11 @@ import { verificarCodigoTOTP } from "@/lib/totp";
 import { documentosAdjuntos } from "@/lib/kycDocumentos";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que en app/api/admin/usuarios/[id]/route.ts: sin esto el navegador puede servir una
+// cola de KYC vieja — el admin podría aprobar/rechazar sobre una solicitud que ya se resolvió
+// por otra vía (u otra pestaña).
+export const dynamic = "force-dynamic";
+
 // GET: listar solicitudes KYC pendientes (y aprobadas/rechazadas recientes)
 export async function GET(req: NextRequest) {
   try {
@@ -45,7 +50,7 @@ export async function GET(req: NextRequest) {
       docs: documentosAdjuntos(u.kycDocumentId),
     }));
 
-    return NextResponse.json({ usuarios: result });
+    return NextResponse.json({ usuarios: result }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

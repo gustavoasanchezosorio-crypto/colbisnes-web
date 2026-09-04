@@ -19,6 +19,9 @@ import { prisma } from "@/lib/prisma";
 import { comingSoonActivo } from "@/lib/launch";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que el resto de rutas admin — ver el comentario en app/api/admin/usuarios/[id]/route.ts.
+export const dynamic = "force-dynamic";
+
 // Tope de filas. La lista de espera hoy son 11 direcciones, pero si la campaña
 // funciona esto puede crecer rápido y el panel no debe intentar pintar miles de
 // filas de golpe. El total va aparte, contado en la base de datos, así que el
@@ -76,19 +79,22 @@ export async function GET() {
     const conCuenta = lista.filter((l) => l.tieneCuenta).length;
     const publicaron = lista.filter((l) => l.productos > 0).length;
 
-    return NextResponse.json({
-      total,
-      ultimas24h,
-      conCuenta,
-      publicaron,
-      lista,
-      // Estado del candado. Lo tiene que resolver el servidor porque depende de
-      // la variable de entorno COMING_SOON, que el navegador no puede leer.
-      //
-      // OJO: aquí NO va, ni puede ir nunca, LAUNCH_BYPASS_CODE. El panel enseña
-      // si el candado está puesto, no la llave.
-      candadoActivo: comingSoonActivo(Date.now(), process.env.COMING_SOON),
-    });
+    return NextResponse.json(
+      {
+        total,
+        ultimas24h,
+        conCuenta,
+        publicaron,
+        lista,
+        // Estado del candado. Lo tiene que resolver el servidor porque depende de
+        // la variable de entorno COMING_SOON, que el navegador no puede leer.
+        //
+        // OJO: aquí NO va, ni puede ir nunca, LAUNCH_BYPASS_CODE. El panel enseña
+        // si el candado está puesto, no la llave.
+        candadoActivo: comingSoonActivo(Date.now(), process.env.COMING_SOON),
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
   } catch (error) {
     // Igual que en el resto del panel: el detalle a los logs, nunca al cliente.
     console.error("GET /api/admin/waitlist:", error);

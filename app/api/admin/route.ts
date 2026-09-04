@@ -6,6 +6,13 @@ import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Ruta genérica ?seccion=X, hoy sin llamador en el frontend (las pestañas usan las rutas
+// dedicadas /api/admin/resumen, /productos, /usuarios, /auditoria), pero sigue viva y
+// respondiendo si alguien la llama directo. Mismo motivo que el resto de rutas admin — ver el
+// comentario en app/api/admin/usuarios/[id]/route.ts.
+export const dynamic = "force-dynamic";
+const NO_STORE = { headers: { "Cache-Control": "no-store, max-age=0" } };
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,11 +41,14 @@ export async function GET(req: NextRequest) {
         prisma.product.count({ where: { createdAt: { gte: hace7dias } } }),
       ]);
 
-      return NextResponse.json({
-        totalUsuarios, totalProductos, productosVendidos, productosActivos,
-        totalOfertas, ofertasAceptadas, totalReviews, usuariosNuevos, productosNuevos,
-        tasaConversion: totalProductos > 0 ? ((productosVendidos / totalProductos) * 100).toFixed(1) : "0",
-      });
+      return NextResponse.json(
+        {
+          totalUsuarios, totalProductos, productosVendidos, productosActivos,
+          totalOfertas, ofertasAceptadas, totalReviews, usuariosNuevos, productosNuevos,
+          tasaConversion: totalProductos > 0 ? ((productosVendidos / totalProductos) * 100).toFixed(1) : "0",
+        },
+        NO_STORE
+      );
     }
 
     if (seccion === "usuarios") {
@@ -50,7 +60,7 @@ export async function GET(req: NextRequest) {
           _count: { select: { products: true, receivedReviews: true } },
         },
       });
-      return NextResponse.json({ usuarios });
+      return NextResponse.json({ usuarios }, NO_STORE);
     }
 
     if (seccion === "productos") {
@@ -62,7 +72,7 @@ export async function GET(req: NextRequest) {
           images: { take: 1 },
         },
       });
-      return NextResponse.json({ productos });
+      return NextResponse.json({ productos }, NO_STORE);
     }
 
     if (seccion === "auditoria") {
@@ -71,7 +81,7 @@ export async function GET(req: NextRequest) {
         take: 100,
         include: { user: { select: { name: true, email: true } } },
       });
-      return NextResponse.json({ logs });
+      return NextResponse.json({ logs }, NO_STORE);
     }
 
     return NextResponse.json({ error: "Sección no válida" }, { status: 400 });

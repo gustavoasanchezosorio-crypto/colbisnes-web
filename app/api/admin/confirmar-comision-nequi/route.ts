@@ -6,6 +6,10 @@ import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Igual que en app/api/admin/usuarios/[id]/route.ts: sin esto el navegador puede servir un
+// listado viejo de "esperando comisión" — el admin podría confirmar sobre datos que ya cambiaron.
+export const dynamic = "force-dynamic";
+
 // El admin verifica manualmente (mirando su cuenta Nequi) que el comprador sí transfirió
 // la comisión de reserva, y confirma aquí. Solo entonces se habilita el envío al vendedor.
 export async function POST(req: NextRequest) {
@@ -111,23 +115,26 @@ export async function GET() {
     });
     const productosPorId = Object.fromEntries(productos.map(p => [p.id, p]));
 
-    return NextResponse.json({
-      ordenes: ordenes.map(o => ({
-        id: o.id,
-        productoTitulo: productosPorId[o.productId]?.title || "—",
-        // Estado real del producto en este momento: debería ser siempre PAYMENT_PENDING
-        // mientras la orden está ESPERANDO_COMISION. Si aparece otra cosa (AVAILABLE porque
-        // expiró, IN_ESCROW/SOLD por otra vía), es una señal de que algo quedó inconsistente
-        // y esta orden no debería confirmarse sin revisar manualmente primero.
-        productoEstado: productosPorId[o.productId]?.status || null,
-        vendedorNombre: productosPorId[o.productId]?.seller?.name || productosPorId[o.productId]?.seller?.email,
-        buyerEmail: o.buyerEmail,
-        comisionReservaCOP: o.comisionReservaCOP,
-        comisionReservaComprobanteUrl: o.comisionReservaComprobanteUrl,
-        comisionReservaReferencia: o.comisionReservaReferencia,
-        createdAt: o.createdAt,
-      })),
-    });
+    return NextResponse.json(
+      {
+        ordenes: ordenes.map(o => ({
+          id: o.id,
+          productoTitulo: productosPorId[o.productId]?.title || "—",
+          // Estado real del producto en este momento: debería ser siempre PAYMENT_PENDING
+          // mientras la orden está ESPERANDO_COMISION. Si aparece otra cosa (AVAILABLE porque
+          // expiró, IN_ESCROW/SOLD por otra vía), es una señal de que algo quedó inconsistente
+          // y esta orden no debería confirmarse sin revisar manualmente primero.
+          productoEstado: productosPorId[o.productId]?.status || null,
+          vendedorNombre: productosPorId[o.productId]?.seller?.name || productosPorId[o.productId]?.seller?.email,
+          buyerEmail: o.buyerEmail,
+          comisionReservaCOP: o.comisionReservaCOP,
+          comisionReservaComprobanteUrl: o.comisionReservaComprobanteUrl,
+          comisionReservaReferencia: o.comisionReservaReferencia,
+          createdAt: o.createdAt,
+        })),
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
   } catch (err: any) {
     console.error("GET /api/admin/confirmar-comision-nequi error:", err.message);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

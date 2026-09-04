@@ -180,7 +180,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
 
   const cargarProducto = async () => {
     try {
-      const res = await fetch(`/api/products/${productId}`);
+      const res = await fetch(`/api/products/${productId}`, { cache: "no-store" });
       if (!res.ok) { router.push("/"); return; }
       setProduct(await res.json());
     } catch { router.push("/"); }

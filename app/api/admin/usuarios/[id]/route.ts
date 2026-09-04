@@ -34,6 +34,13 @@ import { verificarCodigoTOTP } from "@/lib/totp";
  * /api/admin/confirmar-comision-nequi y /api/admin/usuarios-bloqueados.
  */
 
+// Sin esto, el navegador puede servir una respuesta vieja para el mismo usuario (ej: el
+// master abre el panel de edición, cierra, y al reabrirlo poco después ve datos de antes
+// de su propio último guardado) — el mismo problema de caché que ya se resolvió en
+// GET /api/products/[id]. Este endpoint solo lo llama el panel master, pero el dato debe
+// ser siempre el actual de la base, nunca uno guardado por el navegador.
+export const dynamic = "force-dynamic";
+
 const ROLES_PERMITIDOS = ["USER", "ADMIN"] as const;
 
 const SELECT_PERFIL = {
@@ -55,7 +62,7 @@ export async function GET(
     const { id } = await params;
     const usuario = await prisma.user.findUnique({ where: { id }, select: SELECT_PERFIL });
     if (!usuario) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
-    return NextResponse.json({ usuario });
+    return NextResponse.json({ usuario }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (err: any) {
     console.error("GET /api/admin/usuarios/[id] error:", err.message);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

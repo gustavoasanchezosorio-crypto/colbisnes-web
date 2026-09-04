@@ -4,6 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { esAdminSession } from "@/lib/adminAuth";
 
+// Sin esto el navegador puede servir un listado viejo de pagos pendientes: una orden que ya se
+// liberó por otra vía (ej. liberar-pago-auto) seguiría apareciendo aquí como pendiente. El intento
+// de liberarla de nuevo lo rechaza igual /api/admin/liberar-pago (ya relee pagoLiberado en el
+// momento y devuelve 409 si ya se liberó — no hay doble pago posible), pero el admin no debería
+// perder tiempo mirando una cola que no es la real. Igual que el resto de rutas admin — ver el
+// comentario en app/api/admin/usuarios/[id]/route.ts.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -89,7 +97,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ pagos: resultado, enCustodia });
+    return NextResponse.json({ pagos: resultado, enCustodia }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
