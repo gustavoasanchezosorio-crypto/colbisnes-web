@@ -137,6 +137,13 @@ export default function AdminPanel() {
   // app/api/products/[id]/route.ts — nunca es un borrado real.
   const [eliminandoProducto, setEliminandoProducto] = useState<string | null>(null);
 
+  // Filtro "ver publicaciones de este usuario" en la pestaña Productos, disparado desde el botón
+  // 📦 de la pestaña Usuarios (antes de esto no había forma de ver las publicaciones reales de un
+  // vendedor puntual desde admin — solo sus datos de registro). Vive en su propio estado, no en
+  // `busqueda`, porque sobrevive a cambiar de pestaña y volver, y porque filtra por id de vendedor
+  // en el servidor (GET /api/admin/productos?sellerId=), no por texto en el navegador.
+  const [filtroVendedor, setFiltroVendedor] = useState<{ id: string; nombre: string } | null>(null);
+
   // Lista de espera y estado del candado. Se cargan UNA vez al entrar, aparte del
   // resto: la franja de estado y el contador de la pestaña tienen que estar
   // visibles siempre, no solo cuando estás mirando esa sección.
@@ -148,8 +155,11 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth/login"); return; }
-    if (status === "authenticated") { cargarDatos(seccion); }
-  }, [status, seccion]);
+    // filtroVendedor entra en las dependencias para que, al pulsar "📦 Ver publicaciones" (que
+    // cambia seccion Y filtroVendedor casi a la vez), la recarga final quede con el filtro
+    // aplicado — y para que "✕ Quitar filtro" (que solo cambia filtroVendedor) también recargue.
+    if (status === "authenticated") { cargarDatos(seccion, { sellerId: filtroVendedor?.id }); }
+  }, [status, seccion, filtroVendedor]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -175,7 +185,7 @@ export default function AdminPanel() {
     }
   };
 
-  const cargarDatos = async (seccionActual: Seccion) => {
+  const cargarDatos = async (seccionActual: Seccion, opts?: { sellerId?: string }) => {
     setCargando(true);
     setErrorAdmin("");
     try {
@@ -199,7 +209,10 @@ export default function AdminPanel() {
         return;
       }
       const endpoint = seccionActual === "pagos" ? "pagos-pendientes" : seccionActual;
-      const res = await fetch(`/api/admin/${endpoint}`);
+      // El filtro por vendedor solo aplica (y solo tiene sentido) en la pestaña Productos —
+      // ver GET /api/admin/productos y el botón "📦 Ver publicaciones" de la pestaña Usuarios.
+      const query = seccionActual === "productos" && opts?.sellerId ? `?sellerId=${encodeURIComponent(opts.sellerId)}` : "";
+      const res = await fetch(`/api/admin/${endpoint}${query}`);
       const data = await res.json();
       if (!res.ok) {
         setErrorAdmin(`Error ${res.status}: ${data.error || "No autorizado"} — verifica que hayas iniciado sesión con la cuenta de administrador.`);
@@ -453,6 +466,14 @@ export default function AdminPanel() {
     enviarPatchUsuario(u.id, { accion: "reactivar" });
   };
 
+  // Salta de la pestaña Usuarios a Productos, filtrada a un solo vendedor. Antes de esto no
+  // había forma de ver las publicaciones reales de alguien desde admin — la pestaña Productos
+  // no se podía filtrar por vendedor y el conteo de la tabla de Usuarios era solo un número.
+  const verPublicacionesDeUsuario = (u: any) => {
+    setFiltroVendedor({ id: u.id, nombre: u.name || u.email });
+    setSeccion("productos");
+  };
+
   const handleEliminarProducto = async (productId: string, titulo: string) => {
     if (!confirm(`¿Eliminar "${titulo}"? Se oculta del catálogo y de favoritos, pero el registro y su historial quedan intactos en la base — es reversible (no es un borrado real).`)) return;
     setEliminandoProducto(productId);
@@ -462,7 +483,7 @@ export default function AdminPanel() {
       if (res.ok) {
         setMensaje("Producto eliminado (oculto del catálogo)");
         setTimeout(() => setMensaje(""), 4000);
-        cargarDatos("productos");
+        cargarDatos("productos", { sellerId: filtroVendedor?.id });
       } else {
         alert(data.error || "Error al eliminar el producto");
       }
@@ -707,6 +728,10 @@ export default function AdminPanel() {
                                 style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, fontSize: 12, textDecoration: "none", display: "inline-block" }}>
                                 Ver perfil
                               </a>
+                              <button onClick={() => verPublicacionesDeUsuario(u)}
+                                style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.text, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                📦 Publicaciones{typeof u._count?.products === "number" ? ` (${u._count.products})` : ""}
+                              </button>
                               {esMaster && (
                                 <button onClick={() => editandoUsuario === u.id ? cerrarEdicionUsuario() : abrirEdicionUsuario(u.id)}
                                   style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${T.blue}`, background: editandoUsuario === u.id ? T.blue : "transparent", color: editandoUsuario === u.id ? "white" : T.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -830,6 +855,17 @@ export default function AdminPanel() {
             {seccion === "productos" && (
               <div style={{ background: T.card, borderRadius: 16, padding: 24, border: `1px solid ${T.border}` }}>
                 <h2 style={{ margin: "0 0 16px", color: T.gold, textAlign: "center" }}>Productos</h2>
+                {filtroVendedor && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#eef3fb", border: `1px solid ${T.blue}`, flexWrap: "wrap" as const }}>
+                    <span style={{ fontSize: 13, color: T.text }}>
+                      📦 Mostrando publicaciones de <strong>{filtroVendedor.nombre}</strong>
+                    </span>
+                    <button onClick={() => setFiltroVendedor(null)}
+                      style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.blue}`, background: "transparent", color: T.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      ✕ Quitar filtro
+                    </button>
+                  </div>
+                )}
                 {datos?.productos?.length ? (
                   <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
                     <thead>
@@ -869,7 +905,7 @@ export default function AdminPanel() {
                       ))}
                     </tbody>
                   </table>
-                ) : <p style={{ color: T.muted }}>No hay productos</p>}
+                ) : <p style={{ color: T.muted, textAlign: "center" as const }}>{filtroVendedor ? "Este usuario no tiene publicaciones" : "No hay productos"}</p>}
               </div>
             )}
 
