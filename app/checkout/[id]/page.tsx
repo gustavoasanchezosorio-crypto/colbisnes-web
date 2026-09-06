@@ -114,6 +114,14 @@ export default function CheckoutPage() {
     ? producto.offers?.find((o: any) => o.id === producto.acceptedOfferId)
     : null;
   const precio = ofertaAceptada ? ofertaAceptada.amountCOP : producto.priceCOP;
+  // "Contra entrega" en el fondo son dos operaciones distintas que comparten pantalla: si el
+  // producto se despacha (ENVIO/AMBOS), una transportadora real cobra el efectivo al comprador
+  // y se lo liquida al vendedor por fuera de Colbisnes — de ahí que el resto del checkout hable
+  // de "mensajero". Pero un EN_PERSONA (típicamente Vehiculos/Inmuebles, donde nadie despacha un
+  // carro por mensajería) no tiene transportadora de por medio: comprador y vendedor se
+  // encuentran y el pago del saldo es directo entre ellos. Antes de esto el texto decía
+  // "Total al mensajero" siempre, sin importar cuál de los dos casos era.
+  const entregaEnPersona = producto.tipoEntrega === "EN_PERSONA";
   const online = calcularPrecioOnline(precio, nivelConDescuento);
   const contra = calcularPrecioContraEntrega(precio, nivelConDescuento);
   const usdt   = calcularPrecioUSDT(precio, tasa, nivelConDescuento);
@@ -314,9 +322,21 @@ export default function CheckoutPage() {
     ...(proteccionUSD > 0 ? [{ label: "Protección extendida", val: proteccionUSD + " USDT" }] : []),
   ];
 
+  // Copy de "contra entrega" según haya o no transportadora real de por medio (ver el
+  // comentario junto a entregaEnPersona más arriba). El paso a paso de ENVIO/AMBOS queda
+  // carácter por carácter igual que antes; EN_PERSONA es la única rama nueva.
+  const contraSub        = entregaEnPersona ? "Efectivo al recibir en persona + reserva por Nequi" : "Efectivo al recibir + reserva por Nequi";
+  const contraTotalLabel = entregaEnPersona ? "Total a pagar al vendedor" : "Total al mensajero";
+  const contraStepsEnvio = ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para despachar el producto.", "Mensajería entrega el producto — lo revisas al recibir.", "Confirmas la entrega en la app para liberar el pago al vendedor.", "Si el vendedor no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."];
+  const contraStepsPersona = ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para coordinar contigo dónde y cuándo se encuentran.", "Se ven en persona: revisas el producto ahí mismo antes de pagarle el resto directamente al vendedor.", "Confirmas la entrega en la app para dejar la compra completada.", "Si el vendedor no coordina la entrega a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."];
+  const contraSteps      = entregaEnPersona ? contraStepsPersona : contraStepsEnvio;
+  const contraNota       = entregaEnPersona
+    ? "La comisión de reserva se paga aparte por Nequi, antes de coordinar la entrega."
+    : "La comisión de reserva se paga aparte por Nequi, antes del envío.";
+
   const metodos = [
     { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
-    { id: "contraentrega" as MetodoPago, icon: "📦", titulo: "Contra entrega", sub: "Efectivo al recibir + reserva por Nequi", badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: "Total al mensajero", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: ["Pagas por Nequi la comisión de reserva de Colbisnes (garantiza la compra — no es el pago del producto).", "Un administrador confirma tu pago manualmente; te avisamos apenas quede listo.", "El vendedor tiene 24 horas hábiles (8am-8pm) desde que se crea tu orden para despachar el producto.", "Mensajería entrega el producto — lo revisas al recibir.", "Confirmas la entrega en la app para liberar el pago al vendedor.", "Si el vendedor no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión."], nota: ["La comisión de reserva se paga aparte por Nequi, antes del envío.", notaDescuento].filter(Boolean).join(" — ") },
+    { id: "contraentrega" as MetodoPago, icon: "📦", titulo: "Contra entrega", sub: contraSub, badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: contraTotalLabel, totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: contraSteps, nota: [contraNota, notaDescuento].filter(Boolean).join(" — ") },
     { id: "usdt" as MetodoPago, icon: "🪙", titulo: "Pagar con USDT", sub: "BNB Chain BEP20 · Sin bancos", badge: fmtPct(pctUsdt), total: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", desglose: [{ label: "Precio producto", val: fmt(precio) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctUsdt)})`, val: TEST_MODE ? "0.01 USDT" : usdt.comisionUSD + " USDT" }, ...(TEST_MODE ? [] : desgloseExtrasUSD)], totalLabel: "Total USDT", totalVal: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", nota: "Tasa: 1 USD = " + fmt(tasa) + " COP" },
   ];
 
@@ -442,6 +462,17 @@ export default function CheckoutPage() {
                       ))}
                     </div>
                   )}
+                  {/* Botón exclusivo de Nequi (pago online): notificación push directa a la
+                      app del comprador. Antes vivía al final de toda la página, después del
+                      botón "Continuar" — ahí se leía como un 4to método de pago suelto. Va
+                      pegado a esta tarjeta porque es una forma de pagar CON "Pago online
+                      seguro", no una alternativa aparte. */}
+                  {m.id === "online" && !perfilIncompleto && !TEST_MODE && !modoPrueba && perfilFaltantes !== null && (
+                    <button onClick={(e) => { e.stopPropagation(); conDireccion("nequi"); }}
+                      style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      💳 Pagar con Nequi (sin salir de la app)
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -538,13 +569,6 @@ export default function CheckoutPage() {
           </button>
         )}
 
-        {/* Botón exclusivo de Nequi (pago online): notificación push directa a la app del comprador. */}
-        {metodo === "online" && !perfilIncompleto && !TEST_MODE && !modoPrueba && perfilFaltantes !== null && (
-          <button onClick={() => conDireccion("nequi")}
-            style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            💳 Pagar con Nequi (sin salir de la app)
-          </button>
-        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
           <span style={{ fontSize: 11, color: THEME.muted }}>🔒 SSL cifrado · Pagos protegidos por Colbisnes</span>
         </div>
