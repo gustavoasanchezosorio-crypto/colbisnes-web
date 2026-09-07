@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rateLimit";
@@ -13,6 +16,7 @@ import {
   matchIntent,
   esSaludo,
   urlWhatsappSoporte,
+  construirSystemPromptIA,
 } from "@/lib/bluFaq";
 
 const QUICK_REPLIES_DEFAULT = BLU_QUICK_REPLIES_DEFAULT;
@@ -21,6 +25,85 @@ const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
 function json(data: any, status = 200) {
   return NextResponse.json(data, { status });
+}
+
+const anthropic = new Anthropic();
+
+const RespuestaIASchema = z.object({
+  respuesta: z.string(),
+  escalar: z.boolean(),
+});
+
+/** Cuantos mensajes recientes de la conversacion (USUARIO+BLU juntos) se le pasan a la IA
+ *  de respaldo como contexto. Numero impar a proposito (ver historialParaIA): la
+ *  conversacion en BD siempre alterna USUARIO/BLU empezando en USUARIO y en el momento en
+ *  que se llama a esto el ultimo registro es el USUARIO recien guardado, asi que recortar
+ *  una cantidad impar de los mas recientes garantiza que el primer turno del recorte
+ *  tambien caiga en USUARIO (lo que exige la API) sin necesidad de logica adicional. */
+const HISTORIAL_IA_MAX = 11;
+
+/**
+ * Convierte el historial de BluMessage al formato de mensajes de Anthropic.
+ *
+ * Dos cuidados que no son obvios:
+ *  - Fusiona turnos consecutivos del mismo rol: puede pasar (ver la rama de "visitante sin
+ *    sesion" mas abajo) que a una escalada le sigan DOS mensajes de BLU seguidos, y la API
+ *    exige que los roles alternen estrictamente.
+ *  - Si aun asi el primer turno del recorte no queda en "user" (conversacion mas larga que
+ *    HISTORIAL_IA_MAX en un punto raro), se descarta ese sobrante en vez de fallar la
+ *    llamada completa.
+ */
+function historialParaIA(historial: { autor: string; texto: string }[]): { role: "user" | "assistant"; content: string }[] {
+  const fusionado: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of historial) {
+    const role: "user" | "assistant" = m.autor === "USUARIO" ? "user" : "assistant";
+    const anterior = fusionado[fusionado.length - 1];
+    if (anterior && anterior.role === role) {
+      anterior.content += "\n\n" + m.texto;
+    } else {
+      fusionado.push({ role, content: m.texto });
+    }
+  }
+  while (fusionado.length && fusionado[0].role !== "user") fusionado.shift();
+  return fusionado;
+}
+
+/**
+ * Respaldo con IA real para cuando el mensaje del cliente no calzo con ninguna de las
+ * preguntas fijas de BLU_INTENTS. Antes esto caia directo en BLU_FALLBACK ("no te
+ * entendi"); ahora Chucho intenta entender el mensaje de verdad — parafraseos, errores de
+ * tipeo, preguntas de seguimiento — pero SIEMPRE anclado a construirSystemPromptIA() (ver
+ * lib/bluFaq.ts), nunca a lo que el modelo "sepa" de memoria.
+ *
+ * Devuelve null si la llamada falla por cualquier motivo (sin API key, error de red,
+ * limite de la cuenta de Anthropic, salida vacia): quien llama cae de vuelta a
+ * BLU_FALLBACK, asi que el chat nunca se rompe por esto ni deja al cliente sin respuesta.
+ *
+ * Modelo: Haiku (no el Opus que usa analizar-foto/route.ts) porque aqui no hace falta
+ * vision ni razonamiento largo, solo responder texto corto y grounded rapido y barato —
+ * este camino se puede activar mucho mas seguido que el analisis de fotos al publicar.
+ */
+async function responderConIA(historial: { autor: string; texto: string }[]): Promise<{ respuesta: string; escalar: boolean } | null> {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const mensajes = historialParaIA(historial);
+    if (!mensajes.length) return null;
+
+    const message = await anthropic.beta.messages.parse({
+      model: "claude-haiku-4-5",
+      max_tokens: 1024,
+      output_config: { format: zodOutputFormat(RespuestaIASchema) },
+      system: [{ type: "text", text: construirSystemPromptIA(), cache_control: { type: "ephemeral" } }],
+      messages: mensajes,
+    });
+
+    const resultado = message.parsed_output;
+    if (!resultado || !resultado.respuesta.trim()) return null;
+    return { respuesta: resultado.respuesta.trim(), escalar: !!resultado.escalar };
+  } catch (e) {
+    console.error("Error en el respaldo de IA de Chucho Bot:", e);
+    return null;
+  }
 }
 
 /**
@@ -166,7 +249,30 @@ export async function POST(request: Request) {
       return json({ conversationId: conversation.id, respuesta: BLU_SALUDO_INICIAL, quickReplies: QUICK_REPLIES_DEFAULT, escalado: false });
     }
 
-    const intent = matchIntent(mensaje);
+    // El "intent" puede venir de dos lugares: las reglas de siempre (gratis, instantaneo),
+    // o -si ninguna calzo- del respaldo de IA (ver responderConIA). Se le da esta forma
+    // liviana en vez del tipo BluIntent completo (que exige "keywords") justo para poder
+    // sintetizar uno desde la respuesta de la IA sin inventarle palabras clave que no tiene.
+    let intent: { id: string; respuesta: string; escalar?: boolean } | null = matchIntent(mensaje);
+
+    if (!intent) {
+      // Antes de rendirse con el "no te entendi" de siempre, se intenta con IA real —
+      // pero solo si no se ha abusado del camino pago (ver rate limit aparte, mas
+      // estricto que el general de arriba porque este SI cuesta dinero por mensaje).
+      const rlIA = rateLimit(`blu-chat-ia:${ip}`, { limit: 12, windowSeconds: 600 });
+      if (rlIA.allowed) {
+        const historialRaw = await prisma.bluMessage.findMany({
+          where: { conversationId: conversation.id },
+          orderBy: { createdAt: "desc" },
+          take: HISTORIAL_IA_MAX,
+          select: { autor: true, texto: true },
+        });
+        const resultadoIA = await responderConIA(historialRaw.reverse());
+        if (resultadoIA) {
+          intent = { id: "ia_respaldo", respuesta: resultadoIA.respuesta, escalar: resultadoIA.escalar };
+        }
+      }
+    }
 
     if (!intent) {
       await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: BLU_FALLBACK } });

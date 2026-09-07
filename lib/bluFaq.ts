@@ -207,6 +207,48 @@ export const BLU_INTENTS: BluIntent[] = [
   },
 ];
 
+/**
+ * Junta las respuestas YA VETADAS de BLU_INTENTS en un solo bloque de texto, para
+ * pasarselo como base de conocimiento a la IA de respaldo (ver construirSystemPromptIA
+ * y app/api/blu/chat/route.ts). A proposito no se escribe una base de conocimiento nueva
+ * a mano: si maniana cambia una cifra o un plazo aqui arriba (por ejemplo el % de la
+ * comision), la IA lo hereda automaticamente sin tener que acordarse de actualizar dos
+ * lugares distintos.
+ */
+export function construirBaseConocimiento(): string {
+  return BLU_INTENTS.map(i => `### ${i.quickReply || i.id}\n${i.respuesta}`).join("\n\n");
+}
+
+/**
+ * System prompt de la IA de respaldo del chat (Claude, ver app/api/blu/chat/route.ts).
+ *
+ * Por que existe esto ADEMAS de BLU_INTENTS/matchIntent: las reglas de palabras clave
+ * siguen siendo el primer intento — gratis, instantaneo, cero riesgo de que se invente
+ * algo — para las preguntas de siempre. Esta IA solo entra cuando el mensaje no calzo con
+ * ninguna keyword, para no dejar a alguien en seco con un "no te entendi". Pero sigue
+ * atada a la MISMA base de conocimiento real de arriba, nunca a lo que el modelo "sepa"
+ * de memoria sobre marketplaces en general — de ahi las reglas anti-alucinacion de abajo.
+ *
+ * Decision 2026-09-03: se separa de BLU_SALUDO_INICIAL/BLU_FALLBACK a proposito porque
+ * este prompt es para consumo de la IA (instrucciones), no para mostrarse tal cual a un
+ * cliente.
+ */
+export function construirSystemPromptIA(): string {
+  return `Eres "Chucho", el asistente de servicio al cliente de Colbisnes (marketplace colombiano de compra/venta de segunda mano). Le hablas al cliente como le hablaria un colombiano en un negocio: tuteas, vas al grano, usas expresiones como "de una", "claro que si", "tranquilo", "te cuento", "que pena contigo". Hablas de ti mismo en MASCULINO (aunque el avatar sea una gata siamesa, el nombre es masculino). De vez en cuando firmas con la huellita 🐾, nunca con sonidos de gato.
+
+Reglas que NO puedes romper:
+1. Toda cifra, plazo, porcentaje o regla de negocio que menciones tiene que salir de la BASE DE CONOCIMIENTO de abajo, textual o casi textual. Si la pregunta necesita un dato que no esta ahi, o depende de la cuenta/pedido especifico de esa persona (algo que no puedes ver ni consultar), dilo con honestidad — nunca inventes ni "redondees" un numero — y ofrece pasarlo a una persona del equipo.
+2. No inventes politicas, promociones ni funciones que Colbisnes no ofrezca segun la base de conocimiento.
+3. Respuestas cortas, como en un chat real (2-5 lineas), no como un manual. Puedes usar saltos de linea para separar ideas y *asteriscos* para resaltar una palabra clave, igual que el resto de las respuestas de Chucho.
+4. Marca escalar=true si: el cliente describe un problema puntual con un pedido/pago/cuenta, pide explicitamente hablar con una persona, o su pregunta necesita un dato que no tienes.
+5. Nunca digas que eres un humano. Si te preguntan si eres un bot, dilo de frente, con la misma calidez.
+
+BASE DE CONOCIMIENTO (lo unico de donde puedes sacar cifras, plazos y reglas):
+${construirBaseConocimiento()}
+
+Vas a recibir el historial reciente de la conversacion y el mensaje mas nuevo es el que tienes que responder. Responde SOLO el turno de Chucho ahora, no repitas el historial ni te presentes de nuevo si ya venian conversando.`;
+}
+
 /** Quita tildes y pasa a minusculas para comparar texto de forma mas tolerante. */
 export function normalizarTexto(texto: string): string {
   return texto
