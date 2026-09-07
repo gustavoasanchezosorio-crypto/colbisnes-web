@@ -137,7 +137,7 @@ export default function FacturaEnVivo({
               {productoTitulo}
             </div>
             <div style={{ fontSize: "0.72rem", color: THEME.muted, marginTop: 1 }}>
-              {esContra ? "Contra entrega · reserva por Nequi" : "Compra protegida"}
+              {esContra ? (entregaEnPersona ? "Venta en persona · reserva por Nequi" : "Contra entrega · reserva por Nequi") : "Compra protegida"}
             </div>
           </div>
           <span style={{ background: est.bg, color: est.col, padding: "3px 10px", borderRadius: 20, fontSize: "0.68rem", fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0 }}>

@@ -766,13 +766,23 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               <p style={{fontWeight:"700",color:THEME.gold,margin:"0 0 0.4rem"}}>💳 Falta pagar la comisión de reserva</p>
               <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:"0 0 0.7rem"}}>
                 {ordenActiva?.comisionReservaComprobanteUrl
-                  ? "Ya enviaste tu comprobante. Un administrador lo confirmará en breve para que el vendedor pueda despachar."
-                  : "Para garantizar tu compra contra entrega, paga por Nequi la comisión de Colbisnes antes de que el vendedor envíe el producto."}
+                  ? (product.tipoEntrega === "EN_PERSONA"
+                      ? "Ya enviaste tu comprobante. Un administrador lo confirmará en breve para que puedas coordinar la entrega con el vendedor."
+                      : "Ya enviaste tu comprobante. Un administrador lo confirmará en breve para que el vendedor pueda despachar.")
+                  : (product.tipoEntrega === "EN_PERSONA"
+                      ? "Para garantizar tu compra en persona, paga por Nequi la comisión de Colbisnes antes de coordinar el encuentro con el vendedor."
+                      : "Para garantizar tu compra contra entrega, paga por Nequi la comisión de Colbisnes antes de que el vendedor envíe el producto.")}
               </p>
               {ordenActiva?.fechaLimiteEnvio && (
-                <p style={{fontSize:"0.76rem",color:THEME.textSoft,margin:"0 0 0.7rem",fontWeight:600,lineHeight:1.4}}>
-                  ⏰ El vendedor tiene hasta el {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} para despachar (24h hábiles desde que se creó tu orden). Ese plazo corre aunque tu pago esté pendiente — si no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión.
-                </p>
+                product.tipoEntrega === "EN_PERSONA" ? (
+                  <p style={{fontSize:"0.76rem",color:THEME.textSoft,margin:"0 0 0.7rem",fontWeight:600,lineHeight:1.4}}>
+                    ⏰ El vendedor tiene hasta el {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} para coordinar contigo la entrega (24h hábiles desde que se creó tu orden). Ese plazo corre aunque tu pago esté pendiente de confirmar.
+                  </p>
+                ) : (
+                  <p style={{fontSize:"0.76rem",color:THEME.textSoft,margin:"0 0 0.7rem",fontWeight:600,lineHeight:1.4}}>
+                    ⏰ El vendedor tiene hasta el {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} para despachar (24h hábiles desde que se creó tu orden). Ese plazo corre aunque tu pago esté pendiente — si no despacha a tiempo, se bloquea su cuenta y gestionamos la devolución de tu comisión.
+                  </p>
+                )
               )}
               {!ordenActiva?.comisionReservaComprobanteUrl && (
                 <button onClick={()=>setMostrarPagarComision(true)}
@@ -785,11 +795,21 @@ export default function ProductPageClient({ productId }: { productId: string }) 
           {product.status==="PAYMENT_PENDING" && ordenActiva?.estado==="ESPERANDO_COMISION" && esVendedor && (
             <div style={{background:"#f4f7fb",border:`1.5px solid ${THEME.border}`,borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:THEME.text,margin:"0 0 0.25rem"}}>⏳ Esperando pago de la comisión de reserva</p>
-              <p style={{fontSize:"0.82rem",color:THEME.muted,margin:0}}>El comprador aún no ha pagado la comisión de reserva a Colbisnes. Aún no puedes registrar el envío — te avisaremos apenas se confirme.</p>
+              <p style={{fontSize:"0.82rem",color:THEME.muted,margin:0}}>
+                {product.tipoEntrega === "EN_PERSONA"
+                  ? "El comprador aún no ha pagado la comisión de reserva a Colbisnes. Aún no puedes coordinar la entrega — te avisaremos apenas se confirme."
+                  : "El comprador aún no ha pagado la comisión de reserva a Colbisnes. Aún no puedes registrar el envío — te avisaremos apenas se confirme."}
+              </p>
               {ordenActiva?.fechaLimiteEnvio && (
-                <p style={{fontSize:"0.78rem",color:"#b45309",margin:"0.5rem 0 0",fontWeight:700,lineHeight:1.4}}>
-                  ⏰ Ojo: tu plazo de 24h hábiles para despachar ya está corriendo (vence: {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")}), aunque todavía no puedas registrar el envío. Si se vence sin despacho, tu cuenta queda bloqueada y baja tu puntaje.
-                </p>
+                product.tipoEntrega === "EN_PERSONA" ? (
+                  <p style={{fontSize:"0.78rem",color:"#b45309",margin:"0.5rem 0 0",fontWeight:700,lineHeight:1.4}}>
+                    ⏰ Ojo: tu plazo de 24h hábiles para coordinar la entrega ya está corriendo (vence: {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")}), aunque todavía no puedas coordinarla. Escríbele al comprador apenas se confirme tu pago para no hacerlo esperar.
+                  </p>
+                ) : (
+                  <p style={{fontSize:"0.78rem",color:"#b45309",margin:"0.5rem 0 0",fontWeight:700,lineHeight:1.4}}>
+                    ⏰ Ojo: tu plazo de 24h hábiles para despachar ya está corriendo (vence: {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")}), aunque todavía no puedas registrar el envío. Si se vence sin despacho, tu cuenta queda bloqueada y baja tu puntaje.
+                  </p>
+                )
               )}
             </div>
           )}
@@ -797,14 +817,24 @@ export default function ProductPageClient({ productId }: { productId: string }) 
             <div style={{background:"rgba(34,197,94,0.10)",border:"1.5px solid rgba(34,197,94,0.35)",borderRadius:"12px",padding:"0.75rem 1rem"}}>
               <p style={{fontWeight:"700",color:"#15803d",margin:"0 0 0.25rem"}}>💰 Pago recibido en custodia</p>
               <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:0}}>
-                {ordenActiva?.numeroGuia
-                  ? `Guía registrada: ${ordenActiva.numeroGuia}. Esperando confirmación del comprador.`
-                  : "Registra el envío para que el comprador pueda confirmar la entrega."}
+                {product.tipoEntrega === "EN_PERSONA"
+                  ? "Coordina con el comprador dónde y cuándo se encuentran. Cuando reciba el producto, él mismo confirma la entrega desde aquí — no necesitas registrar nada."
+                  : (ordenActiva?.numeroGuia
+                      ? `Guía registrada: ${ordenActiva.numeroGuia}. Esperando confirmación del comprador.`
+                      : "Registra el envío para que el comprador pueda confirmar la entrega.")}
               </p>
-              {!ordenActiva?.numeroGuia && ordenActiva?.fechaLimiteEnvio && (
-                <p style={{fontSize:"0.78rem",color:"#b45309",margin:"0.4rem 0 0",fontWeight:700}}>
-                  ⏰ Plazo de despacho: {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} (24h hábiles 8am-8pm). Si no envías a tiempo, tu cuenta se bloquea y baja tu puntaje.
-                </p>
+              {product.tipoEntrega === "EN_PERSONA" ? (
+                ordenActiva?.fechaLimiteEnvio && (
+                  <p style={{fontSize:"0.78rem",color:"#b45309",margin:"0.4rem 0 0",fontWeight:700}}>
+                    ⏰ Se espera que coordines la entrega antes del {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} (24h hábiles desde la reserva).
+                  </p>
+                )
+              ) : (
+                !ordenActiva?.numeroGuia && ordenActiva?.fechaLimiteEnvio && (
+                  <p style={{fontSize:"0.78rem",color:"#b45309",margin:"0.4rem 0 0",fontWeight:700}}>
+                    ⏰ Plazo de despacho: {new Date(ordenActiva.fechaLimiteEnvio).toLocaleString("es-CO")} (24h hábiles 8am-8pm). Si no envías a tiempo, tu cuenta se bloquea y baja tu puntaje.
+                  </p>
+                )
               )}
             </div>
           )}
@@ -813,7 +843,9 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               <p style={{fontWeight:"700",color:"#15803d",margin:"0 0 0.4rem"}}>✅ ¿Recibiste tu producto?</p>
               <p style={{fontSize:"0.82rem",color:THEME.textSoft,margin:"0 0 0.7rem"}}>
                 {ordenActiva?.metodoPago === "CONTRA_ENTREGA"
-                  ? "Recuerda: pagas el producto en efectivo directo al mensajero al recibirlo. Confirma aquí una vez lo tengas en tus manos."
+                  ? (product.tipoEntrega === "EN_PERSONA"
+                      ? "Recuerda: le pagas el producto en efectivo directo al vendedor cuando se vean en persona. Confirma aquí una vez lo tengas en tus manos."
+                      : "Recuerda: pagas el producto en efectivo directo al mensajero al recibirlo. Confirma aquí una vez lo tengas en tus manos.")
                   : "Confirma la entrega para liberar el pago al vendedor."}
               </p>
               {modoPrueba ? (
@@ -1273,6 +1305,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
           comisionCOP={ordenActiva.comisionReservaCOP ? Math.max(WOMPI_MIN_TX_COP, ordenActiva.comisionReservaCOP) : 0}
           nequiNumero={ordenActiva.nequiNumero || null}
           fechaLimiteEnvio={ordenActiva.fechaLimiteEnvio || null}
+          tipoEntrega={product.tipoEntrega}
           onClose={() => setMostrarPagarComision(false)}
           onSuccess={() => { cargarOrden(); }}
         />

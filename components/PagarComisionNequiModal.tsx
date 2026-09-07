@@ -9,11 +9,17 @@ interface Props {
   comisionCOP: number;
   nequiNumero: string | null;
   fechaLimiteEnvio?: string | null;
+  tipoEntrega?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNumero, fechaLimiteEnvio, onClose, onSuccess }: Props) {
+export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNumero, fechaLimiteEnvio, tipoEntrega, onClose, onSuccess }: Props) {
+  // Mismo mecanismo de reserva que "contra entrega" con transportadora — comparten función
+  // de precio y flujo Nequi — pero aquí no hay mensajero ni "despacho": comprador y vendedor
+  // se coordinan y se ven en persona. Ver el mismo criterio en FacturaEnVivo.tsx y
+  // app/checkout/[id]/page.tsx (contraStepsPersona).
+  const entregaEnPersona = tipoEntrega === "EN_PERSONA";
   const [referencia, setReferencia] = useState("");
   const [comprobante, setComprobante] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -87,7 +93,7 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
           <>
             <div style={{ background: THEME.surfaceAlt, borderRadius: 14, padding: "14px 16px", marginBottom: 16, border: `1px solid ${THEME.border}` }}>
               <p style={{ margin: "0 0 8px", fontSize: 13, color: THEME.textSoft, lineHeight: 1.5 }}>
-                Para reservar el producto y garantizar tu compra contra entrega, primero debes transferir por <strong>Nequi</strong> la comisión de Colbisnes:
+                Para reservar el producto y garantizar tu compra {entregaEnPersona ? "en persona" : "contra entrega"}, primero debes transferir por <strong>Nequi</strong> la comisión de Colbisnes:
               </p>
               <p style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 900, color: THEME.primary, textAlign: "center" }}>{fmt(comisionCOP)}</p>
               {nequiNumero ? (
@@ -118,12 +124,17 @@ export default function PagarComisionNequiModal({ orderId, comisionCOP, nequiNum
             <div style={{ background: "rgba(199,154,46,0.08)", border: "1px solid rgba(199,154,46,0.30)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
               <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 800, color: THEME.gold, textTransform: "uppercase", letterSpacing: "0.04em" }}>📋 Condiciones de esta compra</p>
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-                <li style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 1.45 }}>Esta comisión es una <strong>garantía de reserva</strong> — no es el pago del producto. El producto lo pagas en efectivo, directamente al mensajero, al recibirlo.</li>
+                <li style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 1.45 }}>Esta comisión es una <strong>garantía de reserva</strong> — no es el pago del producto. {entregaEnPersona ? "El producto lo pagas en efectivo, directo al vendedor, cuando se vean en persona." : "El producto lo pagas en efectivo, directamente al mensajero, al recibirlo."}</li>
                 <li style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 1.45 }}>Un administrador de Colbisnes confirma manualmente cada pago revisando tu comprobante — no es instantáneo, puede tardar un poco.</li>
                 <li style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 1.45 }}>
-                  El vendedor tiene <strong>24 horas hábiles (8am–8pm)</strong> desde que se creó tu orden para despachar el producto{fechaLimiteEnvio ? <> — <strong>vence el {new Date(fechaLimiteEnvio).toLocaleString("es-CO")}</strong></> : null}. Ese plazo corre aunque tu pago esté pendiente de confirmar, así que conviene pagar y subir tu comprobante cuanto antes.
+                  El vendedor tiene <strong>24 horas hábiles (8am–8pm)</strong> desde que se creó tu orden para {entregaEnPersona ? "coordinar contigo dónde y cuándo se encuentran" : "despachar el producto"}{fechaLimiteEnvio ? <> — <strong>vence el {new Date(fechaLimiteEnvio).toLocaleString("es-CO")}</strong></> : null}. Ese plazo corre aunque tu pago esté pendiente de confirmar, así que conviene pagar y subir tu comprobante cuanto antes.
                 </li>
-                <li style={{ fontSize: 12, color: "#b45309", lineHeight: 1.45, fontWeight: 600 }}>Si el vendedor no despacha a tiempo: se le bloquea la cuenta para comprar y vender, baja su puntaje de confianza a la mitad, y Colbisnes gestionará contigo la devolución de tu comisión.</li>
+                {!entregaEnPersona && (
+                  <li style={{ fontSize: 12, color: "#b45309", lineHeight: 1.45, fontWeight: 600 }}>Si el vendedor no despacha a tiempo: se le bloquea la cuenta para comprar y vender, baja su puntaje de confianza a la mitad, y Colbisnes gestionará contigo la devolución de tu comisión.</li>
+                )}
+                {entregaEnPersona && (
+                  <li style={{ fontSize: 12, color: "#b45309", lineHeight: 1.45, fontWeight: 600 }}>Si el vendedor no coordina la entrega a tiempo, se le bloquea la cuenta para comprar y vender, baja su puntaje de confianza a la mitad, y Colbisnes gestionará contigo la devolución de tu comisión.</li>
+                )}
               </ul>
             </div>
 

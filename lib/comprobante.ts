@@ -114,7 +114,7 @@ export async function generarComprobantePDF(d: ComprobanteInput): Promise<Buffer
   meta("N° DE ORDEN", d.ordenId);
   meta("FECHA", fmtFecha(d.fecha));
   meta("ESTADO", LABEL_ESTADO[d.estado] || d.estado);
-  meta("MÉTODO DE PAGO", esContra ? "Contra entrega (efectivo + reserva Nequi)" : d.metodoPago);
+  meta("MÉTODO DE PAGO", esContra ? (entregaEnPersona ? "Venta en persona (efectivo + reserva Nequi)" : "Contra entrega (efectivo + reserva Nequi)") : d.metodoPago);
 
   y -= 4;
   page.drawLine({ start: { x: M, y }, end: { x: R, y }, thickness: 1, color: LINE });
