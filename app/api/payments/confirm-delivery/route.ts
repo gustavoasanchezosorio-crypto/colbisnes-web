@@ -158,6 +158,7 @@ export async function POST(request: Request) {
           totalPagado: orden.totalPagado,
           numeroGuia: orden.numeroGuia,
           transportadora: orden.transportadora,
+          tipoEntrega: product.tipoEntrega,
         });
       } catch (pdfErr) {
         console.error('Error generando comprobante PDF:', pdfErr);

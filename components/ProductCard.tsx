@@ -120,6 +120,19 @@ export const ProductCard = React.memo(function ProductCard({
   const enTramiteParaOtros = product.status === 'PAYMENT_PENDING' && timer && timer !== "00:00" && !isOwner && !esCompradorAutorizado;
   const enCustodiaParaOtros = product.status === 'IN_ESCROW' && !isOwner && !esCompradorAutorizado;
 
+  // EN_PERSONA no tiene transportadora ni número de guía — "EN_CAMINO" solo lo fija
+  // /api/orders/marcar-enviado, que exige justo esos dos datos (ver MarcarEnviadoModal). Sin
+  // esta bandera, una orden EN_PERSONA nunca podía avanzar de estado: el vendedor no tenía
+  // forma legítima de "despachar" y el comprador nunca veía "Confirmar entrega" — el pago se
+  // quedaba en custodia para siempre. El backend (confirm-delivery/route.ts) ya acepta
+  // confirmar desde PAGADO/ESPERANDO_ENVIO, no solo EN_CAMINO; esto solo destraba la UI.
+  const entregaEnPersona = product.tipoEntrega === 'EN_PERSONA';
+  const listoParaConfirmarEntrega = !!ordenActiva && (
+    ordenActiva.estado === 'EN_CAMINO' ||
+    ordenActiva.estado === 'ENTREGADO' ||
+    (entregaEnPersona && (ordenActiva.estado === 'PAGADO' || ordenActiva.estado === 'ESPERANDO_ENVIO'))
+  );
+
   const [ahora, setAhora] = useState(() => Date.now());
   useEffect(() => {
     if (!enCustodiaParaOtros || !ordenActiva?.fechaLimiteEnvio) return;
@@ -575,18 +588,21 @@ export const ProductCard = React.memo(function ProductCard({
                   <p style={{ color: THEME.textSoft, fontSize: 11.5, margin: 0, lineHeight: 1.5 }}>Colbisnes retiene el pago hasta que confirmes que recibiste tu producto en buen estado. Solo entonces se libera al vendedor.</p>
                 </div>
               )}
-              {product.status === 'IN_ESCROW' && isOwner && (!ordenActiva || ordenActiva.estado === 'PAGADO' || ordenActiva.estado === 'ESPERANDO_ENVIO') && (
+              {/* EN_PERSONA no pasa por aquí: no hay transportadora ni guía que registrar — el
+                  vendedor solo coordina por chat y espera a que el comprador confirme (el
+                  banner "🔒 Dinero retenido" de arriba ya cubre esa espera). */}
+              {product.status === 'IN_ESCROW' && isOwner && !entregaEnPersona && (!ordenActiva || ordenActiva.estado === 'PAGADO' || ordenActiva.estado === 'ESPERANDO_ENVIO') && (
                 <Button onClick={() => setShowEnviarModal(true)}>📦 Registrar envio</Button>
               )}
-              {product.status === 'IN_ESCROW' && isOwner && ordenActiva && (ordenActiva.estado === 'EN_CAMINO' || ordenActiva.estado === 'ENTREGADO') && (
+              {product.status === 'IN_ESCROW' && isOwner && !entregaEnPersona && ordenActiva && (ordenActiva.estado === 'EN_CAMINO' || ordenActiva.estado === 'ENTREGADO') && (
                 <OutlineButton onClick={() => setShowEnviarModal(true)}>
                   🚚 Guia: {ordenActiva.numeroGuia}
                 </OutlineButton>
               )}
-              {product.status === 'IN_ESCROW' && esCompradorAutorizado && ordenActiva && ordenActiva.estado === 'EN_CAMINO' && (
+              {product.status === 'IN_ESCROW' && esCompradorAutorizado && listoParaConfirmarEntrega && (
                 <Button onClick={handleConfirmDelivery}>✅ Confirmar entrega</Button>
               )}
-              {product.status === 'IN_ESCROW' && esCompradorAutorizado && (!ordenActiva || (ordenActiva.estado !== 'EN_CAMINO' && ordenActiva.estado !== 'ENTREGADO')) && (
+              {product.status === 'IN_ESCROW' && esCompradorAutorizado && !listoParaConfirmarEntrega && (
                 <OutlineButton onClick={() => {}} style={{ opacity: 0.6, cursor: "default" }}>⏳ Esperando envio del vendedor</OutlineButton>
               )}
               {!isOwner && product.status === 'AVAILABLE' && (

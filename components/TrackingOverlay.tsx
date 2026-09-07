@@ -26,8 +26,37 @@ const PASOS_CONTRA_ENTREGA = [
   { id: "COMPLETADO", icon: "⭐", titulo: "Compra completada", desc: "Pago recibido. Califica tu experiencia" },
 ];
 
+// EN_PERSONA no pasa por transportadora: nunca hay "En camino" (ver el mismo ajuste en
+// components/ProductCard.tsx y components/FacturaEnVivo.tsx). El comprador confirma directo
+// desde "esperando envío", así que el paso de transportadora desaparece y el de "entregado"
+// habla del vendedor, no de un mensajero que no existe.
+const PASOS_ONLINE_PERSONA = [
+  { id: "PAGADO", icon: "💳", titulo: "Pago confirmado", desc: "Tu pago fue procesado y confirmado por Colbisnes" },
+  { id: "ESPERANDO_ENVIO", icon: "🤝", titulo: "Coordinando entrega", desc: "El vendedor te contactará para coordinar dónde y cuándo recibir el producto" },
+  { id: "ENTREGADO", icon: "✅", titulo: "Entrega en persona", desc: "Confirma que recibiste tu producto" },
+  { id: "COMPLETADO", icon: "⭐", titulo: "Compra completada", desc: "Pago liberado. Califica tu experiencia" },
+];
+
+const PASOS_CONTRA_ENTREGA_PERSONA = [
+  { id: "PAGADO", icon: "🤝", titulo: "Pedido confirmado", desc: "Tu pedido fue confirmado. Pagarás en efectivo al recibir" },
+  { id: "ESPERANDO_ENVIO", icon: "📍", titulo: "Coordinando entrega", desc: "El vendedor te contactará para coordinar dónde y cuándo se ven" },
+  { id: "ENTREGADO", icon: "✅", titulo: "Entrega en persona — Paga ahora", desc: "Entrega el efectivo directo al vendedor y confirma recibo" },
+  { id: "COMPLETADO", icon: "⭐", titulo: "Compra completada", desc: "Pago recibido. Califica tu experiencia" },
+];
+
+const ORDEN_ESTADOS = ["PAGADO", "ESPERANDO_ENVIO", "EN_CAMINO", "ENTREGADO", "COMPLETADO"];
 function indiceDeEstado(estado: string): number {
-  return PASOS_ONLINE.findIndex(p => p.id === estado);
+  return ORDEN_ESTADOS.indexOf(estado);
+}
+// Índice para las listas *_PERSONA (4 pasos, sin "En camino"). Si una orden vieja quedó en
+// EN_CAMINO con una guía ficticia (el workaround que los vendedores usaban antes de este arreglo
+// para poder cobrar), se colapsa al mismo paso que "Entregado" en vez de desalinear la barra.
+function indiceDeEstadoPersona(estado: string): number {
+  if (estado === "EN_CAMINO" || estado === "ENTREGADO") return 2;
+  if (estado === "COMPLETADO") return 3;
+  if (estado === "PAGADO") return 0;
+  if (estado === "ESPERANDO_ENVIO") return 1;
+  return -1;
 }
 
 interface Props {
@@ -43,6 +72,7 @@ export default function TrackingOverlay({ orderId, productTitle, onClose }: Prop
   const [transportadora, setTransportadora] = useState<string | null>(null);
   const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
   const [metodoPago, setMetodoPago] = useState<string | null>(null);
+  const [tipoEntrega, setTipoEntrega] = useState<string | null>(null);
 
   const [mostrarDisputa, setMostrarDisputa] = useState(false);
   const [motivoDisputa, setMotivoDisputa] = useState(MOTIVOS_DISPUTA[0].id);
@@ -92,6 +122,7 @@ export default function TrackingOverlay({ orderId, productTitle, onClose }: Prop
           if (d.transportadora) setTransportadora(d.transportadora);
           if (d.comprobanteUrl) setComprobanteUrl(d.comprobanteUrl);
           if (d.metodoPago) setMetodoPago(d.metodoPago);
+          if (d.tipoEntrega) setTipoEntrega(d.tipoEntrega);
         })
         .catch(() => {});
     };
@@ -102,8 +133,11 @@ export default function TrackingOverlay({ orderId, productTitle, onClose }: Prop
 
   const fmt = (n: number) => "$" + n.toLocaleString("es-CO");
   const esContraEntrega = metodoPago === "CONTRA_ENTREGA";
-  const PASOS = esContraEntrega ? PASOS_CONTRA_ENTREGA : PASOS_ONLINE;
-  const indiceActual = indiceDeEstado(estado);
+  const entregaEnPersona = tipoEntrega === "EN_PERSONA";
+  const PASOS = entregaEnPersona
+    ? (esContraEntrega ? PASOS_CONTRA_ENTREGA_PERSONA : PASOS_ONLINE_PERSONA)
+    : (esContraEntrega ? PASOS_CONTRA_ENTREGA : PASOS_ONLINE);
+  const indiceActual = entregaEnPersona ? indiceDeEstadoPersona(estado) : indiceDeEstado(estado);
   const enTracking = indiceActual >= 0;
   const esFallido = estado === "RECHAZADO" || estado === "ANULADO" || estado === "ERROR";
   const yaEnviado = indiceActual >= 2;

@@ -27,6 +27,7 @@ export interface ComprobanteInput {
   totalPagado: number;
   numeroGuia?: string | null;
   transportadora?: string | null;
+  tipoEntrega?: string | null;      // "ENVIO" | "EN_PERSONA" | "AMBOS" — si es EN_PERSONA no hay mensajero
 }
 
 // pdf-lib dibuja con codificación WinAnsi (Latin-1). Cualquier caracter fuera de ese
@@ -63,9 +64,10 @@ const LABEL_ESTADO: Record<string, string> = {
 
 // Genera el comprobante de la transacción en PDF (una hoja A4). Muestra el desglose
 // completo para dar claridad a AMBAS partes: lo que el comprador entrega en efectivo
-// al mensajero y lo que recibe el vendedor. Consistente con el checkout: en contra
-// entrega el monto al mensajero = recibeVendedor (precioBase) + envioCobrado, y la
-// comisión de reserva se pagó aparte por Nequi.
+// (al mensajero si hubo transportadora, o directo al vendedor si fue EN_PERSONA) y lo
+// que recibe el vendedor. Consistente con el checkout: en contra entrega el efectivo =
+// recibeVendedor (precioBase) + envioCobrado, y la comisión de reserva se pagó aparte
+// por Nequi. Ver el mismo ajuste EN_PERSONA en components/FacturaEnVivo.tsx.
 export async function generarComprobantePDF(d: ComprobanteInput): Promise<Buffer> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Comprobante Colbisnes ${d.ordenId}`);
@@ -82,7 +84,8 @@ export async function generarComprobantePDF(d: ComprobanteInput): Promise<Buffer
   let y = 841.89 - 56;     // cursor (pdf-lib mide y desde abajo)
 
   const esContra = d.metodoPago === "CONTRA_ENTREGA";
-  const alMensajero = Math.round(Number(d.recibeVendedor) + Number(d.envioCobrado || 0));
+  const entregaEnPersona = d.tipoEntrega === "EN_PERSONA";
+  const totalEfectivo = Math.round(Number(d.recibeVendedor) + Number(d.envioCobrado || 0));
 
   // Helpers de dibujo (usan el cursor `y` vigente)
   const at = (s: string, x: number, size: number, font = helv, color = INK) =>
@@ -165,7 +168,7 @@ export async function generarComprobantePDF(d: ComprobanteInput): Promise<Buffer
   };
 
   if (esContra) {
-    box("A ENTREGAR AL MENSAJERO (EFECTIVO)", fmtCOP(alMensajero), BGSOFT, NAVY);
+    box(entregaEnPersona ? "TOTAL A PAGAR AL VENDEDOR" : "A ENTREGAR AL MENSAJERO (EFECTIVO)", fmtCOP(totalEfectivo), BGSOFT, NAVY);
   } else {
     box("TOTAL PAGADO POR EL COMPRADOR", fmtCOP(d.totalPagado), BGSOFT, NAVY);
   }
@@ -193,7 +196,11 @@ export async function generarComprobantePDF(d: ComprobanteInput): Promise<Buffer
     { x: M, y: footY + 7, size: 8.5, font: helv, color: MUTED }
   );
   page.drawText(
-    san("se paga en efectivo al mensajero contra entrega. Documento generado automáticamente."),
+    san(
+      entregaEnPersona
+        ? "se paga en efectivo directo al vendedor al momento de la entrega. Documento generado automáticamente."
+        : "se paga en efectivo al mensajero contra entrega. Documento generado automáticamente."
+    ),
     { x: M, y: footY - 4, size: 8.5, font: helv, color: MUTED }
   );
   page.drawText(san("colbisnes.com"), { x: M, y: footY - 24, size: 9, font: bold, color: BLUE });

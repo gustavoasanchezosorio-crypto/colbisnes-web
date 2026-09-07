@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
       totalPagado: orden.totalPagado,
       numeroGuia: orden.numeroGuia,
       transportadora: orden.transportadora,
+      tipoEntrega: producto.tipoEntrega,
     });
 
     return new NextResponse(new Uint8Array(pdf), {

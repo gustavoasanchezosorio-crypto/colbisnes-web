@@ -34,9 +34,15 @@ async function handleVerificacion() {
   for (const orden of vencidas) {
     const producto = await prisma.product.findUnique({
       where: { id: orden.productId },
-      select: { sellerId: true, title: true },
+      select: { sellerId: true, title: true, tipoEntrega: true },
     });
     if (!producto) continue;
+
+    // Entrega en persona no tiene transportadora ni numeroGuia que registrar — por diseño
+    // fechaLimiteEnvio/numeroGuia:null nunca se cumple para estas órdenes, así que penalizarlas
+    // aquí sería castigar al vendedor por algo que el sistema nunca le pidió hacer. El plazo de
+    // 24h hábiles solo aplica a contraentrega con transportadora real (ENVIO/AMBOS).
+    if (producto.tipoEntrega === "EN_PERSONA") continue;
 
     const vendedor = await prisma.user.findUnique({ where: { id: producto.sellerId } });
     if (!vendedor) continue;

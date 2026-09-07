@@ -27,7 +27,11 @@ const VERDE = "#22c55e";
 const VERDE_OSC = "#15803d";
 const MORADO = "#6d28d9";
 
-const PASOS = ["Reservado", "Comisión pagada", "En camino", "Entregado"];
+const PASOS_ENVIO = ["Reservado", "Comisión pagada", "En camino", "Entregado"];
+// EN_PERSONA no pasa por transportadora: no hay "En camino" que mostrar, y forzarlo
+// confundía (nunca se marcaba, aunque la compra sí se completara). Ver el mismo ajuste
+// en components/ProductCard.tsx y components/TrackingOverlay.tsx.
+const PASOS_PERSONA = ["Reservado", "Comisión pagada", "Entrega en persona"];
 
 const ESTADO_INFO: Record<string, { label: string; bg: string; col: string }> = {
   ESPERANDO_COMISION: { label: "Esperando comisión", bg: "rgba(199,154,46,0.14)", col: "#9a7317" },
@@ -42,31 +46,43 @@ export default function FacturaEnVivo({
   orden,
   productoTitulo,
   productoImagen,
+  tipoEntrega,
   rol,
 }: {
   orden: FacturaOrden;
   productoTitulo: string;
   productoImagen?: string | null;
+  tipoEntrega?: string;
   rol: "comprador" | "vendedor";
 }) {
   const num = (v: any) => Math.round(Number(v) || 0);
   const fmt = (v: any) => "$" + num(v).toLocaleString("es-CO");
 
   const esContra = orden.metodoPago === "CONTRA_ENTREGA";
+  const entregaEnPersona = tipoEntrega === "EN_PERSONA";
   const recibeVendedor = num(orden.recibeVendedor);
   const envio = num(orden.envioCobrado);
   const comisionReserva = num(orden.comisionReservaCOP ?? orden.comision);
-  const alMensajero = recibeVendedor + envio;
+  const totalEfectivo = recibeVendedor + envio;
 
-  // Pasos completados (índice exclusivo): 1=Reservado, 2=Comisión, 3=Envío, 4=Entrega.
-  const completados =
-    orden.estado === "ESPERANDO_COMISION" ? 1 :
-    orden.estado === "ESPERANDO_ENVIO" || orden.estado === "PAGADO" ? 2 :
-    orden.estado === "EN_CAMINO" ? 3 :
-    (orden.estado === "ENTREGADO" || orden.estado === "COMPLETADO") ? 4 : 1;
-  const finalizado = completados >= 4;
+  const PASOS = entregaEnPersona ? PASOS_PERSONA : PASOS_ENVIO;
 
-  const est = ESTADO_INFO[orden.estado] || { label: orden.estado, bg: THEME.surfaceAlt, col: THEME.muted };
+  // Pasos completados (índice exclusivo). EN_PERSONA salta directo de "pagado/esperando" a
+  // "entregado" — nunca pasa por EN_CAMINO (ver ProductCard.tsx), así que su escala solo
+  // tiene 3 pasos en vez de 4.
+  const completados = entregaEnPersona
+    ? (orden.estado === "ESPERANDO_COMISION" ? 1 :
+       (orden.estado === "ESPERANDO_ENVIO" || orden.estado === "PAGADO") ? 2 :
+       (orden.estado === "ENTREGADO" || orden.estado === "COMPLETADO") ? 3 : 1)
+    : (orden.estado === "ESPERANDO_COMISION" ? 1 :
+       orden.estado === "ESPERANDO_ENVIO" || orden.estado === "PAGADO" ? 2 :
+       orden.estado === "EN_CAMINO" ? 3 :
+       (orden.estado === "ENTREGADO" || orden.estado === "COMPLETADO") ? 4 : 1);
+  const finalizado = entregaEnPersona ? completados >= 3 : completados >= 4;
+
+  const est = entregaEnPersona && orden.estado === "ESPERANDO_ENVIO"
+    ? { label: "Coordinando entrega", bg: "rgba(14,86,192,0.12)", col: THEME.primary }
+    : (ESTADO_INFO[orden.estado] || { label: orden.estado, bg: THEME.surfaceAlt, col: THEME.muted });
   const comisionPagada = !!orden.comisionReservaPagada || completados >= 2;
   const mostrarPdf = orden.estado !== "ESPERANDO_COMISION";
 
@@ -183,9 +199,9 @@ export default function FacturaEnVivo({
         {/* ── Caja destacada (headline por rol) ── */}
         {esComprador ? (
           <HeadlineBox
-            titulo={esContra ? "A ENTREGAR AL MENSAJERO (EFECTIVO)" : "TOTAL PAGADO"}
-            valor={fmt(esContra ? alMensajero : orden.totalPagado)}
-            sub={esContra ? "En efectivo, directo al mensajero al recibir el producto." : undefined}
+            titulo={esContra ? (entregaEnPersona ? "TOTAL A PAGAR AL VENDEDOR" : "A ENTREGAR AL MENSAJERO (EFECTIVO)") : "TOTAL PAGADO"}
+            valor={fmt(esContra ? totalEfectivo : orden.totalPagado)}
+            sub={esContra ? (entregaEnPersona ? "En efectivo, directo al vendedor cuando se vean en persona." : "En efectivo, directo al mensajero al recibir el producto.") : undefined}
             bg="rgba(14,86,192,0.08)"
             borde="rgba(14,86,192,0.22)"
             col={THEME.primaryDark}

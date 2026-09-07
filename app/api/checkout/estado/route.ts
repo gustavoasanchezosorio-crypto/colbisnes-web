@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     // Only the buyer or seller can view order status
     const product = await prisma.product.findUnique({
       where: { id: orden.productId },
-      select: { sellerId: true },
+      select: { sellerId: true, tipoEntrega: true },
     });
     const userId = session.user.id;
     const isParticipant =
@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
       transportadora: orden.transportadora,
       comprobanteUrl: orden.comprobanteUrl,
       metodoPago: orden.metodoPago,
+      // El tracker (TrackingOverlay) necesita saber si es entrega en persona para no mostrar
+      // pasos de transportadora que nunca van a ocurrir.
+      tipoEntrega: product?.tipoEntrega ?? null,
     });
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

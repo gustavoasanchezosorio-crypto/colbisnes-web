@@ -854,6 +854,7 @@ export default function ProductPageClient({ productId }: { productId: string }) 
               orden={ordenActiva}
               productoTitulo={product.title}
               productoImagen={product.images?.[0]?.url}
+              tipoEntrega={product.tipoEntrega}
               rol={esVendedor ? "vendedor" : "comprador"}
             />
           )}
