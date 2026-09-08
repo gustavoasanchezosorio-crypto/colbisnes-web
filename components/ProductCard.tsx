@@ -54,6 +54,7 @@ export const ProductCard = React.memo(function ProductCard({
 
   const handleSelect = useCallback(() => onSelect(product.id), [product.id, onSelect]);
   const handlePaymentRequest = useCallback(() => { window.location.href = "/checkout/" + product.id; }, [product.id]);
+  const handleComprarAhora   = useCallback(() => { window.location.href = "/checkout/" + product.id; }, [product.id]);
   const handleConfirmDelivery = useCallback(() => onConfirmDelivery(product.id), [product.id, onConfirmDelivery]);
   const handleReviewClick = useCallback(() => onReviewClick(product), [product.id, onReviewClick]);
 
@@ -623,6 +624,13 @@ export const ProductCard = React.memo(function ProductCard({
                     {isSelected ? "Ocultar ofertas" : `Ver ofertas (${pendingOffersCount})`}
                   </OutlineButton>
                 )
+              )}
+              {/* Junto a "Hacer oferta": compra directa sin pasar primero por el detalle,
+                  mismo destino que "Realizar pago" (checkout maneja sesión/KYC). */}
+              {!isOwner && product.status === 'AVAILABLE' && (
+                <Button onClick={handleComprarAhora}>
+                  Comprar ahora
+                </Button>
               )}
               {/* Editar: solo el dueño y solo mientras esté DISPONIBLE (una vez hay
                   oferta aceptada/pago/custodia, el backend bloquea la edición). */}
