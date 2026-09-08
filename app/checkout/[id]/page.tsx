@@ -473,101 +473,105 @@ export default function CheckoutPage() {
                       💳 Pagar con Nequi (sin salir de la app)
                     </button>
                   )}
+
+                  {/* Antes esto vivía todo junto al final de la página, después de las 3
+                      tarjetas de método — mismo problema que tenía el botón de Nequi: un
+                      "Continuar" suelto al fondo no deja claro a qué método aplica cuando
+                      hay varias tarjetas visibles. Va pegado a la tarjeta activa. */}
+                  {m.id !== "contraentrega" && !TEST_MODE && (
+                    <div
+                      onClick={() => setProteccionExtendida(p => !p)}
+                      className="glass"
+                      style={{
+                        display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
+                        background: proteccionExtendida ? "#eef3fb" : THEME.surface,
+                        border: proteccionExtendida ? `1.5px solid ${THEME.primary}` : `1.5px solid ${THEME.border}`,
+                        borderRadius: 18, padding: "14px 16px", marginTop: 14,
+                      }}
+                    >
+                      <div style={{
+                        width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                        border: `1.5px solid ${proteccionExtendida ? THEME.primary : THEME.border}`,
+                        background: proteccionExtendida ? THEME.primary : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 900,
+                      }}>{proteccionExtendida ? "✓" : ""}</div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: THEME.text }}>🛡️ Protección de compra extendida</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.4 }}>Tu reclamo se revisa con prioridad si algo sale mal — {fmt(PROTECCION_EXTENDIDA_PRECIO)}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {errorPago && (
+                    <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 14, padding: "12px 14px", marginTop: 14, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 16 }}>⚠️</span>
+                      <p style={{ margin: 0, color: "#b91c1c", fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{errorPago}</p>
+                    </div>
+                  )}
+
+                  {/* En modo prueba no tiene sentido pedirle que complete el perfil "para poder
+                      pagar": no va a poder pagar de todas formas. Gana el aviso de modo prueba. */}
+                  {perfilIncompleto && !modoPrueba && (
+                    <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: "16px 18px", marginTop: 14 }}>
+                      <p style={{ margin: 0, color: "#9a3412", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>🔒</span> No puedes pagar todavía
+                      </p>
+                      <p style={{ margin: "6px 0 0", color: "#9a3412", fontSize: 13, lineHeight: 1.5 }}>
+                        Para proteger tu dinero y poder devolvértelo si algo sale mal, primero completa tu información de pagos:
+                      </p>
+                      <ul style={{ margin: "8px 0 0", padding: "0 0 0 18px", color: "#9a3412", fontSize: 13, lineHeight: 1.6 }}>
+                        {perfilFaltantes!.map(f => <li key={f.key}>{f.label}</li>)}
+                      </ul>
+                      <a href={destinoCompletar}
+                        style={{ display: "block", textAlign: "center", marginTop: 12, padding: "13px", borderRadius: 14, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: `0 8px 24px ${THEME.primary}33` }}>
+                        Completar mi información →
+                      </a>
+                    </div>
+                  )}
+
+                  {/* ACCESO ANTICIPADO: el pago queda deshabilitado. No hay llaves de
+                      sandbox de Wompi en el proyecto (solo las de producción), así que no
+                      existe un destino de pruebas al que mandar al comprador — la única
+                      alternativa honesta es no dejar pagar y decirlo con claridad.
+
+                      El texto habla de "acceso anticipado" y no de "probador" desde el
+                      2026-08-02: a partir de esa fecha el enlace de acceso viaja en el
+                      correo de bienvenida de la lista de espera, así que quien llega aquí
+                      ya no es alguien de confianza probando, sino un usuario cualquiera
+                      que se apuntó. Llamarle probador le sugiere que lo que está viendo
+                      es un simulacro, y lo que ve son precios y productos de verdad. */}
+                  {modoPrueba && (
+                    <>
+                      <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 16, padding: "16px 18px", marginTop: 14 }}>
+                        {/* alignItems flex-start, no center: el mensaje envuelve en dos o
+                            tres líneas en un móvil y con center el ⚠️ quedaba flotando a
+                            media altura del párrafo. */}
+                        <p style={{ margin: 0, color: "#92400e", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "flex-start", gap: 8, lineHeight: 1.45 }}>
+                          <span style={{ fontSize: 18, lineHeight: 1.1 }}>⚠️</span> {MENSAJE_PAGO_BLOQUEADO}
+                        </p>
+                        <p style={{ margin: "6px 0 0", color: "#92400e", fontSize: 13, lineHeight: 1.5 }}>
+                          Puedes revisar precios, comisiones y todo el flujo. Mientras tanto, publica lo que
+                          quieras vender: cuando se abran las compras tu tienda ya está lista.
+                        </p>
+                      </div>
+                      <button disabled
+                        style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: "#e2e8f0", color: "#64748b", fontSize: 17, fontWeight: 800, cursor: "not-allowed", marginTop: 14 }}>
+                        Pago deshabilitado en modo prueba
+                      </button>
+                    </>
+                  )}
+
+                  {!perfilIncompleto && !modoPrueba && (
+                    <button className="cbtn" onClick={handleContinuar} disabled={loading || perfilFaltantes === null}
+                      style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: (loading || perfilFaltantes === null) ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 17, fontWeight: 800, cursor: (loading || perfilFaltantes === null) ? "default" : "pointer", marginTop: 14, boxShadow: `0 12px 40px ${THEME.primary}44` }}>
+                      {loading ? "Procesando..." : perfilFaltantes === null ? "Verificando..." : "Continuar →"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           );
         })}
-
-        {metodo && metodo !== "contraentrega" && !TEST_MODE && (
-          <div
-            onClick={() => setProteccionExtendida(p => !p)}
-            className="glass"
-            style={{
-              display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
-              background: proteccionExtendida ? "#eef3fb" : THEME.surface,
-              border: proteccionExtendida ? `1.5px solid ${THEME.primary}` : `1.5px solid ${THEME.border}`,
-              borderRadius: 18, padding: "14px 16px", marginTop: 4, marginBottom: 14,
-            }}
-          >
-            <div style={{
-              width: 22, height: 22, borderRadius: 7, flexShrink: 0,
-              border: `1.5px solid ${proteccionExtendida ? THEME.primary : THEME.border}`,
-              background: proteccionExtendida ? THEME.primary : "transparent",
-              display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 900,
-            }}>{proteccionExtendida ? "✓" : ""}</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: THEME.text }}>🛡️ Protección de compra extendida</p>
-              <p style={{ margin: "2px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.4 }}>Tu reclamo se revisa con prioridad si algo sale mal — {fmt(PROTECCION_EXTENDIDA_PRECIO)}</p>
-            </div>
-          </div>
-        )}
-
-        {errorPago && (
-          <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 14, padding: "12px 14px", marginBottom: 14, display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <span style={{ fontSize: 16 }}>⚠️</span>
-            <p style={{ margin: 0, color: "#b91c1c", fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{errorPago}</p>
-          </div>
-        )}
-
-        {/* En modo prueba no tiene sentido pedirle que complete el perfil "para poder
-            pagar": no va a poder pagar de todas formas. Gana el aviso de modo prueba. */}
-        {metodo && perfilIncompleto && !modoPrueba && (
-          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: "16px 18px", marginBottom: 14 }}>
-            <p style={{ margin: 0, color: "#9a3412", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 18 }}>🔒</span> No puedes pagar todavía
-            </p>
-            <p style={{ margin: "6px 0 0", color: "#9a3412", fontSize: 13, lineHeight: 1.5 }}>
-              Para proteger tu dinero y poder devolvértelo si algo sale mal, primero completa tu información de pagos:
-            </p>
-            <ul style={{ margin: "8px 0 0", padding: "0 0 0 18px", color: "#9a3412", fontSize: 13, lineHeight: 1.6 }}>
-              {perfilFaltantes!.map(f => <li key={f.key}>{f.label}</li>)}
-            </ul>
-            <a href={destinoCompletar}
-              style={{ display: "block", textAlign: "center", marginTop: 12, padding: "13px", borderRadius: 14, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: `0 8px 24px ${THEME.primary}33` }}>
-              Completar mi información →
-            </a>
-          </div>
-        )}
-
-        {/* ACCESO ANTICIPADO: el pago queda deshabilitado. No hay llaves de
-            sandbox de Wompi en el proyecto (solo las de producción), así que no
-            existe un destino de pruebas al que mandar al comprador — la única
-            alternativa honesta es no dejar pagar y decirlo con claridad.
-
-            El texto habla de "acceso anticipado" y no de "probador" desde el
-            2026-08-02: a partir de esa fecha el enlace de acceso viaja en el
-            correo de bienvenida de la lista de espera, así que quien llega aquí
-            ya no es alguien de confianza probando, sino un usuario cualquiera
-            que se apuntó. Llamarle probador le sugiere que lo que está viendo
-            es un simulacro, y lo que ve son precios y productos de verdad. */}
-        {metodo && modoPrueba && (
-          <>
-            <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 16, padding: "16px 18px", marginBottom: 12 }}>
-              {/* alignItems flex-start, no center: el mensaje envuelve en dos o
-                  tres líneas en un móvil y con center el ⚠️ quedaba flotando a
-                  media altura del párrafo. */}
-              <p style={{ margin: 0, color: "#92400e", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "flex-start", gap: 8, lineHeight: 1.45 }}>
-                <span style={{ fontSize: 18, lineHeight: 1.1 }}>⚠️</span> {MENSAJE_PAGO_BLOQUEADO}
-              </p>
-              <p style={{ margin: "6px 0 0", color: "#92400e", fontSize: 13, lineHeight: 1.5 }}>
-                Puedes revisar precios, comisiones y todo el flujo. Mientras tanto, publica lo que
-                quieras vender: cuando se abran las compras tu tienda ya está lista.
-              </p>
-            </div>
-            <button disabled
-              style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: "#e2e8f0", color: "#64748b", fontSize: 17, fontWeight: 800, cursor: "not-allowed", marginTop: 0 }}>
-              Pago deshabilitado en modo prueba
-            </button>
-          </>
-        )}
-
-        {metodo && !perfilIncompleto && !modoPrueba && (
-          <button className="cbtn" onClick={handleContinuar} disabled={loading || perfilFaltantes === null}
-            style={{ width: "100%", padding: 18, borderRadius: 18, border: "none", background: (loading || perfilFaltantes === null) ? "#e2e8f0" : `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, color: "#fff", fontSize: 17, fontWeight: 800, cursor: (loading || perfilFaltantes === null) ? "default" : "pointer", marginTop: 8, boxShadow: `0 12px 40px ${THEME.primary}44` }}>
-            {loading ? "Procesando..." : perfilFaltantes === null ? "Verificando..." : "Continuar →"}
-          </button>
-        )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20 }}>
           <span style={{ fontSize: 11, color: THEME.muted }}>🔒 SSL cifrado · Pagos protegidos por Colbisnes</span>
