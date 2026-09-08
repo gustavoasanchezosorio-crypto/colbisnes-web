@@ -606,16 +606,30 @@ export const ProductCard = React.memo(function ProductCard({
               {product.status === 'IN_ESCROW' && esCompradorAutorizado && !listoParaConfirmarEntrega && (
                 <OutlineButton onClick={() => {}} style={{ opacity: 0.6, cursor: "default" }}>⏳ Esperando envio del vendedor</OutlineButton>
               )}
+              {/* Fila propia, centrado y con borde dorado: es la acción "explorar/chatear"
+                  (no mueve plata), así que se distingue del par azul de abajo en vez de
+                  competir visualmente con él — antes las 3 quedaban apretadas en una
+                  sola fila y se veía desordenado. */}
               {!isOwner && product.status === 'AVAILABLE' && (
-                <Button onClick={() => { window.location.href = `/product/${product.id}`; }}>
+                <OutlineButton onClick={() => { window.location.href = `/product/${product.id}`; }} style={{
+                  flexBasis: "100%",
+                  width: "100%",
+                  textAlign: "center",
+                  border: `2px solid ${THEME.gold}`,
+                  color: "#8a6a1f",
+                  background: "rgba(199,154,46,0.08)",
+                  boxShadow: "0 4px 14px rgba(199,154,46,0.22)",
+                }}>
                   💬 Ver detalle y chatear
-                </Button>
+                </OutlineButton>
               )}
+              {/* Hacer oferta + Comprar ahora comparten fila, mismas proporciones
+                  (flex 1 / 2) que usa el detalle del producto para el mismo par. */}
               {!isOwner && product.status === 'AVAILABLE' ? (
                 // Va al detalle con el formulario de oferta abierto (flujo correcto con
                 // validación/KYC). Antes abría un modal que mostraba "No hay ofertas aún"
                 // y no dejaba ofertar bien — confuso para el comprador.
-                <OutlineButton onClick={() => { window.location.href = `/product/${product.id}?oferta=1`; }}>
+                <OutlineButton onClick={() => { window.location.href = `/product/${product.id}?oferta=1`; }} style={{ flex: 1 }}>
                   Hacer oferta
                 </OutlineButton>
               ) : (
@@ -625,10 +639,8 @@ export const ProductCard = React.memo(function ProductCard({
                   </OutlineButton>
                 )
               )}
-              {/* Junto a "Hacer oferta": compra directa sin pasar primero por el detalle,
-                  mismo destino que "Realizar pago" (checkout maneja sesión/KYC). */}
               {!isOwner && product.status === 'AVAILABLE' && (
-                <Button onClick={handleComprarAhora}>
+                <Button onClick={handleComprarAhora} style={{ flex: 2 }}>
                   Comprar ahora
                 </Button>
               )}
