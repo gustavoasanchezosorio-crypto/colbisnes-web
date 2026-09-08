@@ -5,6 +5,7 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { requireSesion } from "@/lib/requireKyc";
 import { limpiarContenidoMensaje } from "@/lib/contactFilter";
+import { sendWhatsapp } from "@/lib/whatsapp";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,12 +37,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify recipient exists
-    const recipient = await prisma.user.findUnique({ where: { id: toUserId }, select: { id: true } });
+    const recipient = await prisma.user.findUnique({ where: { id: toUserId }, select: { id: true, name: true, phoneWhatsapp: true } });
     if (!recipient) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
     // Ocultamos datos de contacto externo (teléfono, WhatsApp, redes, correo) para
     // reducir el riesgo de que la relación comprador-vendedor se mude fuera de Colbisnes
     const { contenido, oculto } = limpiarContenidoMensaje(content.trim());
+
+    // Si el destinatario ya tenía mensajes sin leer de este mismo remitente, ya se le avisó
+    // por WhatsApp antes: solo se notifica el primero de una tanda nueva de no leídos, para
+    // no mandar un WhatsApp (con costo) por cada mensaje de una conversación activa.
+    const yaTeniaNoLeidos = await prisma.message.count({
+      where: { fromUserId: session.user.id, toUserId, read: false },
+    });
 
     const message = await prisma.message.create({
       data: {
@@ -50,7 +58,21 @@ export async function POST(req: NextRequest) {
         toUserId,
         productId: productId || null,
       },
+      include: { product: { select: { title: true } } },
     });
+
+    if (yaTeniaNoLeidos === 0) {
+      try {
+        const contexto = message.product?.title ? ` sobre tu producto *${message.product.title}*` : "";
+        await sendWhatsapp({
+          to: recipient.phoneWhatsapp || "",
+          body: `💬 *Colbisnes*\n\nTienes un nuevo mensaje${contexto}, de *${session.user.name || "Alguien"}*.\n\nRespóndele aquí: https://colbisnes.com/mensajes`,
+          mediaUrl: ["https://colbisnes.com/logo-og-square.png"],
+        });
+      } catch (whatsappError) {
+        console.error("Error enviando WhatsApp de nuevo mensaje:", whatsappError);
+      }
+    }
 
     return NextResponse.json({ ok: true, message, contactoOculto: oculto });
   } catch (e) {
