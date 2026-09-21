@@ -65,6 +65,37 @@ export const ProductCard = React.memo(function ProductCard({
   const [esFavorito, setEsFavorito] = useState(false);
   const [favCount, setFavCount] = useState<number>(product.favoritosCount || 0);
   const mensajesNoLeidos = mensajesNoLeidosProp;
+
+  // El vendedor marca su propia publicación como vendida FUERA de Colbisnes, desde la
+  // misma tarjeta del feed — sin tener que entrar al detalle del producto. Mismo botón
+  // que ya existe en app/product/[id]/ProductPageClient.tsx (esa vista SÍ lo tenía); a
+  // esta tarjeta, que es la que la mayoría usa para administrar sus publicaciones desde
+  // el home, se le había quedado por fuera (reporte: "no veo el botón de vendido").
+  // Confirmación en dos pasos dentro de la misma fila de acciones, no un window.confirm.
+  const [confirmarVendido, setConfirmarVendido] = useState(false);
+  const [marcandoVendido, setMarcandoVendido] = useState(false);
+  const [errorVendido, setErrorVendido] = useState("");
+
+  const marcarVendido = useCallback(async () => {
+    setMarcandoVendido(true);
+    setErrorVendido("");
+    try {
+      const res = await fetch(`/api/products/${product.id}/marcar-vendido`, { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorVendido(d.error || "No se pudo marcar como vendido");
+        return;
+      }
+      // El estado real (SOLD) lo recoge el polling de useProducts en el home (≤5s) y esta
+      // misma tarjeta cambia sola a la vista de "Vendido" (ver isSold, arriba) — no hace
+      // falta duplicar ese refresco desde acá.
+    } catch {
+      setErrorVendido("Error de conexión");
+    } finally {
+      setMarcandoVendido(false);
+    }
+  }, [product.id]);
+
   const todasLasFotos: string[] = (product.images && product.images.length > 0)
     ? product.images.map((img: any) => img.url)
     : (firstImage ? [firstImage] : []);
@@ -650,6 +681,41 @@ export const ProductCard = React.memo(function ProductCard({
                 <OutlineButton onClick={() => { window.location.href = `/product/${product.id}/editar`; }}>
                   ✏️ Editar
                 </OutlineButton>
+              )}
+              {/* Marcar como vendido: el vendedor cerró la venta por fuera de Colbisnes
+                  (trato directo, otra red, otro marketplace). Mismo endpoint y mismo
+                  criterio (dueño + AVAILABLE) que app/product/[id]/ProductPageClient.tsx —
+                  ver app/api/products/[id]/marcar-vendido/route.ts para las reglas del
+                  backend (por qué no aplica si ya hay pago/custodia en curso). Esta
+                  tarjeta del feed se había quedado sin el botón (reporte: "no veo el botón
+                  de vendido"); confirmación en dos pasos acá mismo, no un window.confirm. */}
+              {isOwner && product.status === 'AVAILABLE' && !confirmarVendido && (
+                <OutlineButton onClick={() => setConfirmarVendido(true)}>
+                  🤝 Marcar como vendido
+                </OutlineButton>
+              )}
+              {isOwner && product.status === 'AVAILABLE' && confirmarVendido && (
+                <div style={{ width: "100%", background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 14, padding: "12px 14px", marginBottom: 4 }}>
+                  <p style={{ color: "#15803d", fontWeight: 800, fontSize: 12, margin: "0 0 6px" }}>¿Ya lo vendiste por fuera de Colbisnes?</p>
+                  <p style={{ color: THEME.textSoft, fontSize: 11.5, margin: "0 0 10px", lineHeight: 1.5 }}>
+                    Se cierra la publicación y se rechazan las ofertas pendientes que tenga. No se puede deshacer.
+                  </p>
+                  {errorVendido && (
+                    <p style={{ color: "#b91c1c", fontSize: 11.5, fontWeight: 700, margin: "0 0 10px" }}>{errorVendido}</p>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button onClick={marcarVendido} disabled={marcandoVendido} style={{ flex: 1 }}>
+                      {marcandoVendido ? "Marcando…" : "Sí, ya lo vendí"}
+                    </Button>
+                    <OutlineButton
+                      onClick={() => { setConfirmarVendido(false); setErrorVendido(""); }}
+                      disabled={marcandoVendido}
+                      style={{ flex: 1 }}
+                    >
+                      Cancelar
+                    </OutlineButton>
+                  </div>
+                </div>
               )}
             </>
           )}
