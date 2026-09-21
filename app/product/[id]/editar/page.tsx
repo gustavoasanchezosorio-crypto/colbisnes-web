@@ -71,6 +71,11 @@ export default function EditarProductoPage() {
   const [saludBateria, setSaludBateria] = useState("");
   const [piezas, setPiezas] = useState<string[]>([]);
   const esDispositivo = categoriaPideDatosDeDispositivo(category);
+  // "Nuevo" implica, por definición, batería al 100% y ninguna pieza reemplazada (mismo
+  // razonamiento que app/page.tsx). OJO: no es lo mismo que "distinto de Usado" — este
+  // Select tiene un tercer valor, "REACONDICIONADO", que si debe seguir preguntando la
+  // batería y las piezas: un reacondicionado no nace con 100% de salud ni todo original.
+  const esNuevo = condition === "NUEVO";
   // Aviso, no bloqueo: el número tiene sus 15 dígitos pero no cuadra con su dígito de
   // control. Casi siempre es un dígito mal copiado, pero hay equipos reales así, y como
   // aquí no se consulta ninguna base de datos, nadie puede afirmar que esté mal.
@@ -204,7 +209,12 @@ export default function EditarProductoPage() {
         showToast(`El costo del envío no puede superar $${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}. Revisa que no te haya sobrado un cero.`, "warning"); return;
       }
     }
-    if (esDispositivo) {
+    // Nuevo se salta esta revisión entera: el guardar() de más abajo ignora lo que haya
+    // en imei/imei2/saludBateria (ocultos por el `esNuevo` de la JSX) y manda directo
+    // sin IMEI y con la batería al 100%, así que no tiene caso bloquear el guardado por
+    // un dato viejo que ni siquiera se va a usar (ej: quedó un IMEI mal tecleado de
+    // cuando la condición todavía era Usado).
+    if (esDispositivo && !esNuevo) {
       // El parcial (con •) significa "no lo cambié"; el servidor lo entiende así.
       const tocado = (v: string) => v.trim() !== "" && !v.includes("•");
       // Lo único que bloquea es que no sean 15 dígitos. El dígito de control NO bloquea:
@@ -252,10 +262,18 @@ export default function EditarProductoPage() {
         body: JSON.stringify({
           title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images,
           tipoEntrega, precioEnvio,
-          imei: esDispositivo ? imei.trim() : "",
-          imei2: esDispositivo ? imei2.trim() : "",
-          saludBateria: esDispositivo ? saludBateria.trim() : "",
-          piezasReemplazadas: esDispositivo ? piezas : [],
+          // Igual que en app/page.tsx: "Nuevo" fuerza estos tres campos sin importar qué
+          // haya quedado en las casillas (ocultas por el `esNuevo` de la JSX más abajo) —
+          // por ejemplo si el vendedor tenía la categoría en Tecnologia con Usado, escribió
+          // IMEI o batería, y luego cambió la condición a Nuevo sin borrar ese texto. El
+          // IMEI existe para validar el origen de un equipo USADO (que no esté robado ni
+          // reportado); en uno nuevo no hay ese historial que verificar, así que se manda
+          // vacío — "" y no un valor enmascarado, para que el servidor lo entienda como
+          // "bórralo" y no como "no lo toques" (ver sinEnmascarar en la API).
+          imei: esDispositivo && !esNuevo ? imei.trim() : "",
+          imei2: esDispositivo && !esNuevo ? imei2.trim() : "",
+          saludBateria: esDispositivo ? (esNuevo ? "100" : saludBateria.trim()) : "",
+          piezasReemplazadas: esDispositivo ? (esNuevo ? ["NINGUNA"] : piezas) : [],
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -435,77 +453,91 @@ export default function EditarProductoPage() {
               Datos del equipo <span style={{ fontWeight: 500, color: THEME.muted }}>(opcional)</span>
             </p>
             <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
-                    IMEI 1
-                  </label>
-                  <Input
-                    placeholder="15 dígitos (*#06#)"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={20}
-                    value={imei}
-                    onChange={(e) => setImei(e.target.value)}
-                  />
-                  {avisoImei1 && (
-                    <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei1}</p>
-                  )}
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
-                    IMEI 2 <span style={{ fontWeight: 500, color: THEME.muted }}>(si tiene dos SIM)</span>
-                  </label>
-                  <Input
-                    placeholder="15 dígitos"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={20}
-                    value={imei2}
-                    onChange={(e) => setImei2(e.target.value)}
-                  />
-                  {avisoImei2 && (
-                    <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei2}</p>
-                  )}
-                </div>
-              </div>
-              <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
-                En la publicación se ve solo una parte. Los números completos se los entregamos
-                únicamente a tu comprador, cuando ya haya reservado o pagado el equipo.
-              </p>
-              <div>
-                <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
-                  Salud de la batería <span style={{ fontWeight: 500, color: THEME.muted }}>(porcentaje)</span>
-                </label>
-                {/* Mismo tratamiento que en el formulario de publicar: el % queda dentro
-                    de la casilla para que no se pierda al escribir. Ver app/page.tsx. */}
-                <div style={{ position: "relative" }}>
-                  <Input
-                    placeholder="Ej: 87"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={3}
-                    value={saludBateria}
-                    onChange={(e) => setSaludBateria(e.target.value.replace(/\D/g, ""))}
-                    style={{ paddingRight: 36 }}
-                  />
-                  <span style={{ position: "absolute", right: 13, top: 0, height: "100%", display: "flex", alignItems: "center", fontSize: "0.95rem", fontWeight: 600, color: THEME.muted, pointerEvents: "none" }}>
-                    %
-                  </span>
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px", color: THEME.text }}>Piezas reemplazadas</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {PIEZAS.map((p) => (
-                    <label key={p.id}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}>
-                      <input type="checkbox" checked={piezas.includes(p.id)} onChange={() => alternarPieza(p.id)} style={{ margin: 0, cursor: "pointer" }} />
-                      {p.label}
+              {esNuevo ? (
+                // Mismo razonamiento que app/page.tsx: el IMEI sirve para que el comprador
+                // verifique el origen de un equipo USADO (que no esté robado ni reportado), y
+                // la batería/piezas para declarar su desgaste — ninguna de las dos preguntas
+                // aplica a un equipo Nuevo. El guardar() de más arriba ya fuerza estos tres
+                // campos (IMEI vacío, batería 100%, piezas NINGUNA) sin importar qué haya
+                // quedado escrito de un cambio de condición anterior.
+                <p style={{ fontSize: 11.5, color: THEME.muted, margin: 0, lineHeight: 1.4, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 10, padding: "9px 11px" }}>
+                  ✅ Como lo marcaste como <strong>Nuevo</strong>, no hace falta declarar el IMEI: se guarda sin historial que verificar, con batería al 100% y sin piezas reemplazadas.
+                </p>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                        IMEI 1
+                      </label>
+                      <Input
+                        placeholder="15 dígitos (*#06#)"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={20}
+                        value={imei}
+                        onChange={(e) => setImei(e.target.value)}
+                      />
+                      {avisoImei1 && (
+                        <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei1}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                        IMEI 2 <span style={{ fontWeight: 500, color: THEME.muted }}>(si tiene dos SIM)</span>
+                      </label>
+                      <Input
+                        placeholder="15 dígitos"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={20}
+                        value={imei2}
+                        onChange={(e) => setImei2(e.target.value)}
+                      />
+                      {avisoImei2 && (
+                        <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei2}</p>
+                      )}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
+                    En la publicación se ve solo una parte. Los números completos se los entregamos
+                    únicamente a tu comprador, cuando ya haya reservado o pagado el equipo.
+                  </p>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                      Salud de la batería <span style={{ fontWeight: 500, color: THEME.muted }}>(porcentaje)</span>
                     </label>
-                  ))}
-                </div>
-              </div>
+                    {/* Mismo tratamiento que en el formulario de publicar: el % queda dentro
+                        de la casilla para que no se pierda al escribir. Ver app/page.tsx. */}
+                    <div style={{ position: "relative" }}>
+                      <Input
+                        placeholder="Ej: 87"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={3}
+                        value={saludBateria}
+                        onChange={(e) => setSaludBateria(e.target.value.replace(/\D/g, ""))}
+                        style={{ paddingRight: 36 }}
+                      />
+                      <span style={{ position: "absolute", right: 13, top: 0, height: "100%", display: "flex", alignItems: "center", fontSize: "0.95rem", fontWeight: 600, color: THEME.muted, pointerEvents: "none" }}>
+                        %
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px", color: THEME.text }}>Piezas reemplazadas</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {PIEZAS.map((p) => (
+                        <label key={p.id}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}>
+                          <input type="checkbox" checked={piezas.includes(p.id)} onChange={() => alternarPieza(p.id)} style={{ margin: 0, cursor: "pointer" }} />
+                          {p.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

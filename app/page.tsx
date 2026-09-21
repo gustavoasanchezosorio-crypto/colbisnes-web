@@ -449,6 +449,13 @@ function PageInner() {
   // Las casillas de IMEI, batería y piezas solo existen para dispositivos.
   const categoriaElegida = watch("category");
   const esDispositivo = categoriaPideDatosDeDispositivo(categoriaElegida);
+  // "Nuevo" implica, por definición, batería al 100% y ninguna pieza reemplazada:
+  // preguntarlo de todos modos es pedirle al vendedor que confirme algo obvio, y
+  // eso es justo la clase de fricción de la que se quejó un vendedor real (un
+  // celular nuevo, y el formulario le pedía la salud de la batería igual que a
+  // uno usado). El IMEI sí se sigue pidiendo: un equipo nuevo también lo tiene.
+  const condicionElegida = watch("condition");
+  const esNuevo = condicionElegida === "NUEVO";
 
   // El costo del envío solo tiene sentido si el producto se despacha. Si es solo
   // en persona no se pregunta, y el servidor además lo descarta (lib/entrega.ts),
@@ -515,6 +522,17 @@ function PageInner() {
       const res = await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({
         ...datosProducto,
         images: imageUrls,
+        // Igual que con precioEnvio más abajo: "Nuevo" fuerza estos tres campos pase lo
+        // que pase con los inputs (ahora ocultos por el `esNuevo` de la JSX). Si el
+        // vendedor escribió IMEI o salud de batería con la categoría en "Usado" y luego
+        // cambió a "Nuevo" sin borrar ese texto, react-hook-form sigue guardando esos
+        // valores viejos aunque los inputs ya no se vean — este override es lo que de
+        // verdad impide que se publique ese IMEI/batería obsoletos en vez de lo que la
+        // UI promete: sin IMEI que declarar y con el equipo al 100%.
+        imei: data.condition === "NUEVO" ? "" : data.imei,
+        imei2: data.condition === "NUEVO" ? "" : data.imei2,
+        saludBateria: data.condition === "NUEVO" ? "100" : data.saludBateria,
+        piezasReemplazadas: data.condition === "NUEVO" ? ["NINGUNA"] : data.piezasReemplazadas,
         // Se vuelve a mirar el tipo de entrega y no solo el modo: si alguien escoge
         // "solo envío" con valor fijo y después se arrepiente y pasa a "ambos", el
         // modo se queda en FIJO aunque la casilla ya no esté a la vista. El servidor
@@ -890,105 +908,124 @@ function PageInner() {
                     </p>
 
                     <div style={{ display: "grid", gap: 10 }}>
-                      {/* Los dos IMEI van en el mismo renglón porque son el mismo dato
-                          del mismo equipo: casi todos los celulares de hoy son de dos
-                          SIM y traen uno por ranura. Separarlos en dos renglones haría
-                          parecer que el segundo es otra cosa.
-
-                          auto-fit con minmax es lo que los mantiene juntos en pantallas
-                          normales y los apila solos en un teléfono estrecho, sin media
-                          query: dos casillas de 15 dígitos lado a lado en 360 px no se
-                          pueden ni leer, y esto se llena casi siempre desde el celular. */}
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
-                        <div>
-                          {/* Etiqueta encima y no solo placeholder: al escribir, el
-                              placeholder desaparece y con dos casillas idénticas al
-                              lado ya no se sabe cuál se está llenando. */}
-                          <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
-                            IMEI 1
-                          </label>
-                          <Input
-                            placeholder="15 dígitos (*#06#)"
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={20}
-                            {...register("imei")}
-                          />
-                          {errors.imei
-                            ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei.message}</p>
-                            : avisoImei1 && <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei1}</p>}
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
-                            IMEI 2 <span style={{ fontWeight: 500, color: THEME.muted }}>(si tiene dos SIM)</span>
-                          </label>
-                          <Input
-                            placeholder="15 dígitos"
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={20}
-                            {...register("imei2")}
-                          />
-                          {errors.imei2
-                            ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei2.message}</p>
-                            : avisoImei2 && <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei2}</p>}
-                        </div>
-                      </div>
-                      <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
-                        Al marcar <strong>*#06#</strong> el teléfono muestra los dos. En la
-                        publicación se ve solo una parte (490154•••••••18). Los números completos
-                        se los entregamos únicamente a tu comprador, cuando ya haya reservado o
-                        pagado el equipo. Queda registrado quién los consultó.
-                      </p>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
-                          Salud de la batería <span style={{ fontWeight: 500, color: THEME.muted }}>(porcentaje)</span>
-                        </label>
-                        {/* El % va pegado dentro de la casilla y no solo en el placeholder:
-                            así sigue a la vista mientras se escribe. Sin él, un "87" suelto
-                            se puede entender como 87 ciclos o como 87 % — y ese número es
-                            justo de los que se discuten en una devolución. */}
-                        <div style={{ position: "relative" }}>
-                          <Input
-                            placeholder="Ej: 87"
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={3}
-                            {...register("saludBateria")}
-                            style={{ paddingRight: 36 }}
-                            onKeyDown={e => {
-                              const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
-                              if (nav || e.ctrlKey || e.metaKey) return;
-                              if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
-                            }}
-                          />
-                          <span style={{ position: "absolute", right: 13, top: 0, height: "100%", display: "flex", alignItems: "center", fontSize: "0.95rem", fontWeight: 600, color: THEME.muted, pointerEvents: "none" }}>
-                            %
-                          </span>
-                        </div>
-                        {errors.saludBateria && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.saludBateria.message}</p>}
-                      </div>
-
-                      <div>
-                        <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px" }}>Piezas reemplazadas</p>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {PIEZAS.map(p => (
-                            <label
-                              key={p.id}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}
-                            >
-                              <input type="checkbox" value={p.id} {...register("piezasReemplazadas")} style={{ margin: 0, cursor: "pointer" }} />
-                              {p.label}
-                            </label>
-                          ))}
-                        </div>
-                        <p style={{ fontSize: 11, color: THEME.muted, margin: "8px 0 0", lineHeight: 1.4 }}>
-                          Decirlo de frente no te quita compradores: te quita devoluciones.
-                          Si el comprador recibe el equipo y no corresponde con lo que
-                          publicaste, puede devolverlo por información falsa.
+                      {esNuevo ? (
+                        // El IMEI existe para que el comprador verifique el ORIGEN de un
+                        // equipo usado (que no esté robado ni reportado), y la batería/piezas
+                        // para declarar su desgaste: ninguna de las dos preguntas tiene
+                        // sentido en un equipo nuevo, que por definición no tiene ese
+                        // historial que revisar y trae la batería al 100%. Un vendedor real
+                        // se quejó de que el formulario le pedía la salud de batería a un
+                        // celular nuevo — este bloque completo (IMEI incluido) desaparece por
+                        // lo mismo cuando la condición es Nuevo. Al enviar (onPublish) se
+                        // limpian los dos IMEI y se fuerza saludBateria=100 y piezas=NINGUNA,
+                        // sin importar qué haya quedado guardado de un cambio de opinión
+                        // anterior (ej: escribió estos datos con Usado y luego pasó a Nuevo).
+                        <p style={{ fontSize: 11.5, color: THEME.muted, margin: 0, lineHeight: 1.4, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 10, padding: "9px 11px" }}>
+                          ✅ Como lo marcaste como <strong>Nuevo</strong>, no hace falta declarar el IMEI: se publica sin historial que verificar, con batería al 100% y sin piezas reemplazadas.
                         </p>
-                      </div>
+                      ) : (
+                        <>
+                          {/* Los dos IMEI van en el mismo renglón porque son el mismo dato
+                              del mismo equipo: casi todos los celulares de hoy son de dos
+                              SIM y traen uno por ranura. Separarlos en dos renglones haría
+                              parecer que el segundo es otra cosa.
+
+                              auto-fit con minmax es lo que los mantiene juntos en pantallas
+                              normales y los apila solos en un teléfono estrecho, sin media
+                              query: dos casillas de 15 dígitos lado a lado en 360 px no se
+                              pueden ni leer, y esto se llena casi siempre desde el celular. */}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+                            <div>
+                              {/* Etiqueta encima y no solo placeholder: al escribir, el
+                                  placeholder desaparece y con dos casillas idénticas al
+                                  lado ya no se sabe cuál se está llenando. */}
+                              <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                                IMEI 1
+                              </label>
+                              <Input
+                                placeholder="15 dígitos (*#06#)"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={20}
+                                {...register("imei")}
+                              />
+                              {errors.imei
+                                ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei.message}</p>
+                                : avisoImei1 && <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei1}</p>}
+                            </div>
+                            <div>
+                              <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                                IMEI 2 <span style={{ fontWeight: 500, color: THEME.muted }}>(si tiene dos SIM)</span>
+                              </label>
+                              <Input
+                                placeholder="15 dígitos"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={20}
+                                {...register("imei2")}
+                              />
+                              {errors.imei2
+                                ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.imei2.message}</p>
+                                : avisoImei2 && <p style={{ color: "#9a5b00", fontSize: 11.5, margin: "4px 0 0", lineHeight: 1.4 }}>{avisoImei2}</p>}
+                            </div>
+                          </div>
+                          <p style={{ fontSize: 11, color: THEME.muted, margin: "-2px 0 0", lineHeight: 1.4 }}>
+                            Al marcar <strong>*#06#</strong> el teléfono muestra los dos. En la
+                            publicación se ve solo una parte (490154•••••••18). Los números completos
+                            se los entregamos únicamente a tu comprador, cuando ya haya reservado o
+                            pagado el equipo. Queda registrado quién los consultó.
+                          </p>
+
+                          <div>
+                            <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, color: THEME.primaryDark, margin: "0 0 4px" }}>
+                              Salud de la batería <span style={{ fontWeight: 500, color: THEME.muted }}>(porcentaje)</span>
+                            </label>
+                            {/* El % va pegado dentro de la casilla y no solo en el placeholder:
+                                así sigue a la vista mientras se escribe. Sin él, un "87" suelto
+                                se puede entender como 87 ciclos o como 87 % — y ese número es
+                                justo de los que se discuten en una devolución. */}
+                            <div style={{ position: "relative" }}>
+                              <Input
+                                placeholder="Ej: 87"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={3}
+                                {...register("saludBateria")}
+                                style={{ paddingRight: 36 }}
+                                onKeyDown={e => {
+                                  const nav = ["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End"].includes(e.key);
+                                  if (nav || e.ctrlKey || e.metaKey) return;
+                                  if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                                }}
+                              />
+                              <span style={{ position: "absolute", right: 13, top: 0, height: "100%", display: "flex", alignItems: "center", fontSize: "0.95rem", fontWeight: 600, color: THEME.muted, pointerEvents: "none" }}>
+                                %
+                              </span>
+                            </div>
+                            {errors.saludBateria && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.saludBateria.message}</p>}
+                          </div>
+
+                          <div>
+                            <p style={{ fontSize: 12.5, fontWeight: 600, margin: "2px 0 6px" }}>Piezas reemplazadas</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                              {PIEZAS.map(p => (
+                                <label
+                                  key={p.id}
+                                  style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}
+                                >
+                                  <input type="checkbox" value={p.id} {...register("piezasReemplazadas")} style={{ margin: 0, cursor: "pointer" }} />
+                                  {p.label}
+                                </label>
+                              ))}
+                            </div>
+                            <p style={{ fontSize: 11, color: THEME.muted, margin: "8px 0 0", lineHeight: 1.4 }}>
+                              Decirlo de frente no te quita compradores: te quita devoluciones.
+                              Si el comprador recibe el equipo y no corresponde con lo que
+                              publicaste, puede devolverlo por información falsa.
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
