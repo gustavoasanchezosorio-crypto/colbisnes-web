@@ -7,6 +7,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { ToastProvider } from '@/components/Toast';
 import BluWidget from '@/components/BluWidget';
 import ProfileCompletionAlert from '@/components/ProfileCompletionAlert';
+import VerifyEmailAlert from '@/components/VerifyEmailAlert';
 import BannerModoPrueba from '@/components/BannerModoPrueba';
 import CelebracionLanzamiento from '@/components/CelebracionLanzamiento';
 
@@ -150,6 +151,7 @@ export default function RootLayout({
                 {children}
                 <BluWidget />
                 <ProfileCompletionAlert />
+                <VerifyEmailAlert />
               </NotificationProvider>
             </ToastProvider>
           </AppProvider>

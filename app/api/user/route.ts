@@ -17,6 +17,9 @@ const SELECT_FIELDS = {
   // Necesario para el cálculo de perfil completo y los avisos contextuales:
   // sin KYC aprobado el usuario no puede publicar ni recibir pagos.
   kycStatus: true,
+  // Para el aviso de "confirma tu correo" (components/VerifyEmailAlert.tsx):
+  // sin esto el cliente no tiene forma de saber si le falta verificar.
+  emailVerified: true,
 };
 
 export async function GET() {
