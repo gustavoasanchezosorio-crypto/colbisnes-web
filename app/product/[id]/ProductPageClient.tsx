@@ -116,6 +116,14 @@ export default function ProductPageClient({ productId }: { productId: string }) 
     }
   }, [searchParams]);
 
+  // El vendedor marca su propia publicación como vendida FUERA de Colbisnes (trato
+  // directo, otra red social, etc.). Confirmación en dos pasos dentro de la misma
+  // tarjeta (mostrar aviso -> confirmar) en vez de un window.confirm nativo, que no
+  // se usa en ningún otro lado de este componente.
+  const [confirmarVendido, setConfirmarVendido] = useState(false);
+  const [marcandoVendido, setMarcandoVendido]   = useState(false);
+  const [errorVendido, setErrorVendido]         = useState("");
+
   const esVendedor  = session?.user?.id === product?.sellerId;
 
   // ¿Este visitante es el comprador de esta publicación, y su orden ya le da derecho
@@ -304,6 +312,17 @@ export default function ProductPageClient({ productId }: { productId: string }) 
       if (handleKycRequired(d)) return;
       if (res.ok) { cargarProducto(); cargarOfertas(); }
     } catch {}
+  };
+  const marcarVendido = async () => {
+    setMarcandoVendido(true); setErrorVendido("");
+    try {
+      const res = await fetch(`/api/products/${productId}/marcar-vendido`, { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setErrorVendido(d.error || "No se pudo marcar como vendido"); return; }
+      setConfirmarVendido(false);
+      await Promise.all([cargarProducto(), cargarOfertas()]);
+    } catch { setErrorVendido("Error de conexión"); }
+    finally { setMarcandoVendido(false); }
   };
   const irACheckout = () => {
     if (!session?.user) { router.push("/auth/login"); return; }
@@ -583,6 +602,39 @@ export default function ProductPageClient({ productId }: { productId: string }) 
                 </div>
               </div>
             </a>
+          )}
+
+          {/* Vendido por fuera: solo el vendedor y solo mientras esté DISPONIBLE — si ya
+              hay oferta aceptada, pago o custodia en curso DENTRO de Colbisnes, el backend
+              rechaza el intento (ver app/api/products/[id]/marcar-vendido/route.ts) para no
+              pisar una compra real a mitad de camino. */}
+          {esVendedor && disponible && (
+            confirmarVendido ? (
+              <div style={{background:"rgba(34,197,94,0.10)",border:"1px solid rgba(34,197,94,0.35)",borderRadius:"12px",padding:"0.7rem 0.9rem",display:"flex",flexDirection:"column",gap:8}}>
+                <p style={{margin:0,fontSize:"0.82rem",color:"#15803d",fontWeight:700}}>
+                  ¿Ya lo vendiste por fuera de Colbisnes? Se cierra la publicación y se rechazan las ofertas pendientes que tenga. No se puede deshacer desde aquí.
+                </p>
+                {errorVendido && <p style={{margin:0,fontSize:"0.78rem",color:"#b91c1c",fontWeight:600}}>{errorVendido}</p>}
+                <div style={{display:"flex",gap:8}}>
+                  <button disabled={marcandoVendido} onClick={marcarVendido}
+                    style={{flex:1,background:"#16a34a",color:"white",border:"none",borderRadius:"10px",padding:"0.55rem",fontWeight:800,fontSize:"0.85rem",cursor:marcandoVendido?"not-allowed":"pointer"}}>
+                    {marcandoVendido?"Marcando...":"Sí, ya lo vendí"}
+                  </button>
+                  <button disabled={marcandoVendido} onClick={() => { setConfirmarVendido(false); setErrorVendido(""); }}
+                    style={{background:"transparent",color:THEME.muted,border:`1.5px solid ${THEME.border}`,borderRadius:"10px",padding:"0.55rem 0.9rem",fontWeight:700,fontSize:"0.85rem",cursor:marcandoVendido?"not-allowed":"pointer"}}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div onClick={() => setConfirmarVendido(true)} style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:"12px",padding:"0.7rem 0.9rem",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                <span style={{fontSize:18}}>🤝</span>
+                <div style={{flex:1}}>
+                  <p style={{margin:0,fontSize:"0.85rem",color:"#15803d",fontWeight:800}}>Marcar como vendido</p>
+                  <p style={{margin:0,fontSize:"0.75rem",color:THEME.muted}}>¿Lo vendiste por fuera de Colbisnes? Ciérralo aquí para que deje de aparecer en el catálogo.</p>
+                </div>
+              </div>
+            )
           )}
 
           {esVendedor && (
