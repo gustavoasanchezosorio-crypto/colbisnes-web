@@ -9,12 +9,8 @@ import { THEME } from "@/lib/theme";
 const AZUL = THEME.primary;
 const DORADO = THEME.gold;
 
-// Solo letras y espacios (sin números ni especiales)
-const soloLetras = (v: string) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g, "");
-
 export default function RegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -36,14 +32,18 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!name.trim()) { setError("El nombre es requerido"); return; }
-    if (name.trim().length < 2) { setError("El nombre debe tener al menos 2 letras"); return; }
     setLoading(true);
     try {
+      // A propósito NO se manda `name` acá: el registro solo pide correo y contraseña
+      // (menos fricción de entrada — pedido explícito, 2026-09-21). El backend ya
+      // acepta `name` opcional (ver app/api/auth/register/route.ts), así que la cuenta
+      // queda con name=null y se completa después desde /perfil/editar, que es
+      // justo lo que ya hace el aviso de perfil incompleto (ProfileCompletionAlert)
+      // para el resto de los datos no críticos.
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: name.trim() }),
+        body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
         // La cuenta ya quedó creada: iniciamos sesión de una vez con las mismas
@@ -91,7 +91,7 @@ export default function RegisterPage() {
       <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
         <div style={{ width: "100%", maxWidth: 420, background: THEME.surfaceGradient, borderRadius: 20, padding: "2rem", boxShadow: THEME.cardShadow, border: "1.5px solid transparent" }}>
           <h1 style={{ color: THEME.text, fontWeight: 900, fontSize: "1.5rem", margin: "0 0 0.25rem", textAlign: "center" }}>Crear cuenta</h1>
-          <p style={{ color: THEME.muted, fontSize: "0.85rem", margin: "0 0 1.5rem" }}>Únete a Colbisnes y empieza a comprar y vender</p>
+          <p style={{ color: THEME.muted, fontSize: "0.85rem", margin: "0 0 1.5rem" }}>Solo tu correo y una contraseña. El resto te lo pedimos después, cuando lo necesites para ofertar, comprar o vender.</p>
 
           <button
             type="button" onClick={handleGoogleRegister} disabled={googleLoading}
@@ -113,19 +113,13 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            {/* Nombre */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={lbl}>Nombre completo</label>
-              <input
-                style={inp} type="text" placeholder="Ej: Gustavo Osorio"
-                value={name}
-                onChange={e => setName(soloLetras(e.target.value))}
-                onKeyDown={e => { if (/[0-9!@#$%^&*()_+=\[\]{};':"\\|,.<>/?]/.test(e.key)) e.preventDefault(); }}
-                maxLength={60}
-                autoComplete="name"
-              />
-              <p style={{ fontSize: 11, color: THEME.muted, margin: "3px 0 0" }}>Solo letras, sin números ni símbolos</p>
-            </div>
+            {/* Nombre: se quitó de aquí a propósito (pedido 2026-09-21) — el registro
+                pide solo correo y contraseña. El nombre (y todo lo demás: teléfono,
+                ciudad, KYC, datos de cobro) se completa después desde /perfil/editar;
+                ProfileCompletionAlert se lo recuerda con un aviso no bloqueante, y los
+                datos de verdad críticos (KYC, código anti fraude, Nequi/Bre-B) el
+                propio servidor los exige justo en el momento de ofertar/publicar/pagar
+                (ver lib/profileCompletion.ts y lib/requireAntiPhishing.ts). */}
 
             {/* Email */}
             <div style={{ marginBottom: "1.1rem" }}>
