@@ -237,8 +237,8 @@ function PageInner() {
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<FilterState & { condition?: string }>(() => {
-    const url = { searchQuery: searchParams.get("q") || "", city: searchParams.get("city") || "", minPrice: searchParams.get("minPrice") || "", maxPrice: searchParams.get("maxPrice") || "", status: searchParams.get("status") || "", condition: searchParams.get("condition") || "" };
+  const [filters, setFilters] = useState<FilterState>(() => {
+    const url = { searchQuery: searchParams.get("q") || "", city: searchParams.get("city") || "", minPrice: searchParams.get("minPrice") || "", maxPrice: searchParams.get("maxPrice") || "", status: searchParams.get("status") || "", condition: searchParams.get("condition") || "", category: searchParams.get("category") || "" };
     if (typeof window !== "undefined") { try { const s = JSON.parse(localStorage.getItem(FILTERS_KEY) || "{}"); return Object.fromEntries(Object.entries(url).map(([k,v]) => [k, v || (s as any)[k] || ""])) as typeof url; } catch {} }
     return url;
   });
@@ -616,7 +616,7 @@ function PageInner() {
     } catch (err: any) { showToast(err.message || "Error al enviar calificacion", "error"); }
   }, [refetch, showToast]);
   const clearFilters = useCallback(() => {
-    setFilters({ searchQuery: "", city: "", minPrice: "", maxPrice: "", status: "", condition: "" });
+    setFilters({ searchQuery: "", city: "", minPrice: "", maxPrice: "", status: "", condition: "", category: "" });
     if (typeof window !== "undefined") localStorage.removeItem(FILTERS_KEY);
   }, []);
   const isAuthenticated = sessionStatus === "authenticated";
@@ -1104,9 +1104,9 @@ function PageInner() {
           </div>
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8, marginTop: 4 }}>
             {CATEGORIES.map(c => {
-              const activa = (filters as any).category === c.id;
+              const activa = filters.category === c.id;
               return (
-                <button key={c.id} onClick={() => setFilters(prev => ({ ...prev, category: activa ? "" : c.id } as any))}
+                <button key={c.id} onClick={() => setFilters(prev => ({ ...prev, category: activa ? "" : c.id }))}
                   style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: activa ? "2px solid #1466cc" : "1px solid " + THEME.border, background: activa ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
                   <span style={{ fontSize: 22 }}>{c.icon}</span>
                   <span style={{ fontSize: 11, fontWeight: activa ? 800 : 600, color: activa ? THEME.primary : THEME.muted, whiteSpace: "nowrap" }}>{c.label}</span>

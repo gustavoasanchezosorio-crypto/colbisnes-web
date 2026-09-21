@@ -6,6 +6,14 @@ export interface FilterState {
   minPrice: string;
   maxPrice: string;
   status: string;
+  // Los dos siguientes ya los aceptaba /api/products (ver where.category / where.condition
+  // en el GET de app/api/products/route.ts) pero faltaban aquí: el botón de categoría en
+  // app/page.tsx los escribía en el estado local con un `as any` porque el tipo no los
+  // declaraba, y buildQuery de abajo nunca los leía para armar la URL — el clic cambiaba
+  // el estado y el resaltado del botón, pero la categoría jamás llegaba al fetch, así que
+  // el listado no se filtraba (bug reportado: "en vehiculos... siguen saliendo todos").
+  category: string;
+  condition: string;
 }
 
 export interface Product {
@@ -55,6 +63,8 @@ export const useProducts = (filters: FilterState) => {
     if (f.minPrice) params.append('minPrice', f.minPrice);
     if (f.maxPrice) params.append('maxPrice', f.maxPrice);
     if (f.status) params.append('status', f.status);
+    if (f.category) params.append('category', f.category);
+    if (f.condition) params.append('condition', f.condition);
     return params.toString();
   }, []);
 
