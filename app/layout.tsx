@@ -10,6 +10,7 @@ import ProfileCompletionAlert from '@/components/ProfileCompletionAlert';
 import VerifyEmailAlert from '@/components/VerifyEmailAlert';
 import BannerModoPrueba from '@/components/BannerModoPrueba';
 import CelebracionLanzamiento from '@/components/CelebracionLanzamiento';
+import { safeJsonLd } from '@/lib/jsonLd';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -124,7 +125,11 @@ export default function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+          // safeJsonLd en vez de JSON.stringify a secas: hoy organizationJsonLd es todo
+          // texto fijo así que no hay nada que inyectar, pero si algún día alguno de
+          // estos campos pasa a venir de datos dinámicos, este patrón ya queda a salvo
+          // de que un "</script>" literal rompa el tag (ver lib/jsonLd.ts).
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }}
         />
         {/* Cloudflare Web Analytics: gratis, sin cookies, sin banner de consentimiento.
             colbisnes.com no está proxiado por Cloudflare (confirmado: sin header cf-ray),

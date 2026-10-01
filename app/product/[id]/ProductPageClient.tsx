@@ -56,7 +56,7 @@ const glass = (alpha = 0.7, blur = 20): React.CSSProperties => ({
   boxShadow: "0 8px 24px rgba(10,46,107,0.10)",
 });
 
-export default function ProductPageClient({ productId }: { productId: string }) {
+export default function ProductPageClient({ productId, initialProduct = null }: { productId: string; initialProduct?: Product | null }) {
   const { data: session } = useSession();
   const router = useRouter();
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -65,10 +65,19 @@ export default function ProductPageClient({ productId }: { productId: string }) 
   // pulsando un botón que no hace nada, porque este handler ignora los errores.
   const modoPrueba = useModoPrueba();
 
-  const [product, setProduct]     = useState<Product | null>(null);
+  // `initialProduct` viene del server component (app/product/[id]/page.tsx), que ya
+  // hizo este mismo fetch sin cookies de sesión (la vista "pública", igual a la que ve
+  // Google). Sembrarlo acá evita el parpadeo de "Cargando..." Y, sobre todo, hace que
+  // el título/precio/descripción/fotos existan en el HTML que el servidor entrega —
+  // antes `product` arrancaba en null y solo se llenaba después de montarse en el
+  // navegador, así que un rastreador que no ejecuta JS (o que lo hace en una segunda
+  // pasada) no veía nada. El useEffect de abajo (cargarProducto) sigue corriendo igual
+  // al montar y reemplaza esto con la vista real de la sesión (ofertas propias, chat,
+  // etc.) apenas resuelve — esto solo adelanta el primer pintado.
+  const [product, setProduct]     = useState<Product | null>(initialProduct);
   const [offers, setOffers]       = useState<Offer[]>([]);
   const [imagenActual, setImagenActual] = useState(0);
-  const [cargando, setCargando]   = useState(true);
+  const [cargando, setCargando]   = useState(!initialProduct);
   const [countdown, setCountdown] = useState(0);
   const [esFavorito, setEsFavorito]     = useState(false);
   const [favoritosCount, setFavCount]   = useState(0);
