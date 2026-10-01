@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProductSocket } from "@/lib/useSocket";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 import TrackingOverlay from "@/components/TrackingOverlay";
 import TrustBadge from "@/components/TrustBadge";
 import PagarComisionNequiModal from "@/components/PagarComisionNequiModal";
@@ -445,7 +446,7 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
         <div className="galeria-col">
           <div className="img-wrap" style={{position:"relative",borderRadius:"16px",overflow:"hidden",aspectRatio:"4/3",background:"#eef2f7"}}>
             {product.images?.length > 0 ? (
-              <img src={product.images[imagenActual]?.url} alt={product.title}
+              <img src={cldOptimizar(product.images[imagenActual]?.url)} alt={product.title}
                 style={{width:"100%",height:"100%",objectFit:"contain",display:"block"}} />
             ) : (
               <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",color:"rgba(13,27,42,0.25)"}}>📷</div>
@@ -497,7 +498,7 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
           {product.images.length > 1 && (
             <div style={{display:"flex",gap:"0.5rem",marginTop:"0.6rem",flexWrap:"wrap"}}>
               {product.images.map((img,i)=>(
-                <img key={i} src={img.url} alt="" onClick={()=>setImagenActual(i)} className="thumb"
+                <img key={i} src={cldOptimizar(img.url)} alt={`${product.title} - foto ${i + 1}`} onClick={()=>setImagenActual(i)} className="thumb"
                   style={{width:58,height:58,objectFit:"cover",borderRadius:10,cursor:"pointer",
                     border:`2.5px solid ${i===imagenActual?AZUL:"transparent"}`,
                     boxShadow:i===imagenActual?`0 0 0 2px ${AZUL}33`:"none"}}/>

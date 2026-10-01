@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { THEME } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 // Tarjeta de solo lectura para listados renderizados en el servidor (hoy: páginas de
 // categoría, ver app/categoria/[slug]/page.tsx). A propósito NO es la misma
@@ -42,7 +43,7 @@ export default function CategoryProductCard({ product }: Props) {
         <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", aspectRatio: "4/3", background: "#eef2f7", marginBottom: 12 }}>
           {product.firstImage ? (
             <img
-              src={product.firstImage}
+              src={cldOptimizar(product.firstImage)}
               alt={product.title}
               loading="lazy"
               style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}

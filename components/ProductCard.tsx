@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button, OutlineButton } from './FormComponents';
 import { THEME } from '@/lib/theme';
 import { formatMoney, getTimeLeft, getStatusLabel } from '@/lib/utils';
+import { cldOptimizar } from '@/lib/cloudinaryUrl';
 import MarcarEnviadoModal from './MarcarEnviadoModal';
 
 interface ProductCardProps {
@@ -375,7 +376,7 @@ export const ProductCard = React.memo(function ProductCard({
         {todasLasFotos.length > 0 && (
           <div style={{ position: "relative", marginBottom: "12px", borderRadius: "12px", overflow: "hidden", aspectRatio: "4/3", background: "#eef2f7" }}>
             <img
-              src={todasLasFotos[fotoActual]}
+              src={cldOptimizar(todasLasFotos[fotoActual])}
               alt={product.title}
               onClick={() => setShowGaleria(true)}
               style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", cursor: "pointer" }}
@@ -780,7 +781,7 @@ export const ProductCard = React.memo(function ProductCard({
               >‹</button>
             )}
 
-            <img src={todasLasFotos[fotoActual]} alt={product.title + " foto " + (fotoActual + 1)} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 16, objectFit: "contain", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} />
+            <img src={cldOptimizar(todasLasFotos[fotoActual])} alt={product.title + " foto " + (fotoActual + 1)} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 16, objectFit: "contain", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} />
 
             {todasLasFotos.length > 1 && (
               <button

@@ -8,6 +8,7 @@ import { Button, OutlineButton } from "@/components/FormComponents";
 import TrustBadge from "@/components/TrustBadge";
 import { THEME } from "@/lib/theme";
 import { formatMoney } from "@/lib/utils";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 const AZUL = THEME.primary;
 const DORADO = THEME.gold;
@@ -120,7 +121,7 @@ export default function UserProfilePage() {
         {/* Tarjeta de perfil */}
         <div style={{ background: THEME.surfaceGradient, boxShadow: THEME.cardShadow, borderRadius: 20, padding: "1.75rem", marginBottom: "1.5rem", border: "1.5px solid transparent", display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
           {user.image ? (
-            <img src={user.image} alt={user.name || "Usuario"} style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: `3px solid ${DORADO}` }} onError={e => (e.currentTarget.style.display = "none")} />
+            <img src={cldOptimizar(user.image)} alt={user.name || "Usuario"} style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: `3px solid ${DORADO}` }} onError={e => (e.currentTarget.style.display = "none")} />
           ) : (
             <div style={{ width: 100, height: 100, borderRadius: "50%", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem", color: "white", fontWeight: 900 }}>
               {(user.name || "?")[0].toUpperCase()}
@@ -235,7 +236,7 @@ export default function UserProfilePage() {
                 {favorites.map(p => (
                   <div key={p.id} style={{ background: THEME.surfaceGradient, boxShadow: THEME.cardShadow, borderRadius: 14, padding: "1rem 1.25rem", border: "1.5px solid transparent", display: "flex", gap: "1rem", alignItems: "center" }}>
                     {p.images?.[0]?.url && (
-                      <img src={p.images[0].url} alt={p.title} style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                      <img src={cldOptimizar(p.images[0].url)} alt={p.title} style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h3 style={{ margin: "0 0 0.25rem", fontSize: "0.95rem", fontWeight: 800, color: THEME.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title}</h3>
