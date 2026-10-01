@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
+import { CATEGORIES } from "@/lib/theme";
 
 const SITE_URL = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
 
@@ -33,8 +34,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Las 11 categorías (app/categoria/[slug]/page.tsx) son páginas fijas, no filas de la
+  // tabla Product, así que no salen del query de arriba. lastModified va con la fecha
+  // de esta misma ejecución (no hay una fecha "real" que les corresponda, a diferencia
+  // de un producto con su createdAt) — igual que el home, abajo. Prioridad 0.6: por
+  // debajo de los productos (0.8), porque son páginas de entrada/agregación y el
+  // contenido que de verdad importa indexar es la ficha de cada producto.
+  const paginasCategoria: MetadataRoute.Sitemap = CATEGORIES.map((c) => ({
+    url: `${SITE_URL}/categoria/${c.id}`,
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
   return [
     { url: SITE_URL, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    ...paginasCategoria,
     ...paginasProducto,
   ];
 }

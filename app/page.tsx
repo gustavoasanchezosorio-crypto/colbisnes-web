@@ -1179,20 +1179,37 @@ function PageInner() {
         )}
       </main>
       <footer style={{ borderTop: `1px solid ${THEME.border}`, background: THEME.surface, padding: "32px 24px" }}>
-        <div style={{ maxWidth: 1160, margin: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <img src="/logo.svg?v=2" alt="Colbisnes" style={{ height: 30, width: "auto", display: "block" }} />
-            </div>
-            <p style={{ fontSize: 12, color: THEME.muted, margin: "3px 0 0" }}>© {new Date().getFullYear()} Colbisnes — La mejor tienda de segunda mano de Colombia</p>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {PAYMENT_METHODS.map(m => (
-              <span key={m.label} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px 5px 6px", borderRadius: 20, background: "#f4f7fb", border: `1px solid ${THEME.border}`, color: THEME.text, fontSize: 12, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,0.06)" }}>
-                <img src={m.logo} alt={m.label} style={{ height: 24, width: 24, objectFit: "contain", borderRadius: 6, display: "block", background: "#fff", padding: 2 }} />
-                {m.label}
-              </span>
+        <div style={{ maxWidth: 1160, margin: "auto" }}>
+          {/* Enlaces reales (<a>, via next/link) a cada página de categoría — ver
+              app/categoria/[slug]/page.tsx. Los chips de arriba (más abajo en este mismo
+              archivo) filtran sin salir del home, que es mejor UX para quien ya está
+              navegando, pero eso significa que ningún <a href> del sitio apuntaba todavía
+              a /categoria/*: esas páginas ya están en el sitemap (app/sitemap.ts), pero sin
+              un enlace real quedarían "huérfanas" — el propio audit de SEO que motivó esto
+              marca justo ese caso como problema. Este bloque es solo para que Google (y
+              cualquiera) las descubra desde la página de más autoridad del sitio. */}
+          <nav aria-label="Categorías" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+            {CATEGORIES.map(c => (
+              <Link key={c.id} href={`/categoria/${c.id}`} style={{ fontSize: 12.5, fontWeight: 700, color: THEME.primary, textDecoration: "none", background: "#f4f7fb", border: `1px solid ${THEME.border}`, borderRadius: 20, padding: "6px 12px" }}>
+                {c.icon} {c.label}
+              </Link>
             ))}
+          </nav>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img src="/logo.svg?v=2" alt="Colbisnes" style={{ height: 30, width: "auto", display: "block" }} />
+              </div>
+              <p style={{ fontSize: 12, color: THEME.muted, margin: "3px 0 0" }}>© {new Date().getFullYear()} Colbisnes — La mejor tienda de segunda mano de Colombia</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {PAYMENT_METHODS.map(m => (
+                <span key={m.label} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px 5px 6px", borderRadius: 20, background: "#f4f7fb", border: `1px solid ${THEME.border}`, color: THEME.text, fontSize: 12, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,0.06)" }}>
+                  <img src={m.logo} alt={m.label} style={{ height: 24, width: 24, objectFit: "contain", borderRadius: 6, display: "block", background: "#fff", padding: 2 }} />
+                  {m.label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </footer>
