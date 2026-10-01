@@ -6,6 +6,7 @@ import { THEME } from "@/lib/theme";
 import { LAUNCH_AT_MS } from "@/lib/launch";
 import { COOKIE_MODO_PRUEBA_UI } from "@/lib/modoPrueba";
 import { esCuentaMaster } from "@/lib/adminAuth";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 type Seccion = "resumen" | "lista" | "usuarios" | "productos" | "pagos" | "bloqueos" | "auditoria" | "urls";
 
@@ -1028,7 +1029,7 @@ export default function AdminPanel() {
                           </div>
                           {o.comisionReservaComprobanteUrl && (
                             <a href={o.comisionReservaComprobanteUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block", marginBottom: 12 }}>
-                              <img src={o.comisionReservaComprobanteUrl} alt="comprobante" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 10, border: "1px solid " + T.border, objectFit: "cover" as const }} />
+                              <img src={cldOptimizar(o.comisionReservaComprobanteUrl)} alt="comprobante" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 10, border: "1px solid " + T.border, objectFit: "cover" as const }} />
                             </a>
                           )}
                           <p style={{ margin: "0 0 10px", color: T.muted, fontSize: 11.5 }}>Subido: {new Date(o.createdAt).toLocaleString("es-CO")}</p>

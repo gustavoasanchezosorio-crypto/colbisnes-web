@@ -8,6 +8,7 @@ import { Button, OutlineButton, Input, Select, TextArea } from "@/components/For
 import { useToast } from "@/components/Toast";
 import { esCuentaMaster } from "@/lib/adminAuth";
 import { normalizarHeic, comprimirImagen } from "@/lib/imagen";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 import {
   PIEZAS,
   categoriaPideDatosDeDispositivo,
@@ -558,14 +559,14 @@ export default function EditarProductoPage() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {imagenesExistentes.map((url) => (
               <div key={url} style={{ position: "relative", width: 86, height: 86, borderRadius: 12, overflow: "hidden", border: `2px solid ${THEME.gold}` }}>
-                <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={cldOptimizar(url)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <button type="button" onClick={() => quitarExistente(url)} aria-label="Quitar foto"
                   style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(239,68,68,0.92)", border: "none", color: "white", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>×</button>
               </div>
             ))}
             {nuevosPreviews.map((src, idx) => (
               <div key={src} style={{ position: "relative", width: 86, height: 86, borderRadius: 12, overflow: "hidden", border: `2px dashed ${THEME.gold}` }}>
-                <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={cldOptimizar(src)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <button type="button" onClick={() => quitarNueva(idx)} aria-label="Quitar foto nueva"
                   style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(239,68,68,0.92)", border: "none", color: "white", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>×</button>
               </div>

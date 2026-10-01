@@ -1,5 +1,6 @@
 "use client";
 import { THEME } from "@/lib/theme";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 // Factura Colbisnes "en vivo": el mismo desglose del comprobante PDF, pero renderizado
 // en la página del producto y actualizándose en tiempo real (el padre recarga la orden
@@ -130,7 +131,7 @@ export default function FacturaEnVivo({
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "0.85rem" }}>
           {productoImagen && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={productoImagen} alt="" style={{ width: 42, height: 42, borderRadius: 9, objectFit: "cover", border: `1px solid ${THEME.border}`, flexShrink: 0 }} />
+            <img src={cldOptimizar(productoImagen)} alt="" style={{ width: 42, height: 42, borderRadius: 9, objectFit: "cover", border: `1px solid ${THEME.border}`, flexShrink: 0 }} />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: "0.86rem", fontWeight: 700, color: THEME.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

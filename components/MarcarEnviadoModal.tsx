@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { THEME } from "@/lib/theme";
 import { validarNumeroGuia } from "@/lib/shippingValidation";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 interface Props {
   orderId: string;
@@ -154,7 +155,7 @@ export default function MarcarEnviadoModal({ orderId, direccionEnvio, onClose, o
         <input type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} id="comprobante-input" />
         <label htmlFor="comprobante-input" style={{ display: "block", border: `2px dashed ${THEME.border}`, borderRadius: 14, padding: preview ? 0 : "24px 14px", textAlign: "center", cursor: "pointer", marginBottom: 16, overflow: "hidden", background: THEME.surfaceAlt }}>
           {preview ? (
-            <img src={preview} alt="comprobante" style={{ width: "100%", maxHeight: 180, objectFit: "cover", display: "block" }} />
+            <img src={cldOptimizar(preview)} alt="comprobante" style={{ width: "100%", maxHeight: 180, objectFit: "cover", display: "block" }} />
           ) : (
             <span style={{ color: THEME.primary, fontSize: 13, fontWeight: 600 }}>📷 Toca para subir la foto de la guia</span>
           )}

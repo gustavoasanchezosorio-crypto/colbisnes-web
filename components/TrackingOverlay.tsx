@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 const MOTIVOS_DISPUTA = [
   { id: "NO_ENVIADO", label: "El vendedor no ha enviado el producto" },
@@ -218,7 +219,7 @@ export default function TrackingOverlay({ orderId, productTitle, onClose }: Prop
                   <span style={{ color: "#0a1628", fontWeight: 700 }}>{numeroGuia}</span>
                 </div>
                 {comprobanteUrl && (
-                  <img src={comprobanteUrl} alt="Comprobante de envio" style={{ width: "100%", borderRadius: 12, maxHeight: 160, objectFit: "cover", marginTop: 4 }} />
+                  <img src={cldOptimizar(comprobanteUrl)} alt="Comprobante de envio" style={{ width: "100%", borderRadius: 12, maxHeight: 160, objectFit: "cover", marginTop: 4 }} />
                 )}
               </div>
             )}

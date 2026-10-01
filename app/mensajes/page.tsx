@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 const AZUL = THEME.primary;
 
@@ -101,7 +102,7 @@ export default function MensajesPage() {
 
   const avatar = (nombre: string, imagen?: string) => (
     imagen
-      ? <img src={imagen} alt={nombre} style={{width:"40px",height:"40px",borderRadius:"50%",objectFit:"cover"}} />
+      ? <img src={cldOptimizar(imagen)} alt={nombre} style={{width:"40px",height:"40px",borderRadius:"50%",objectFit:"cover"}} />
       : <div style={{width:"40px",height:"40px",borderRadius:"50%",background:`linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,display:"flex",
           alignItems:"center",justifyContent:"center",color:"white",fontWeight:"bold",fontSize:"1rem",flexShrink:0}}>
           {(nombre||"?")[0].toUpperCase()}

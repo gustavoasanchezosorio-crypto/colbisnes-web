@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 interface DisputeItem {
   id: string;
@@ -160,7 +161,7 @@ export default function AdminDisputasPage() {
                   <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                     {d.evidence.map((url, i) => (
                       <a key={i} href={url} target="_blank" rel="noreferrer">
-                        <img src={url} alt={`evidencia ${i + 1}`} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 10, border: `1px solid ${THEME.border}` }} />
+                        <img src={cldOptimizar(url)} alt={`evidencia ${i + 1}`} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 10, border: `1px solid ${THEME.border}` }} />
                       </a>
                     ))}
                   </div>

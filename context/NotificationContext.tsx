@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { THEME } from '@/lib/theme';
+import { cldOptimizar } from '@/lib/cloudinaryUrl';
 
 type MsgPopup = { from: string | null; title: string | null; image: string | null; productId: string | null };
 
@@ -219,7 +220,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         >
           {msgPopup.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={msgPopup.image} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+            <img src={cldOptimizar(msgPopup.image)} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
           ) : (
             <div style={{ width: 46, height: 46, borderRadius: 10, background: THEME.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>💬</div>
           )}

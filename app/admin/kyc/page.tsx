@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { THEME } from "@/lib/theme";
 import { puedeAprobarseAMano, MOTIVO_SIN_DOCUMENTOS } from "@/lib/kycDocumentos";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 interface KycUser {
   id: string;
@@ -179,7 +180,7 @@ export default function AdminKycPage() {
                         style={{ borderRadius: 12, overflow: "hidden", cursor: "zoom-in", background: THEME.surfaceAlt, aspectRatio: "1", position: "relative" }}
                         onClick={() => setLightbox(u.docs.selfieUrl!)}
                       >
-                        <img src={u.docs.selfieUrl} alt="Selfie" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={cldOptimizar(u.docs.selfieUrl)} alt="Selfie" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     </div>
                   )}
@@ -190,7 +191,7 @@ export default function AdminKycPage() {
                         style={{ borderRadius: 12, overflow: "hidden", cursor: "zoom-in", background: THEME.surfaceAlt, aspectRatio: "16/10", position: "relative" }}
                         onClick={() => setLightbox(u.docs.cedulaUrl!)}
                       >
-                        <img src={u.docs.cedulaUrl} alt="Cédula" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={cldOptimizar(u.docs.cedulaUrl)} alt="Cédula" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     </div>
                   )}
@@ -217,7 +218,7 @@ export default function AdminKycPage() {
           onClick={() => setLightbox(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}
         >
-          <img src={lightbox} alt="Documento de verificación facial" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 16, objectFit: "contain" }} />
+          <img src={cldOptimizar(lightbox)} alt="Documento de verificación facial" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 16, objectFit: "contain" }} />
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { Button, OutlineButton } from "@/components/FormComponents";
 import { THEME } from "@/lib/theme";
 import { validarDireccionEnvio, limpiarDireccion, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 import { validarBreb, limpiarBreb, LARGO_MAX_BREB } from "@/lib/breb";
+import { cldOptimizar } from "@/lib/cloudinaryUrl";
 
 const AZUL = THEME.primary;
 
@@ -355,7 +356,7 @@ export default function EditarPerfilPage() {
               <label style={lbl}>Foto de perfil</label>
               <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                 {formData.image
-                  ? <img src={formData.image} alt="Vista previa" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,205,0,0.5)" }} />
+                  ? <img src={cldOptimizar(formData.image)} alt="Vista previa" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,205,0,0.5)" }} />
                   : <div style={{ width: 72, height: 72, borderRadius: "50%", background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: "1.5rem" }}>{(formData.name || "?")[0]?.toUpperCase()}</div>
                 }
                 <div>
