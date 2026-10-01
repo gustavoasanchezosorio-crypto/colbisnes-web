@@ -772,6 +772,23 @@ function PageInner() {
       )}
 
       <main style={{ maxWidth: 1160, margin: "auto", padding: "28px 16px 60px" }}>
+        {/* h1 de la página — no existía ninguno en el home (auditoría SEO 2026-10-01).
+            Es un "use client", así que no puede exportar su propia metadata (ver
+            app/layout.tsx para el título/descripción genéricos que hereda); este es el
+            único lugar donde el home puede decirle a Google de qué trata, y por eso va
+            FUERA de los bloques condicionales (formulario de publicar, modal de perfil)
+            — tiene que pintarse siempre, para cualquier visitante. La copia reusa a
+            propósito la misma frase del description del layout raíz ("segunda mano...
+            pagos protegidos"), para no mandar una señal distinta en cada lado. */}
+        <div style={{ textAlign: "center", margin: "0 0 22px" }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: THEME.text, margin: "0 0 6px", letterSpacing: "-0.3px" }}>
+            Compra y vende de segunda mano en Colombia con pagos protegidos
+          </h1>
+          <p style={{ fontSize: "0.9rem", color: THEME.muted, margin: 0 }}>
+            Publica gratis, recibe ofertas y cobra seguro — Colbisnes retiene el pago hasta que todo llegue bien.
+          </p>
+        </div>
+
         {isAuthenticated && showPublishForm && (
           <div ref={publishFormRef} style={{ background: THEME.surfaceGradient, borderRadius: 20, padding: "24px 20px", border: "1.5px solid transparent", marginBottom: 24, boxShadow: THEME.cardShadow, scrollMarginTop: 80 }}>
             <h2 style={{ fontSize: 17, fontWeight: 800, color: THEME.text, margin: "0 0 18px", textAlign: "center" }}>Publicar producto</h2>
