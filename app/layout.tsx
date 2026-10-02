@@ -21,6 +21,15 @@ export const metadata: Metadata = {
   title: { default: "Colbisnes", template: "%s · Colbisnes" },
   description: "El marketplace colombiano de segunda mano con pagos protegidos.",
   applicationName: "Colbisnes",
+  // Verificación de propiedad en Google Search Console (2026-10-01), cuenta
+  // gustavoa.sanchezosorio@gmail.com — la propiedad anterior quedó verificada
+  // con otra cuenta de Google a la que ya no se tiene acceso, así que se dio
+  // de alta de nuevo para poder usar la Inspección de URLs (solicitar
+  // indexación del home tras el fix de SSR). No quitar aunque ya diga
+  // "verificado": Search Console revisa que esta etiqueta siga presente.
+  verification: {
+    google: "im5cgV4LsKABV4-pmJF_dz_Kre_CMNGp3Hxyn5j6OLI",
+  },
   openGraph: {
     type: "website",
     siteName: "Colbisnes",
