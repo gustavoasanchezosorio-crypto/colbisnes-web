@@ -107,7 +107,15 @@ async function procesarWebhookDestacado(reference: string, status: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    console.log("Webhook Wompi recibido:", JSON.stringify(body));
+    // No se loguea el body completo: Wompi incluye ahí datos del comprador (email,
+    // teléfono, detalles del método de pago). Solo se deja lo necesario para rastrear
+    // un webhook en los logs — los mismos campos que el código ya usa más abajo.
+    console.log("Webhook Wompi recibido:", {
+      event: body?.event,
+      transactionId: body?.data?.transaction?.id,
+      status: body?.data?.transaction?.status,
+      reference: body?.data?.transaction?.reference,
+    });
 
     const event     = body.event;
     const data      = body.data;
