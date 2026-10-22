@@ -1219,7 +1219,7 @@ function PageInner() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {PAYMENT_METHODS.map(m => (
                 <span key={m.label} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px 5px 6px", borderRadius: 20, background: "#f4f7fb", border: `1px solid ${THEME.border}`, color: THEME.text, fontSize: 12, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,0.06)" }}>
-                  <img src={m.logo} alt={m.label} style={{ height: 24, width: 24, objectFit: "contain", borderRadius: 6, display: "block", background: "#fff", padding: 2 }} />
+                  <img src={m.logo} alt={m.label} style={{ height: 24, width: "auto", maxWidth: 40, objectFit: "contain", borderRadius: 6, display: "block", background: "#fff", padding: 2 }} />
                   {m.label}
                 </span>
               ))}
