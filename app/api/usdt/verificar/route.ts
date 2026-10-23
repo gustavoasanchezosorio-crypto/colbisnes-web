@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { sendWhatsapp } from "@/lib/whatsapp";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
+import { rateLimit, getIP } from "@/lib/rateLimit";
 
 const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -49,6 +50,13 @@ async function segundosPorBloque(url: string, bloqueActual: number): Promise<num
 
 export async function GET(req: NextRequest) {
   try {
+    // Ruta sin sesión (el checkout la sondea mientras espera la confirmación en blockchain)
+    // y cada llamada puede disparar hasta 3 peticiones RPC pagadas a Meganode/NodeReal más
+    // abajo. Sin límite, cualquiera con un orderId podía loopearla sin costo y agotar la
+    // cuota del proveedor RPC para todo el sitio.
+    const { allowed } = rateLimit(`usdt-verificar:${getIP(req)}`, { limit: 20, windowSeconds: 60 });
+    if (!allowed) return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
+
     const orderId = req.nextUrl.searchParams.get("orderId");
     if (!orderId) return NextResponse.json({ error: "orderId requerido" }, { status: 400 });
 
