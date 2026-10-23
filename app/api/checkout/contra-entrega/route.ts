@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { calcularPrecioContraEntrega, calcularExtrasCheckout, nivelParaDescuento } from "@/lib/pricing";
 import { getServerSession } from "next-auth";
@@ -132,7 +133,10 @@ export async function POST(req: NextRequest) {
     // la protección no tendría por dónde cobrarse (antes se sumaba a totalPagado sin cobrarse
     // nunca). Se fuerza a false aunque el cliente la mande. Sí se mantiene en pago online/USDT.
     const extras = calcularExtrasCheckout(producto, false);
-    const codigoSecreto = Math.floor(100000 + Math.random() * 900000).toString();
+    // RNG criptográfico, no Math.random(): este es el código que el comprador debería dar
+    // para confirmar la entrega — que no sea predecible importa, aunque hoy ningún endpoint
+    // lo esté verificando todavía (ver nota en el reporte de este hallazgo).
+    const codigoSecreto = crypto.randomInt(100000, 1000000).toString();
     const ahora = new Date();
     const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
 
