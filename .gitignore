@@ -17,6 +17,11 @@
 /.next/
 /out/
 
+# Copias de conflicto estilo macOS (p. ej. de iCloud Drive, ya que el proyecto
+# vive en Desktop) que a veces duplican carpetas de build con un sufijo " 2",
+# " 3", etc. Nunca deben versionarse: son contenido de build, regenerable.
+/.next */
+
 # production
 /build
 
