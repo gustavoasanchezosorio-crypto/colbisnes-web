@@ -50,6 +50,23 @@ export interface TasaUSDT {
   fuente: "binance-p2p" | "exchangerate-api" | "fallback";
 }
 
+// Caché corta en memoria: esta función la llama tanto la ruta pública /api/tasa-usdt (sin
+// login, para refrescar el precio en el checkout) como, en el mismo proceso, cada creación
+// de orden USDT y cada desembolso automático. Sin caché, cualquiera podía loopear la ruta
+// pública y acabar generando tantas llamadas a Binance P2P que la IP del servidor quedara
+// bloqueada por el rate-limit propio de Binance — dejando a TODOS los usuarios atrapados en
+// el valor fijo de respaldo (4200), no solo a quien abusó. La tasa USD/COP no se mueve en
+// segundos, así que una ventana corta no introduce un precio real desactualizado.
+const CACHE_TTL_MS = 45_000;
+let cache: { valor: TasaUSDT; expiraEn: number } | null = null;
+
+export async function obtenerTasaUSDT(): Promise<TasaUSDT> {
+  if (cache && cache.expiraEn > Date.now()) return cache.valor;
+  const valor = await obtenerTasaUSDTSinCache();
+  cache = { valor, expiraEn: Date.now() + CACHE_TTL_MS };
+  return valor;
+}
+
 // Única fuente de verdad para la tasa USD/COP usada en pagos USDT. Antes existían DOS
 // caminos que podían devolver números distintos para la MISMA orden: el checkout (navegador)
 // llamaba a /api/tasa-usdt directamente, mientras que la creación de la orden (servidor)
@@ -59,7 +76,7 @@ export interface TasaUSDT {
 // respaldo (4200) mientras el checkout sí mostraba la tasa real — descuadre confirmado en
 // producción el 2026-07-06 (orden #cmra17eqb: preview 5.1 USDT vs orden creada 4.5 USDT).
 // Ahora ambos caminos llaman esta misma función en proceso, sin HTTP de por medio.
-export async function obtenerTasaUSDT(): Promise<TasaUSDT> {
+async function obtenerTasaUSDTSinCache(): Promise<TasaUSDT> {
   try {
     const tasa = await tasaBinanceP2P();
     if (tasa) return { tasa, fuente: "binance-p2p" };
