@@ -22,11 +22,8 @@
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "cookie": "^0.7.2",
-    "crypto": "^1.0.1",
-    "crypto-js": "^4.2.0",
     "dotenv": "^17.2.4",
     "ethers": "^6.17.0",
-    "formidable": "^3.5.4",
     "heic-convert": "^2.1.0",
     "heic2any": "^0.0.4",
     "next": "^16.1.6",
@@ -51,7 +48,6 @@
     "@auth/core": "0.41.3"
   },
   "devDependencies": {
-    "@types/formidable": "^3.5.0",
     "@types/node": "25.5.0",
     "@types/pg": "^8.20.0",
     "@types/react": "19.2.14",
