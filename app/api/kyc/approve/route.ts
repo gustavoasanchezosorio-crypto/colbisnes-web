@@ -78,6 +78,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true, mensaje: "Usuario verificado y notificado" });
   } catch (error: any) {
     console.error("Error aprobar KYC:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

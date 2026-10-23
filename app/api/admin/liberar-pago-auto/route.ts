@@ -124,6 +124,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, orden: ordenActualizada, txHash, amountUSD });
   } catch (error: any) {
     console.error("Error en liberar-pago-auto:", error);
-    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

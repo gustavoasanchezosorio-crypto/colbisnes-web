@@ -304,7 +304,7 @@ export async function POST(req: NextRequest) {
     console.log("Orden " + orden.id + " actualizada a estado " + nuevoEstado);
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("Error en webhook Wompi:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("Error en webhook Wompi:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

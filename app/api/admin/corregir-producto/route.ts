@@ -61,6 +61,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, producto: actualizado });
   } catch (err: any) {
     console.error("POST /api/admin/corregir-producto error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

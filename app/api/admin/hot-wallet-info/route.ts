@@ -31,6 +31,7 @@ export async function GET() {
 
     return NextResponse.json({ address, saldoUSDT, saldoBNB }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Error interno" }, { status: 500 });
+    console.error("GET /api/admin/hot-wallet-info error:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

@@ -54,6 +54,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(Array.from(mapaConvs.values()));
   } catch (e: any) {
     console.error("GET /api/messages/conversaciones error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

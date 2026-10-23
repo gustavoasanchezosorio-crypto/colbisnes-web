@@ -213,6 +213,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("POST /api/checkout/contra-entrega error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

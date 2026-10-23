@@ -52,7 +52,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ usuarios: result }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("GET /api/admin/kyc error:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
@@ -123,6 +124,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, mensaje: "Verificación facial rechazada y usuario notificado" });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("POST /api/admin/kyc error:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

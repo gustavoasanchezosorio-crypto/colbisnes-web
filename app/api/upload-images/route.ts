@@ -60,6 +60,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, urls: uploadedUrls });
   } catch (error: any) {
     console.error("Error al subir imágenes:", error);
-    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

@@ -190,7 +190,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ estado: orden.estado, encontrado: false, totalLogsRevisados: logs.length, wallet, paymentExpiresAt });
   } catch (err: any) {
-    console.error("Error verificando USDT:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("Error verificando USDT:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

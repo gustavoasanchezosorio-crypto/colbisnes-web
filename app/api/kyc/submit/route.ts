@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, status: "pending" });
   } catch (err: any) {
-    console.error("Error en KYC submit:", err.message);
-    return NextResponse.json({ error: err.message || "Error interno" }, { status: 500 });
+    console.error("Error en KYC submit:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

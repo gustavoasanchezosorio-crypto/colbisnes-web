@@ -60,7 +60,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ count: product?.favoritesCount || 0, esFavorito });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error("GET /api/favorites error:", e);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
@@ -169,6 +170,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (e: any) {
     console.error("POST /api/favorites error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

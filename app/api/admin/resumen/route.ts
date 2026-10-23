@@ -25,6 +25,7 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("GET /api/admin/resumen error:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(wompiUrl);
   } catch (err: any) {
-    console.error("Error en checkout Wompi comisión:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("Error en checkout Wompi comisión:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

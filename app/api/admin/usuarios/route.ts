@@ -26,6 +26,7 @@ export async function GET() {
     });
     return NextResponse.json({ usuarios }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("GET /api/admin/usuarios error:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

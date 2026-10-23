@@ -78,6 +78,7 @@ export async function GET() {
 
     return NextResponse.json({ logs }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("GET /api/admin/auditoria error:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

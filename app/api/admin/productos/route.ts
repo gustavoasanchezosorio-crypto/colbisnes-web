@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json({ productos }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("GET /api/admin/productos error:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

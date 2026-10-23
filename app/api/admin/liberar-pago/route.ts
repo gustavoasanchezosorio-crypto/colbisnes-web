@@ -125,6 +125,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, orden: ordenActualizada });
   } catch (err: any) {
     console.error("Error en liberar-pago:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

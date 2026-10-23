@@ -77,6 +77,6 @@ export async function POST() {
     });
   } catch (error: any) {
     console.error("Error en KYC start (Didit):", error);
-    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

@@ -184,7 +184,7 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true, usuario: actualizado });
   } catch (err: any) {
-    console.error("PATCH /api/admin/usuarios/[id] error:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("PATCH /api/admin/usuarios/[id] error:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

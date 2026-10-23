@@ -97,7 +97,7 @@ export async function GET(
     );
   } catch (error: any) {
     console.error("GET /api/products/[id] error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
@@ -318,7 +318,7 @@ export async function PATCH(
     return NextResponse.json({ ok: true, producto: actualizado });
   } catch (error: any) {
     console.error("PATCH /api/products/[id] error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
@@ -365,6 +365,6 @@ export async function DELETE(
     return NextResponse.json({ ok: true, producto: actualizado });
   } catch (error: any) {
     console.error("DELETE /api/products/[id] error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
