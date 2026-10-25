@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import ProductPageClient from "./ProductPageClient";
 import { safeJsonLd } from "@/lib/jsonLd";
+import { CATEGORIES } from "@/lib/theme";
 
 const SITE_URL = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
 
@@ -90,6 +91,25 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     },
   };
 
+  // Mismo patrón que app/categoria/[slug]/page.tsx: Inicio > Categoría > Producto.
+  // Antes esta página solo tenía el Product de arriba — faltaba el BreadcrumbList
+  // que SÍ existe en categoría, así que Google no podía pintar la ruta de migas en
+  // el resultado de búsqueda de una ficha de producto (sí podía en una categoría).
+  // Si product.category no matchea ninguna de las 11 conocidas (dato viejo o
+  // manipulado a mano en la BD), se omite ese nivel en vez de romper con undefined.
+  const categoria = product && CATEGORIES.find((c) => c.id === product.category);
+  const breadcrumbJsonLd = product && {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Inicio", item: SITE_URL },
+      ...(categoria
+        ? [{ "@type": "ListItem", position: 2, name: categoria.label, item: `${SITE_URL}/categoria/${categoria.id}` }]
+        : []),
+      { "@type": "ListItem", position: categoria ? 3 : 2, name: product.title, item: `${SITE_URL}/product/${id}` },
+    ],
+  };
+
   return (
     <>
       {productJsonLd && (
@@ -100,6 +120,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           // un "</script>" literal ahí rompería el tag — ver lib/jsonLd.ts.
           dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }}
         />
+      )}
+      {breadcrumbJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
       )}
       <ProductPageClient productId={id} initialProduct={product} />
     </>
