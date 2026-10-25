@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { z } from "zod";
-import { useProducts, FilterState } from "@/hooks/useProducts";
+import { useProducts, FilterState, Product } from "@/hooks/useProducts";
 import { useToast } from "@/components/Toast";
 import { useNotifications } from "@/context/NotificationContext";
 import { productSchema } from "@/utils/validations";
@@ -232,7 +232,7 @@ function ImagePicker({ files, previews, onChange, disabled }: ImagePickerProps) 
   );
 }
 
-function PageInner() {
+function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
   const { data: session, status: sessionStatus } = useSession();
   const { showToast } = useToast();
   const router = useRouter();
@@ -242,7 +242,7 @@ function PageInner() {
     if (typeof window !== "undefined") { try { const s = JSON.parse(localStorage.getItem(FILTERS_KEY) || "{}"); return Object.fromEntries(Object.entries(url).map(([k,v]) => [k, v || (s as any)[k] || ""])) as typeof url; } catch {} }
     return url;
   });
-  const { products, loading, error, hasMore, fetchMore, refetch } = useProducts(filters);
+  const { products, loading, error, hasMore, fetchMore, refetch } = useProducts(filters, initialProducts);
 
   useEffect(() => {
     const trackingId = searchParams.get("tracking");
@@ -1268,10 +1268,10 @@ function PageInner() {
   );
 }
 
-export default function HomeClient() {
+export default function HomeClient({ initialProducts }: { initialProducts?: Product[] }) {
   return (
     <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Cargando...</div>}>
-      <PageInner />
+      <PageInner initialProducts={initialProducts} />
     </Suspense>
   );
 }

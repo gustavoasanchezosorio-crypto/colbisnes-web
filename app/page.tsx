@@ -1,7 +1,23 @@
 import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
+import type { Product } from "@/hooks/useProducts";
 
 const SITE_URL = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
+
+// Primera página sin filtros, la misma que pide hooks/useProducts.ts al montar
+// con los filtros vacíos (page=1&limit=10) — así el HTML que recibe un crawler
+// en su primera pasada (la que no ejecuta JavaScript) ya trae productos reales
+// en vez del "Cargando..." del fallback de Suspense. Si el fetch falla, no pasa
+// nada grave: HomeClient simplemente carga por su cuenta, como hacía antes.
+async function getInitialProducts(): Promise<Product[]> {
+  try {
+    const res = await fetch(`${SITE_URL}/api/products?page=1&limit=10`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
 
 // Antes este archivo ERA toda la home ("use client", con el formulario de publicar,
 // filtros, scroll infinito, sesión, etc. — ver app/HomeClient.tsx, que es exactamente
@@ -57,6 +73,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
-  return <HomeClient />;
+export default async function Page() {
+  const initialProducts = await getInitialProducts();
+  return <HomeClient initialProducts={initialProducts} />;
 }

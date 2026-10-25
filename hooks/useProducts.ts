@@ -41,17 +41,23 @@ export interface Product {
 const LIMIT = 10;
 const MAX_LOADED = 200;
 
-export const useProducts = (filters: FilterState) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export const useProducts = (filters: FilterState, initialProducts?: Product[]) => {
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
+  const [loading, setLoading] = useState(!initialProducts);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState((initialProducts?.length ?? 0) === LIMIT);
 
   const pageRef = useRef(1);
   const inFlight = useRef(false);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
+  // Si app/page.tsx ya pidió la primera página en el servidor (para que Google
+  // la vea en el HTML crudo, ver auditoría SEO 2026-10-23), nos la saltamos UNA
+  // sola vez al montar para no pisarla con un parpadeo de skeleton — pero solo
+  // si los filtros con los que arrancó el cliente son los vacíos (sin query
+  // params ni localStorage), que son los mismos que usó ese fetch del servidor.
+  const skipFirstLoad = useRef(!!initialProducts && Object.values(filters).every((v) => !v));
 
   const buildQuery = useCallback((page: number, limit: number) => {
     const f = filtersRef.current;
@@ -134,6 +140,10 @@ export const useProducts = (filters: FilterState) => {
 
   // Recargar al cambiar filtros (con debounce)
   useEffect(() => {
+    if (skipFirstLoad.current) {
+      skipFirstLoad.current = false;
+      return;
+    }
     const t = setTimeout(() => { pageRef.current = 1; loadFirst(); }, 300);
     return () => clearTimeout(t);
   }, [filters, loadFirst]);
