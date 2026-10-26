@@ -6,12 +6,25 @@ import type { MetadataRoute } from "next";
 //
 // Lo que se bloquea es lo que no aporta nada en un buscador y sí puede filtrar
 // datos o gastar presupuesto de rastreo:
-//   /admin    → panel interno
-//   /api      → endpoints, nunca contenido indexable
-//   /checkout → flujo de pago, con estado por usuario
-//   /perfil   → datos personales
-//   /kyc      → verificación de identidad
-//   /auth     → login y registro
+//   /admin             → panel interno
+//   /api               → endpoints, nunca contenido indexable
+//   /checkout          → flujo de pago, con estado por usuario
+//   /perfil            → datos personales
+//   /kyc               → verificación de identidad
+//   /auth              → login y registro
+//   /mensajes          → bandeja de chat privado entre comprador y vendedor
+//   /product/*/editar  → formulario de edición, solo para el dueño de la publicación
+//
+// /mensajes y /product/*/editar (agregados en esta auditoría) quedaron afuera
+// de la lista original: son "use client" protegidas solo con useSession en el
+// navegador — middleware.ts únicamente aplica el candado de prelanzamiento, no
+// autenticación por ruta — así que el HTML que recibe un rastreador es un 200
+// público, aunque la UI redirija después de montarse en el navegador. Sin este
+// disallow, Google podía rastrear e indexar ambas como contenido vacío/thin.
+// El comodín "*" en /product/*/editar lo soportan Google, Bing, etc. (no es
+// parte del estándar original de robots.txt, pero sí de su implementación
+// real) y hace falta para no bloquear de paso /product/[id] (la ficha pública,
+// que sí debe indexarse) con un prefijo más corto como "/product".
 //
 // /coming-soon NO se bloquea a propósito: es la página a la que se está llevando
 // tráfico para la lista de espera. Sacarla del buscador iría en contra de la
@@ -27,7 +40,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/api", "/checkout", "/perfil", "/kyc", "/auth"],
+      disallow: ["/admin", "/api", "/checkout", "/perfil", "/kyc", "/auth", "/mensajes", "/product/*/editar"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
