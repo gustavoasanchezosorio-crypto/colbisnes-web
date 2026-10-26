@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Primero genera el secreto (GET /api/admin/2fa/setup)" }, { status: 400 });
     }
 
-    if (!(await verificarCodigoTOTP(user.totpSecret, code))) {
+    if (!(await verificarCodigoTOTP(user.totpSecret, code, user.id))) {
       return NextResponse.json({ error: "Código inválido" }, { status: 400 });
     }
 

@@ -89,7 +89,7 @@ export async function PATCH(
     if (!master?.totpEnabled || !master.totpSecret) {
       return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
     }
-    if (!(await verificarCodigoTOTP(master.totpSecret, body.code))) {
+    if (!(await verificarCodigoTOTP(master.totpSecret, body.code, master.id))) {
       return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
     }
 

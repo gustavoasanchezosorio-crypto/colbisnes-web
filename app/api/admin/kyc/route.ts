@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     if (!admin?.totpEnabled || !admin.totpSecret) {
       return NextResponse.json({ error: "El 2FA no está activado. Configúralo en /admin/2fa" }, { status: 400 });
     }
-    if (!(await verificarCodigoTOTP(admin.totpSecret, code))) {
+    if (!(await verificarCodigoTOTP(admin.totpSecret, code, admin.id))) {
       return NextResponse.json({ error: "Código de verificación inválido" }, { status: 401 });
     }
 
