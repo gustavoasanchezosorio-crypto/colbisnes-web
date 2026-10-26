@@ -39,17 +39,24 @@ export async function requireSesion(): Promise<Resultado> {
 /**
  * Exige sesión iniciada Y verificación de identidad aprobada.
  *
- * DÓNDE VA ESTE CANDADO (decisión del 2026-09-02): solo donde hay plata o donde alguien
- * se expone públicamente como vendedor. Hoy son dos sitios:
+ * DÓNDE VA ESTE CANDADO (actualizado 2026-10-26, reemplaza la decisión del 2026-09-02):
+ * solo quien se expone públicamente como vendedor y va a recibir plata nuestra.
  *
  *   · Publicar un producto  — quien ofrece algo a la comunidad y va a recibir un pago
  *                             nuestro tiene nombre y cédula. Sin excepción.
- *   · Los checkouts         — online, contra entrega y USDT.
  *
- * Y explícitamente NO va en mirar, ofertar, escribir mensajes, calificar ni confirmar la
- * entrega. Antes estaba en todos, y el efecto era que alguien que apenas llegaba a curiosear
- * se topaba de entrada con un muro de cédula y selfie. Pedir todo por adelantado no protege
- * más: solo espanta a quien todavía no ha hecho nada que proteger.
+ * Y explícitamente YA NO va en los checkouts (online, contra entrega, USDT): el COMPRADOR
+ * no necesita identidad verificada para pagar. La garantía de la compra es el propio
+ * escrow/custodia del pago (el dinero no se libera al vendedor hasta confirmar la entrega),
+ * no el documento de quien compra — exigírselo solo era fricción sin proteger nada que el
+ * escrow no protegiera ya. Los tres checkouts (app/api/checkout/contra-entrega/route.ts,
+ * app/api/checkout/usdt/route.ts, lib/checkoutOnline.ts) llaman ahora a requireSesion().
+ * Tampoco va, como antes, en mirar, ofertar, escribir mensajes, calificar ni confirmar la
+ * entrega. Pedir identidad por adelantado o de más no protege más: solo espanta a quien
+ * todavía no ha hecho nada que proteger.
+ *
+ * Esta función queda disponible (no se usa hoy en ningún endpoint) por si en el futuro algún
+ * flujo nuevo necesita volver a exigir KYC a un comprador — p. ej. compras de monto muy alto.
  *
  * Uso:
  *   const { session, response } = await requireKyc();

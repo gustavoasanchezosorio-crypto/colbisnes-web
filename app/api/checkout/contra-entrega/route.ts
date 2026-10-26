@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { calcularPrecioContraEntrega, calcularExtrasCheckout, nivelParaDescuento } from "@/lib/pricing";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireKyc } from "@/lib/requireKyc";
+import { requireSesion } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { esCuentaMaster } from "@/lib/adminAuth";
 import { registrarAuditoria } from "@/lib/audit";
@@ -23,8 +23,13 @@ export async function POST(req: NextRequest) {
     // comisión de reserva pagada de verdad por Nequi. No es un flujo simulable.
     if (enModoPrueba(req)) return bloqueadoPorModoPrueba(MENSAJE_PAGO_BLOQUEADO);
 
-    const { session, response: kycError } = await requireKyc();
-    if (kycError) return kycError;
+    // Decisión 2026-10-26: el comprador ya NO necesita identidad verificada (reconocimiento
+    // facial) para pagar — la garantía de la compra es el propio escrow/custodia del pago,
+    // no el documento del comprador. El filtro de identidad queda solo para quien publica
+    // (ver POST /api/products y el comentario de requireKyc() en lib/requireKyc.ts). Aquí
+    // solo se exige sesión iniciada.
+    const { session, response: authError } = await requireSesion();
+    if (authError) return authError;
 
     const bloqueo = await bloqueoResponse(session.user.id);
     if (bloqueo) return bloqueo;

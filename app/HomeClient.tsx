@@ -339,9 +339,13 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
   const [kycPendiente, setKycPendiente] = useState(false);
   // Aviso contextual: qué le falta al usuario (crítico) para poder operar.
   // Se llamaba "faltaVender" y ese nombre hacía daño: llevaba a leerlo como cosa de
-  // vendedores, cuando el KYC y el código anti fraude frenan también al COMPRADOR en su
-  // primera oferta — y frenan igual a quien va a PUBLICAR (lo comprueba el servidor en
-  // app/api/products/route.ts). No hay nadie a quien esta lista no le aplique.
+  // vendedores, cuando el código anti fraude frena también al COMPRADOR en su primera oferta
+  // — y frena igual a quien va a PUBLICAR (lo comprueba el servidor en
+  // app/api/products/route.ts). El KYC, desde el 2026-10-26, ya solo frena a quien PUBLICA
+  // (el comprador no lo necesita para pagar, ver lib/requireKyc.ts); esta lista sigue
+  // mostrándolo igual porque sirve como recordatorio general de cuenta, no solo de pago —
+  // a diferencia de app/checkout/[id]/page.tsx, que sí lo descarta puntualmente porque ahí
+  // bloqueaba el botón de pagar sin que el servidor lo fuera a exigir.
   const [faltaParaOperar, setFaltaParaOperar] = useState<{ key: string; label: string }[]>([]);
   // Modal emergente para invitar a completar los datos críticos faltantes.
   const [showFaltaModal, setShowFaltaModal] = useState(false);
@@ -1134,6 +1138,14 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
             <Input placeholder="Buscar productos..." value={filters.searchQuery} onChange={e => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))} style={{ flex: 1, minWidth: 180 }} />
           </div>
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8, marginTop: 4 }}>
+            {/* "Todos" va primero, antes de las categorías: es el estado por defecto (ninguna
+                categoría elegida) y debe ser lo primero que se toque en la fila, no uno más
+                mezclado entre Vehiculos, Inmuebles, etc. */}
+            <button onClick={() => setFilters(prev => ({ ...prev, category: "" }))}
+              style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: !filters.category ? "2px solid #1466cc" : "1px solid " + THEME.border, background: !filters.category ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
+              <span style={{ fontSize: 22 }}>🏷️</span>
+              <span style={{ fontSize: 11, fontWeight: !filters.category ? 800 : 600, color: !filters.category ? THEME.primary : THEME.muted, whiteSpace: "nowrap" }}>Todos</span>
+            </button>
             {CATEGORIES.map(c => {
               const activa = filters.category === c.id;
               return (
@@ -1155,7 +1167,11 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
               <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
               <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
             </Select>
-            {hasActiveFilters && <OutlineButton onClick={clearFilters}>Limpiar</OutlineButton>}
+            {/* Limpiar siempre al final de la fila, fijo. Antes aparecía/desaparecía según
+                hasActiveFilters y corría de lugar al resto de botones cada vez que un filtro
+                se activaba o se soltaba; ahora solo se apaga visualmente (sin desaparecer)
+                cuando no hay nada que limpiar. */}
+            <OutlineButton onClick={clearFilters} disabled={!hasActiveFilters} style={{ flexShrink: 0, opacity: hasActiveFilters ? 1 : 0.5, cursor: hasActiveFilters ? "pointer" : "default" }}>Limpiar</OutlineButton>
           </div>
         </div>
         <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { calcularPrecioOnline, calcularExtrasCheckout, nivelParaDescuento } from "@/lib/pricing";
 import { esCuentaMaster } from "@/lib/adminAuth";
-import { requireKyc } from "@/lib/requireKyc";
+import { requireSesion } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
@@ -35,8 +35,15 @@ export async function prepararOrdenOnline(
   productoId: string,
   proteccionExtendida: boolean
 ): Promise<PrepararOnlineResult> {
-  const { session, response: kycError } = await requireKyc();
-  if (kycError) return { ok: false, code: "kyc", status: 403 };
+  // Decisión 2026-10-26: el comprador ya NO necesita identidad verificada (reconocimiento
+  // facial) para pagar — la garantía de la compra es el propio escrow/custodia del pago, no
+  // el documento del comprador. El filtro de identidad queda solo para quien publica (ver
+  // POST /api/products). Aquí solo se exige sesión iniciada. Se conserva el nombre de código
+  // "kyc" (lo leen app/api/checkout/wompi/route.ts y .../nequi-online/route.ts, que
+  // redirigen a /kyc) para no tocar esos switch — esa página ya redirige a /auth/login si
+  // detecta que, en realidad, a quien llegó aquí le faltaba sesión y no verificación.
+  const { session, response: authError } = await requireSesion();
+  if (authError) return { ok: false, code: "kyc", status: 403 };
 
   const bloqueo = await bloqueoResponse(session.user.id);
   if (bloqueo) return { ok: false, code: "blocked", status: 403, message: "Tu cuenta está bloqueada temporalmente." };

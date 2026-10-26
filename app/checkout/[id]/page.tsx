@@ -67,8 +67,15 @@ export default function CheckoutPage() {
         // El código anti fraude ya viene dentro de los críticos (lib/profileCompletion.ts).
         // Antes se añadía aquí a mano, porque allá no estaba marcado como crítico; ahora sí
         // lo está, y repetirlo haría que saliera dos veces en la lista de "te falta".
+        //
+        // "kycStatus" se descarta a propósito (2026-10-26): esa lista es compartida con el
+        // flujo de publicar, donde el KYC sí sigue siendo obligatorio, pero el COMPRADOR ya
+        // no necesita identidad verificada para pagar — la garantía de la compra es el propio
+        // escrow del pago (ver lib/requireKyc.ts y los checkouts, que ya no llaman a
+        // requireKyc()). Sin este filtro, a cualquier comprador sin KYC se le bloqueaba aquí
+        // el botón "Continuar" aunque el servidor ya no fuera a exigírselo.
         const { faltantesCriticos } = computeProfileCompletion(u);
-        setPerfilFaltantes(faltantesCriticos);
+        setPerfilFaltantes(faltantesCriticos.filter(f => f.key !== "kycStatus"));
       })
       .catch(() => setPerfilFaltantes([]));
   }, [id]);
@@ -170,10 +177,10 @@ export default function CheckoutPage() {
   };
 
   const perfilIncompleto = (perfilFaltantes?.length ?? 0) > 0;
-  // Solo falta KYC → mándalo al flujo de verificación; cualquier otra cosa → editar perfil.
-  const destinoCompletar = perfilFaltantes && perfilFaltantes.length === 1 && perfilFaltantes[0].key === "kycStatus"
-    ? "/kyc"
-    : "/perfil/editar?falta=pago";
+  // Ya no puede faltar "kycStatus" aquí (se descarta arriba, ver el efecto que llama a
+  // computeProfileCompletion): el comprador no necesita KYC para pagar desde 2026-10-26.
+  // Lo único que puede faltarle ahora (anti fraude, Nequi, Bre-B) se completa en el perfil.
+  const destinoCompletar = "/perfil/editar?falta=pago";
 
   const seguirConElPago = () => {
     if (TEST_MODE) {

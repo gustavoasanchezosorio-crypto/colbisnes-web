@@ -25,7 +25,11 @@ interface CampoPerfil {
   // del ayudante requireKyc: publicar hace la comprobación a mano y no lo usa):
   //   · publicar (POST /api/products) ....... KYC + código anti fraude
   //   · hacer una oferta (POST /api/offers) . código anti fraude
-  //   · pagar (los 3 checkouts) ............. KYC + código anti fraude + Nequi + Bre-B
+  //   · pagar (los 3 checkouts) ............. código anti fraude + Nequi + Bre-B
+  //     (YA NO pide KYC al comprador desde el 2026-10-26: la garantía de la compra es el
+  //     propio escrow del pago, no el documento de quien compra; ver lib/requireKyc.ts.
+  //     checkout/[id]/page.tsx descarta "kycStatus" de faltantesCriticos a mano por este
+  //     mismo motivo, sin tocar esta lista — que publicar sí la sigue necesitando tal cual.)
   //   · que te compren (vendedorPuedeRecibirVentas) .. KYC + Nequi + Bre-B del vendedor
   //
   // Ojo con el significado de "crítico": marca lo que bloquea ALGUNA acción, no lo que hay
