@@ -145,7 +145,7 @@ export default function BluWidget() {
             background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
             padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
           }}>
-            <img src="/nolan-avatar.jpg" alt="Nolan" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
+            <img src="/nolan-avatar.jpg" alt="Nolan" style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, border: "2px solid rgba(255,255,255,0.65)", boxShadow: "0 0 10px rgba(255,224,140,0.55)" }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, color: "#fff", fontWeight: 800, fontSize: 14.5 }}>Nolan ✨</p>
               <p style={{ margin: 0, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600 }}>Asistente de Colbisnes</p>
