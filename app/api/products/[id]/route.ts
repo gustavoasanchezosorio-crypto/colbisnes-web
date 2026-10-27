@@ -6,6 +6,7 @@ import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { registrarAuditoria } from "@/lib/audit";
 import { esCuentaMaster } from "@/lib/adminAuth";
 import { normalizarEntrega } from "@/lib/entrega";
+import { normalizarTituloProducto } from "@/lib/normalizarTitulo";
 import {
   categoriaPideDatosDeDispositivo,
   validarImeisDeclarados,
@@ -264,7 +265,7 @@ export async function PATCH(
       prisma.product.update({
         where: { id },
         data: {
-          title: title.trim(),
+          title: normalizarTituloProducto(title),
           description: description.trim(),
           priceCOP,
           city: city.trim(),
@@ -305,7 +306,7 @@ export async function PATCH(
           piezasReemplazadas: product.piezasReemplazadas,
         },
         despues: {
-          title: title.trim(), priceCOP, city: city.trim(),
+          title: normalizarTituloProducto(title), priceCOP, city: city.trim(),
           condition: finalCondition, category: finalCategory,
           imei: imeiFinal, imei2: imei2Final, saludBateria: bateriaFinal,
           piezasReemplazadas: piezasFinal,

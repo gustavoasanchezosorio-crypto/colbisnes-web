@@ -6,6 +6,7 @@ import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { normalizarEntrega } from "@/lib/entrega";
+import { normalizarTituloProducto } from "@/lib/normalizarTitulo";
 import {
   categoriaPideDatosDeDispositivo,
   validarImeisDeclarados,
@@ -283,7 +284,7 @@ export async function POST(request: Request) {
 
     const product = await prisma.product.create({
       data: {
-        title: title.trim(),
+        title: normalizarTituloProducto(title),
         description: description.trim(),
         priceCOP,
         city: city.trim(),
