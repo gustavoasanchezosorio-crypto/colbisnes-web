@@ -1138,14 +1138,33 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
             <Input placeholder="Buscar productos..." value={filters.searchQuery} onChange={e => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))} style={{ flex: 1, minWidth: 180 }} />
           </div>
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8, marginTop: 4 }}>
-            {/* "Todos" va primero, antes de las categorías: es el estado por defecto (ninguna
-                categoría elegida) y debe ser lo primero que se toque en la fila, no uno más
-                mezclado entre Vehiculos, Inmuebles, etc. */}
+            {/* Orden de la fila (2026-10-26, corregido): "Todos" primero, luego los controles
+                de ciudad/estado y "Limpiar" van PEGADOS a él, todavía antes de las categorías.
+                Antes quedaban al final de la fila, detrás de las 11 categorías — en un celular
+                había que arrastrar todo el scroll horizontal para alcanzarlos. Las categorías
+                (que son muchas y se reconocen por ícono) son las que se mandan al tramo que
+                sí requiere deslizar; los controles de uso frecuente quedan a la vista sin
+                desplazar nada. */}
             <button onClick={() => setFilters(prev => ({ ...prev, category: "" }))}
               style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: !filters.category ? "2px solid #1466cc" : "1px solid " + THEME.border, background: !filters.category ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
               <span style={{ fontSize: 22 }}>🏷️</span>
               <span style={{ fontSize: 11, fontWeight: !filters.category ? 800 : 600, color: !filters.category ? THEME.primary : THEME.muted, whiteSpace: "nowrap" }}>Todos</span>
             </button>
+            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: 140, flexShrink: 0 }}>
+              <option value="">Todas las ciudades</option>
+              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </Select>
+            <Select value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: 140, flexShrink: 0 }}>
+              <option value="">Todos</option>
+              <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
+              <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
+              <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
+              <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
+            </Select>
+            {/* Limpiar ya no va al final de la fila, fijo. Solo se apaga visualmente (sin
+                desaparecer ni correr de lugar al resto de botones) cuando no hay nada que
+                limpiar. */}
+            <OutlineButton onClick={clearFilters} disabled={!hasActiveFilters} style={{ flexShrink: 0, opacity: hasActiveFilters ? 1 : 0.5, cursor: hasActiveFilters ? "pointer" : "default" }}>Limpiar</OutlineButton>
             {CATEGORIES.map(c => {
               const activa = filters.category === c.id;
               return (
@@ -1156,22 +1175,6 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                 </button>
               );
             })}
-            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: 140 }}>
-              <option value="">Todas las ciudades</option>
-              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </Select>
-            <Select value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: 140 }}>
-              <option value="">Todos</option>
-              <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
-              <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
-              <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
-              <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
-            </Select>
-            {/* Limpiar siempre al final de la fila, fijo. Antes aparecía/desaparecía según
-                hasActiveFilters y corría de lugar al resto de botones cada vez que un filtro
-                se activaba o se soltaba; ahora solo se apaga visualmente (sin desaparecer)
-                cuando no hay nada que limpiar. */}
-            <OutlineButton onClick={clearFilters} disabled={!hasActiveFilters} style={{ flexShrink: 0, opacity: hasActiveFilters ? 1 : 0.5, cursor: hasActiveFilters ? "pointer" : "default" }}>Limpiar</OutlineButton>
           </div>
         </div>
         <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
