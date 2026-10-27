@@ -47,9 +47,28 @@ export async function generateMetadata(
   const imagen = product.images?.[0]?.url || `${SITE_URL}/logo-google.png`;
   const url = `${SITE_URL}/product/${id}`;
 
+  // Keywords por publicación, no por sitio: cada una sale solo de los datos reales de
+  // ESTA publicación (título, categoría, condición, ciudad), así que nunca queda
+  // obsoleta ni se repite igual en dos fichas distintas. A propósito NO es un volcado
+  // de todo el inventario activo en el <head> del sitio — eso Google lo ignora desde
+  // 2009 y a Bing/IndexNow les huele a spam por ser sitewide y seguro desactualizado
+  // apenas cambie una publicación (se discutió con el dueño el 2026-10-27).
+  const categoriaMeta = CATEGORIES.find((c) => c.id === product.category);
+  const keywords = Array.from(
+    new Set(
+      [
+        product.title,
+        categoriaMeta?.label,
+        product.city && categoriaMeta?.label ? `${categoriaMeta.label} en ${product.city}` : undefined,
+        `${condicionLabel(product.condition)} ${categoriaMeta?.label ?? ""}`.trim(),
+      ].filter((k): k is string => Boolean(k))
+    )
+  );
+
   return {
     title: titulo, // el layout raíz le agrega "· Colbisnes" solo (title.template)
     description: descripcion,
+    keywords,
     alternates: { canonical: url },
     openGraph: {
       title: `${titulo} · Colbisnes`,
