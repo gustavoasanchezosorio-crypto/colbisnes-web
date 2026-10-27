@@ -1145,16 +1145,23 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                 (que son muchas y se reconocen por ícono) son las que se mandan al tramo que
                 sí requiere deslizar; los controles de uso frecuente quedan a la vista sin
                 desplazar nada. */}
+            {/* "Todos" sin recuadro (2026-10-26): a diferencia de las categorías, no lleva
+                borde ni fondo — es texto+ícono plano, para distinguirlo visualmente de los
+                chips reales. El color azul corporativo de abajo lo sigue marcando como
+                clickeable aunque no tenga caja. */}
             <button onClick={() => setFilters(prev => ({ ...prev, category: "" }))}
-              style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: !filters.category ? "2px solid #1466cc" : "1px solid " + THEME.border, background: !filters.category ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
+              style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", border: "none", background: "transparent", cursor: "pointer", minWidth: 72 }}>
               <span style={{ fontSize: 22 }}>🏷️</span>
-              <span style={{ fontSize: 11, fontWeight: !filters.category ? 800 : 600, color: !filters.category ? THEME.primary : THEME.muted, whiteSpace: "nowrap" }}>Todos</span>
+              <span style={{ fontSize: 11, fontWeight: !filters.category ? 800 : 600, color: THEME.primary, whiteSpace: "nowrap" }}>Todos</span>
             </button>
-            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: 140, flexShrink: 0 }}>
+            {/* Ancho automático (2026-10-26): antes era un width fijo de 140px que recortaba
+                "Todas las ciudades"; ahora se ensancha solo hasta lo que ocupa el texto
+                seleccionado. */}
+            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "auto", flexShrink: 0, color: THEME.primary }}>
               <option value="">Todas las ciudades</option>
               {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
-            <Select value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: 140, flexShrink: 0 }}>
+            <Select value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: "auto", flexShrink: 0, color: THEME.primary }}>
               <option value="">Todos</option>
               <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
               <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
@@ -1171,7 +1178,7 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                 <button key={c.id} onClick={() => setFilters(prev => ({ ...prev, category: activa ? "" : c.id }))}
                   style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: activa ? "2px solid #1466cc" : "1px solid " + THEME.border, background: activa ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
                   <span style={{ fontSize: 22 }}>{c.icon}</span>
-                  <span style={{ fontSize: 11, fontWeight: activa ? 800 : 600, color: activa ? THEME.primary : THEME.muted, whiteSpace: "nowrap" }}>{c.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: activa ? 800 : 600, color: THEME.primary, whiteSpace: "nowrap" }}>{c.label}</span>
                 </button>
               );
             })}
