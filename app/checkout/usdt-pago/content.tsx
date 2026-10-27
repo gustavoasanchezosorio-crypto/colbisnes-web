@@ -9,6 +9,10 @@ export default function USDTPagoContent() {
   const router  = useRouter();
   const orderId = params.get("orderId");
   const total   = params.get("total");
+  // Si el producto se identifica (viene en la URL desde checkout/[id]), el botón de
+  // volver puede llevar derecho a esa página de pago para elegir otro método. Si no
+  // viene (links viejos sin este parámetro), cae al inicio en vez de romperse.
+  const productId = params.get("productId");
   // La wallet SIEMPRE se toma del servidor (fuente de verdad), nunca de la URL.
   // Un link/pantalla viejo puede traer en la URL una wallet que ya no es la vigente
   // (pasó en producción 2026-07-07: se cambió la hot wallet y una pantalla cacheada
@@ -139,6 +143,17 @@ export default function USDTPagoContent() {
   return (
     <div style={{ minHeight: "100vh", background: THEME.background, fontFamily: "-apple-system,sans-serif", padding: "24px 16px 60px" }}>
       <div style={{ maxWidth: 460, margin: "0 auto" }}>
+
+        {/* Antes no había ninguna forma de salir de esta pantalla si el comprador
+            quería cambiar de método de pago (reportado por el usuario 2026-10-26) —
+            esta orden sigue vigente (no se cancela), solo se vuelve a la página del
+            producto donde puede elegir contraentrega u otro método. */}
+        <button
+          onClick={() => router.push(productId ? "/checkout/" + productId : "/")}
+          style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 14px", borderRadius: 12, border: `1px solid ${THEME.border}`, background: THEME.surfaceAlt, color: THEME.textSoft, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >
+          ← Volver a Colbisnes
+        </button>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, boxShadow: `0 4px 16px ${THEME.primary}44` }}>🪙</div>

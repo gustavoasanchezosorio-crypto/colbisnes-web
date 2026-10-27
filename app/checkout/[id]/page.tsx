@@ -168,7 +168,7 @@ export default function CheckoutPage() {
         if (data.emailVerificationRequired) { window.location.href = "/auth/verify"; return; }
         if (data.antiPhishingRequired) { window.location.href = "/perfil/editar"; return; }
         if (data.payoutRequired) { window.location.href = "/perfil/editar?falta=pago"; return; }
-        if (data.ok) { window.location.href = "/checkout/usdt-pago?orderId=" + data.ordenId + "&total=" + data.totalUSDT + "&wallet=" + data.wallet; return; }
+        if (data.ok) { window.location.href = "/checkout/usdt-pago?orderId=" + data.ordenId + "&total=" + data.totalUSDT + "&wallet=" + data.wallet + "&productId=" + id; return; }
         setErrorPago(data.error || "No se pudo procesar el pago. Intenta de nuevo.");
       }
     } catch {

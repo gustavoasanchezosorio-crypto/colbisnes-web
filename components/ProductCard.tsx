@@ -769,9 +769,20 @@ export const ProductCard = React.memo(function ProductCard({
       {showGaleria && todasLasFotos.length > 0 && (
         <div
           onClick={() => setShowGaleria(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 3000, background: "rgba(5,13,26,0.92)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "galeriaFadeIn 0.2s ease" }}
+          // zIndex 9600 (no 3000): el overlay vivía por debajo de VerifyEmailAlert
+          // (zIndex 9400), así que a quien le faltaba confirmar el correo la franja
+          // fija de arriba le tapaba literalmente el botón de cerrar — no era solo
+          // que se viera poco, era que quedaba debajo de otro elemento encima.
+          style={{ position: "fixed", inset: 0, zIndex: 9600, background: "rgba(5,13,26,0.92)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "galeriaFadeIn 0.2s ease" }}
         >
-          <button onClick={() => setShowGaleria(false)} style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 18, cursor: "pointer", zIndex: 10 }}>×</button>
+          {/* Más abajo (antes top:18, pegado al borde donde cualquier banner fijo la
+              tapa) y más notorio: más grande, fondo más opaco y con sombra para que
+              resalte sobre fotos claras y oscuras por igual. */}
+          <button
+            onClick={() => setShowGaleria(false)}
+            aria-label="Cerrar"
+            style={{ position: "absolute", top: 56, right: 18, width: 42, height: 42, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.5)", background: "rgba(20,20,20,0.55)", color: "#fff", fontSize: 22, fontWeight: 700, lineHeight: 1, cursor: "pointer", boxShadow: "0 4px 14px rgba(0,0,0,0.4)", zIndex: 10 }}
+          >×</button>
 
           <div onClick={e => e.stopPropagation()} style={{ position: "relative", maxWidth: 720, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {todasLasFotos.length > 1 && (
