@@ -1,121 +1,90 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Nolan, asistente de Colbisnes">
-  <!--
-    Nota (2026-10-27): se le pidio mas "vivo"/llamativo y con movimiento.
-    Es un SVG (vector), no un mapa de pixeles, asi que ya se ve nitido a
-    cualquier tamano/resolucion (incluido 4K) sin necesidad de exportarlo
-    mas grande -- "4K" no aplica a vectores. Lo que si se puede hacer, y
-    se hizo aqui, es subirle el contraste/saturacion y agregarle animacion
-    (SMIL <animate>, funciona incluso cargado via <img src="...">): las
-    estrellas titilan, el halo respira, y el anillo/disco brillan con un
-    pulso lento.
-  -->
   <defs>
-    <!-- Fondo: espacio profundo, un poco mas gris/azulado que una nebulosa pura -->
-    <radialGradient id="nolanFondo" cx="50%" cy="46%" r="78%">
-      <stop offset="0%"  stop-color="#1b2433"/>
-      <stop offset="55%" stop-color="#0c121e"/>
-      <stop offset="100%" stop-color="#030508"/>
+    <radialGradient id="nolanFondo" cx="50%" cy="50%" r="75%">
+      <stop offset="0%"  stop-color="#0e1f3d"/>
+      <stop offset="60%" stop-color="#070f22"/>
+      <stop offset="100%" stop-color="#020611"/>
     </radialGradient>
-
-    <!-- Resplandor suave detras de todo el agujero negro -->
-    <radialGradient id="nolanHalo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"  stop-color="#fff9e6" stop-opacity="0.65"/>
-      <stop offset="45%" stop-color="#ffcf73" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#ffcf73" stop-opacity="0"/>
+    <radialGradient id="nolanNubePurpura" cx="30%" cy="35%" r="55%">
+      <stop offset="0%"  stop-color="#b968ff" stop-opacity="1"/>
+      <stop offset="55%" stop-color="#8b3bf5" stop-opacity="0.62"/>
+      <stop offset="100%" stop-color="#8b3bf5" stop-opacity="0"/>
     </radialGradient>
-
-    <!-- Anillo de luz curvado (foton ring): blanco caliente arriba, dorado/cobre abajo -->
-    <linearGradient id="nolanAnillo" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"   stop-color="#ffffff"/>
-      <stop offset="25%"  stop-color="#ffe9b0"/>
-      <stop offset="50%"  stop-color="#f7c550"/>
-      <stop offset="75%"  stop-color="#e08a1f"/>
-      <stop offset="100%" stop-color="#7a3d0a"/>
-    </linearGradient>
-
-    <!-- Disco de acrecion visto de canto: brilla blanco al centro, se apaga a los lados -->
-    <linearGradient id="nolanDisco" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#7a3d0a" stop-opacity="0"/>
-      <stop offset="12%"  stop-color="#f7c550" stop-opacity="0.9"/>
-      <stop offset="50%"  stop-color="#ffffff" stop-opacity="1"/>
-      <stop offset="88%"  stop-color="#f7c550" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#7a3d0a" stop-opacity="0"/>
-    </linearGradient>
-
-    <filter id="nolanBlurSuave" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="3.2"/>
+    <radialGradient id="nolanNubeAzul" cx="68%" cy="38%" r="50%">
+      <stop offset="0%"  stop-color="#3f8bff" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#1455cc" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#1455cc" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNubeMagenta" cx="55%" cy="72%" r="50%">
+      <stop offset="0%"  stop-color="#ff5ca8" stop-opacity="0.92"/>
+      <stop offset="55%" stop-color="#be185d" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#be185d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNubeCian" cx="22%" cy="70%" r="42%">
+      <stop offset="0%"  stop-color="#4de4ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNucleo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#f1e3ff" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#e9d5ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="nolanBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7.5"/>
     </filter>
-    <filter id="nolanBlurHalo" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="7"/>
+    <filter id="nolanBlurNucleo" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="1.4"/>
     </filter>
   </defs>
 
   <!-- Fondo: cielo profundo -->
   <rect x="0" y="0" width="200" height="200" fill="url(#nolanFondo)"/>
 
-  <!-- Estrellas, cada una titila a su propio ritmo -->
-  <circle cx="174.1" cy="161.0" r="1.60" fill="#ffffff" opacity="0.81"><animate attributeName="opacity" values="0.81;0.18;0.81" dur="2.20s" begin="0s" repeatCount="indefinite"/></circle>
-  <circle cx="111.9" cy="142.4" r="1.12" fill="#ffffff" opacity="0.38"><animate attributeName="opacity" values="0.38;0.08;0.38" dur="2.55s" begin="-0.53s" repeatCount="indefinite"/></circle>
-  <circle cx="139.0" cy="153.9" r="1.27" fill="#ffffff" opacity="0.54"><animate attributeName="opacity" values="0.54;0.12;0.54" dur="2.90s" begin="-1.06s" repeatCount="indefinite"/></circle>
-  <circle cx="146.3" cy="185.9" r="1.64" fill="#ffffff" opacity="0.89"><animate attributeName="opacity" values="0.89;0.20;0.89" dur="3.25s" begin="-1.59s" repeatCount="indefinite"/></circle>
-  <circle cx="39.1" cy="29.9" r="1.20" fill="#ffffff" opacity="0.85"><animate attributeName="opacity" values="0.85;0.19;0.85" dur="3.60s" begin="-2.12s" repeatCount="indefinite"/></circle>
-  <circle cx="35.3" cy="88.8" r="0.76" fill="#ffffff" opacity="0.65"><animate attributeName="opacity" values="0.65;0.14;0.65" dur="3.95s" begin="-2.65s" repeatCount="indefinite"/></circle>
-  <circle cx="132.7" cy="11.8" r="1.06" fill="#ffffff" opacity="0.80"><animate attributeName="opacity" values="0.80;0.18;0.80" dur="4.30s" begin="-3.18s" repeatCount="indefinite"/></circle>
-  <circle cx="87.1" cy="144.9" r="0.51" fill="#ffffff" opacity="0.89"><animate attributeName="opacity" values="0.89;0.20;0.89" dur="2.20s" begin="-0.21s" repeatCount="indefinite"/></circle>
-  <circle cx="95.3" cy="37.9" r="1.49" fill="#ffffff" opacity="0.46"><animate attributeName="opacity" values="0.46;0.10;0.46" dur="2.55s" begin="-0.74s" repeatCount="indefinite"/></circle>
-  <circle cx="69.4" cy="150.5" r="0.72" fill="#ffffff" opacity="0.37"><animate attributeName="opacity" values="0.37;0.08;0.37" dur="2.90s" begin="-1.27s" repeatCount="indefinite"/></circle>
-  <circle cx="192.1" cy="39.5" r="1.21" fill="#ffffff" opacity="0.92"><animate attributeName="opacity" values="0.92;0.20;0.92" dur="3.25s" begin="-1.80s" repeatCount="indefinite"/></circle>
-  <circle cx="62.7" cy="129.2" r="0.44" fill="#ffffff" opacity="0.39"><animate attributeName="opacity" values="0.39;0.09;0.39" dur="3.60s" begin="-2.33s" repeatCount="indefinite"/></circle>
-  <circle cx="84.3" cy="154.1" r="1.49" fill="#ffffff" opacity="0.58"><animate attributeName="opacity" values="0.58;0.13;0.58" dur="3.95s" begin="-2.86s" repeatCount="indefinite"/></circle>
-  <circle cx="97.9" cy="33.7" r="1.58" fill="#ffffff" opacity="0.72"><animate attributeName="opacity" values="0.72;0.16;0.72" dur="4.30s" begin="-3.39s" repeatCount="indefinite"/></circle>
-  <circle cx="65.8" cy="106.8" r="1.08" fill="#ffffff" opacity="0.83"><animate attributeName="opacity" values="0.83;0.18;0.83" dur="2.20s" begin="-0.42s" repeatCount="indefinite"/></circle>
-  <circle cx="113.4" cy="150.7" r="1.63" fill="#ffffff" opacity="0.63"><animate attributeName="opacity" values="0.63;0.14;0.63" dur="2.55s" begin="-0.95s" repeatCount="indefinite"/></circle>
-  <circle cx="124.7" cy="63.4" r="1.17" fill="#ffffff" opacity="0.69"><animate attributeName="opacity" values="0.69;0.15;0.69" dur="2.90s" begin="-1.48s" repeatCount="indefinite"/></circle>
-  <circle cx="40.4" cy="98.6" r="0.37" fill="#ffffff" opacity="0.37"><animate attributeName="opacity" values="0.37;0.08;0.37" dur="3.25s" begin="-2.01s" repeatCount="indefinite"/></circle>
-  <circle cx="92.7" cy="76.1" r="0.71" fill="#ffffff" opacity="0.92"><animate attributeName="opacity" values="0.92;0.20;0.92" dur="3.60s" begin="-2.54s" repeatCount="indefinite"/></circle>
-  <circle cx="16.3" cy="64.6" r="0.86" fill="#ffffff" opacity="0.65"><animate attributeName="opacity" values="0.65;0.14;0.65" dur="3.95s" begin="-3.07s" repeatCount="indefinite"/></circle>
-  <circle cx="114.5" cy="40.6" r="0.48" fill="#ffffff" opacity="0.63"><animate attributeName="opacity" values="0.63;0.14;0.63" dur="4.30s" begin="-0.10s" repeatCount="indefinite"/></circle>
-  <circle cx="150.3" cy="58.4" r="0.90" fill="#ffffff" opacity="0.67"><animate attributeName="opacity" values="0.67;0.15;0.67" dur="2.20s" begin="-0.63s" repeatCount="indefinite"/></circle>
-  <circle cx="92.8" cy="165.4" r="1.52" fill="#ffffff" opacity="0.38"><animate attributeName="opacity" values="0.38;0.08;0.38" dur="2.55s" begin="-1.16s" repeatCount="indefinite"/></circle>
-  <circle cx="32.2" cy="60.8" r="0.98" fill="#ffffff" opacity="0.80"><animate attributeName="opacity" values="0.80;0.18;0.80" dur="2.90s" begin="-1.69s" repeatCount="indefinite"/></circle>
-  <circle cx="30.1" cy="33.5" r="0.46" fill="#ffffff" opacity="0.85"><animate attributeName="opacity" values="0.85;0.19;0.85" dur="3.25s" begin="-2.22s" repeatCount="indefinite"/></circle>
-  <circle cx="98.2" cy="109.8" r="1.40" fill="#ffffff" opacity="0.90"><animate attributeName="opacity" values="0.90;0.20;0.90" dur="3.60s" begin="-2.75s" repeatCount="indefinite"/></circle>
-  <circle cx="113.5" cy="95.2" r="1.42" fill="#ffffff" opacity="0.69"><animate attributeName="opacity" values="0.69;0.15;0.69" dur="3.95s" begin="-3.28s" repeatCount="indefinite"/></circle>
-  <circle cx="52.0" cy="129.6" r="1.56" fill="#ffffff" opacity="0.68"><animate attributeName="opacity" values="0.68;0.15;0.68" dur="4.30s" begin="-0.31s" repeatCount="indefinite"/></circle>
-  <circle cx="160.5" cy="25.7" r="1.38" fill="#ffffff" opacity="0.78"><animate attributeName="opacity" values="0.78;0.17;0.78" dur="2.20s" begin="-0.84s" repeatCount="indefinite"/></circle>
-  <circle cx="102.3" cy="79.9" r="1.39" fill="#ffffff" opacity="0.68"><animate attributeName="opacity" values="0.68;0.15;0.68" dur="2.55s" begin="-1.37s" repeatCount="indefinite"/></circle>
-  <circle cx="152.3" cy="90.6" r="1.18" fill="#ffffff" opacity="0.55"><animate attributeName="opacity" values="0.55;0.12;0.55" dur="2.90s" begin="-1.90s" repeatCount="indefinite"/></circle>
-  <circle cx="23.7" cy="41.2" r="1.03" fill="#ffffff" opacity="0.45"><animate attributeName="opacity" values="0.45;0.10;0.45" dur="3.25s" begin="-2.43s" repeatCount="indefinite"/></circle>
-  <circle cx="126.6" cy="142.8" r="0.44" fill="#ffffff" opacity="0.58"><animate attributeName="opacity" values="0.58;0.13;0.58" dur="3.60s" begin="-2.96s" repeatCount="indefinite"/></circle>
-  <circle cx="74.7" cy="44.4" r="1.46" fill="#ffffff" opacity="0.87"><animate attributeName="opacity" values="0.87;0.19;0.87" dur="3.95s" begin="-3.49s" repeatCount="indefinite"/></circle>
+  <!-- Nubes de gas de la nebulosa, difuminadas y superpuestas -->
+  <g filter="url(#nolanBlur)">
+    <circle cx="60" cy="70" r="70" fill="url(#nolanNubePurpura)"/>
+    <circle cx="136" cy="76" r="62" fill="url(#nolanNubeAzul)"/>
+    <circle cx="110" cy="144" r="64" fill="url(#nolanNubeMagenta)"/>
+    <circle cx="44" cy="140" r="48" fill="url(#nolanNubeCian)"/>
+  </g>
 
-  <!-- Resplandor detras del agujero negro: respira lento -->
-  <circle cx="100" cy="100" r="72" fill="url(#nolanHalo)" filter="url(#nolanBlurHalo)">
-    <animate attributeName="r" values="68;80;68" dur="6s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.55;0.9;0.55" dur="6s" repeatCount="indefinite"/>
-  </circle>
+  <!-- Nucleo brillante, como el corazon de la nebulosa (mas nitido y definido) -->
+  <circle cx="98" cy="96" r="27" fill="url(#nolanNucleo)" filter="url(#nolanBlurNucleo)"/>
+  <circle cx="98" cy="96" r="9" fill="#ffffff" opacity="0.9" filter="url(#nolanBlurNucleo)"/>
 
-  <!-- Anillo de foton: la luz curvada por la gravedad, pasando por arriba y por abajo -->
-  <circle cx="100" cy="100" r="54" fill="none" stroke="url(#nolanAnillo)" stroke-width="16" filter="url(#nolanBlurSuave)">
-    <animate attributeName="stroke-width" values="15;18;15" dur="4s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.9;1;0.9" dur="4s" repeatCount="indefinite"/>
-  </circle>
-
-  <!-- Destello extra arriba del anillo, el punto mas caliente -->
-  <ellipse cx="100" cy="47" rx="17" ry="6" fill="#ffffff" filter="url(#nolanBlurSuave)">
-    <animate attributeName="opacity" values="0.65;1;0.65" dur="3.2s" repeatCount="indefinite"/>
-  </ellipse>
-
-  <!-- Disco de acrecion visto de canto, se extiende mas alla del anillo -->
-  <ellipse cx="100" cy="100" rx="94" ry="7" fill="url(#nolanDisco)" filter="url(#nolanBlurSuave)">
-    <animate attributeName="opacity" values="0.85;1;0.85" dur="4s" begin="-1.3s" repeatCount="indefinite"/>
-  </ellipse>
-
-  <!-- Horizonte de eventos: el vacio negro -->
-  <circle cx="100" cy="100" r="44" fill="#000000"/>
-
-  <!-- Tramo del disco que pasa por delante del horizonte (el mas cercano a quien mira) -->
-  <path d="M 56,103 Q 100,112 144,103 L 144,99 Q 100,108 56,99 Z" fill="url(#nolanDisco)" filter="url(#nolanBlurSuave)">
-    <animate attributeName="opacity" values="0.85;1;0.85" dur="4s" begin="-2.6s" repeatCount="indefinite"/>
-  </path>
+  <!-- Estrellas -->
+  <circle cx="174.1" cy="161.0" r="1.60" fill="#ffffff" opacity="0.81"/>
+  <circle cx="111.9" cy="142.4" r="1.12" fill="#ffffff" opacity="0.38"/>
+  <circle cx="139.0" cy="153.9" r="1.27" fill="#ffffff" opacity="0.54"/>
+  <circle cx="146.3" cy="185.9" r="1.64" fill="#ffffff" opacity="0.89"/>
+  <circle cx="39.1" cy="29.9" r="1.20" fill="#ffffff" opacity="0.85"/>
+  <circle cx="35.3" cy="88.8" r="0.76" fill="#ffffff" opacity="0.65"/>
+  <circle cx="132.7" cy="11.8" r="1.06" fill="#ffffff" opacity="0.80"/>
+  <circle cx="87.1" cy="144.9" r="0.51" fill="#ffffff" opacity="0.89"/>
+  <circle cx="95.3" cy="37.9" r="1.49" fill="#ffffff" opacity="0.46"/>
+  <circle cx="69.4" cy="150.5" r="0.72" fill="#ffffff" opacity="0.37"/>
+  <circle cx="192.1" cy="39.5" r="1.21" fill="#ffffff" opacity="0.92"/>
+  <circle cx="62.7" cy="129.2" r="0.44" fill="#ffffff" opacity="0.39"/>
+  <circle cx="84.3" cy="154.1" r="1.49" fill="#ffffff" opacity="0.58"/>
+  <circle cx="97.9" cy="33.7" r="1.58" fill="#ffffff" opacity="0.72"/>
+  <circle cx="65.8" cy="106.8" r="1.08" fill="#ffffff" opacity="0.83"/>
+  <circle cx="113.4" cy="150.7" r="1.63" fill="#ffffff" opacity="0.63"/>
+  <circle cx="124.7" cy="63.4" r="1.17" fill="#ffffff" opacity="0.69"/>
+  <circle cx="40.4" cy="98.6" r="0.37" fill="#ffffff" opacity="0.37"/>
+  <circle cx="92.7" cy="76.1" r="0.71" fill="#ffffff" opacity="0.92"/>
+  <circle cx="16.3" cy="64.6" r="0.86" fill="#ffffff" opacity="0.65"/>
+  <circle cx="114.5" cy="40.6" r="0.48" fill="#ffffff" opacity="0.63"/>
+  <circle cx="150.3" cy="58.4" r="0.90" fill="#ffffff" opacity="0.67"/>
+  <circle cx="92.8" cy="165.4" r="1.52" fill="#ffffff" opacity="0.38"/>
+  <circle cx="32.2" cy="60.8" r="0.98" fill="#ffffff" opacity="0.80"/>
+  <circle cx="30.1" cy="33.5" r="0.46" fill="#ffffff" opacity="0.85"/>
+  <circle cx="98.2" cy="109.8" r="1.40" fill="#ffffff" opacity="0.90"/>
+  <circle cx="113.5" cy="95.2" r="1.42" fill="#ffffff" opacity="0.69"/>
+  <circle cx="52.0" cy="129.6" r="1.56" fill="#ffffff" opacity="0.68"/>
+  <circle cx="160.5" cy="25.7" r="1.38" fill="#ffffff" opacity="0.78"/>
+  <circle cx="102.3" cy="79.9" r="1.39" fill="#ffffff" opacity="0.68"/>
+  <circle cx="152.3" cy="90.6" r="1.18" fill="#ffffff" opacity="0.55"/>
+  <circle cx="23.7" cy="41.2" r="1.03" fill="#ffffff" opacity="0.45"/>
+  <circle cx="126.6" cy="142.8" r="0.44" fill="#ffffff" opacity="0.58"/>
+  <circle cx="74.7" cy="44.4" r="1.46" fill="#ffffff" opacity="0.87"/>
 </svg>
