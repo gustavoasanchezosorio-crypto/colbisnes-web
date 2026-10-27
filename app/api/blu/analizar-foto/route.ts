@@ -30,7 +30,7 @@ const AnalisisSchema = z.object({
 });
 
 const SYSTEM_PROMPT =
-  `Eres "Chucho Bot", el asistente de Colbisnes, un marketplace colombiano de compra/venta. Un vendedor esta subiendo fotos de un producto para publicarlo (puede haber varias fotos del mismo articulo desde distintos angulos) y tu tarea es generar una sugerencia completa de publicacion, como lo hacen apps como Wallapop: identifica el articulo con la mayor precision posible (tipo, marca, modelo especifico -ej. distinguir "iPhone 11" de "iPhone 17", o "PlayStation 4" de "PlayStation 5" por sus detalles visuales-, color principal), su estado aparente (NUEVO o USADO segun lo que se vea en la foto), y redacta un titulo corto y natural en español como lo escribiria un vendedor colombiano (ej. "iPhone 11 blanco 64GB", "Tenis Nike Air Force 1 negros"), sin precio. Ademas redacta una descripcion breve (2-4 frases) destacando caracteristicas visibles relevantes para un comprador, en español natural, sin inventar datos que no se puedan ver en la foto (no inventes especificaciones tecnicas que no sean evidentes). Elige la categoria mas adecuada de la lista permitida. Si no estas seguro del modelo exacto, da tu mejor estimacion razonada en vez de dejarlo vacio, pero baja el nivel de "confianza". Si ninguna foto muestra claramente un producto vendible (borrosa, una persona, un paisaje, una pantalla en blanco, etc.), responde con esProducto=false. Importante: en el titulo y la descripcion usa solo texto plano simple, sin comillas tipograficas curvas (" " ' '), sin guiones largos (— o –, usa un guion normal "-" si hace falta) ni otros caracteres especiales decorativos, para que se vea igual de limpio que el resto de los textos de la app.`;
+  `Eres "Nolan", el asistente de Colbisnes, un marketplace colombiano de compra/venta. Un vendedor esta subiendo fotos de un producto para publicarlo (puede haber varias fotos del mismo articulo desde distintos angulos) y tu tarea es generar una sugerencia completa de publicacion, como lo hacen apps como Wallapop: identifica el articulo con la mayor precision posible (tipo, marca, modelo especifico -ej. distinguir "iPhone 11" de "iPhone 17", o "PlayStation 4" de "PlayStation 5" por sus detalles visuales-, color principal), su estado aparente (NUEVO o USADO segun lo que se vea en la foto), y redacta un titulo corto y natural en español como lo escribiria un vendedor colombiano (ej. "iPhone 11 blanco 64GB", "Tenis Nike Air Force 1 negros"), sin precio. Ademas redacta una descripcion breve (2-4 frases) destacando caracteristicas visibles relevantes para un comprador, en español natural, sin inventar datos que no se puedan ver en la foto (no inventes especificaciones tecnicas que no sean evidentes). Elige la categoria mas adecuada de la lista permitida. Si no estas seguro del modelo exacto, da tu mejor estimacion razonada en vez de dejarlo vacio, pero baja el nivel de "confianza". Si ninguna foto muestra claramente un producto vendible (borrosa, una persona, un paisaje, una pantalla en blanco, etc.), responde con esProducto=false. Importante: en el titulo y la descripcion usa solo texto plano simple, sin comillas tipograficas curvas (" " ' '), sin guiones largos (— o –, usa un guion normal "-" si hace falta) ni otros caracteres especiales decorativos, para que se vea igual de limpio que el resto de los textos de la app.`;
 
 function json(data: any, status = 200) {
   return NextResponse.json(data, { status });
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const identifier = session.user.id || getIP(request);
     const rl = rateLimit(`blu-foto:${identifier}`, { limit: 15, windowSeconds: 600 });
     if (!rl.allowed) {
-      return json({ error: "Chucho Bot ya analizó varias fotos seguidas. Espera un momento e intenta de nuevo." }, 429);
+      return json({ error: "Nolan ya analizó varias fotos seguidas. Espera un momento e intenta de nuevo." }, 429);
     }
 
     const body = await request.json().catch(() => ({}));
@@ -78,14 +78,14 @@ export async function POST(request: Request) {
     for (const img of imagenes) {
       const tipoValido = (MEDIA_TYPES as readonly string[]).includes(img.mediaType) || HEIC_TYPES.includes(img.mediaType);
       if (!tipoValido) {
-        return json({ error: "Chucho Bot no reconoce este formato de foto (prueba con JPG o PNG)." }, 400);
+        return json({ error: "Nolan no reconoce este formato de foto (prueba con JPG o PNG)." }, 400);
       }
       if (img.imageBase64.length > MAX_BASE64_LENGTH) return json({ error: "La imagen es muy pesada" }, 400);
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error("ANTHROPIC_API_KEY no está configurada");
-      return json({ error: "Chucho Bot no puede analizar fotos en este momento" }, 503);
+      return json({ error: "Nolan no puede analizar fotos en este momento" }, 503);
     }
 
     let convertidas: { base64: string; mediaType: string }[];
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       convertidas = await Promise.all(imagenes.map(img => aJpegBase64(img.imageBase64, img.mediaType)));
     } catch (e) {
       console.error("Error convirtiendo HEIC en el servidor:", e);
-      return json({ error: "Chucho Bot no pudo procesar esta foto (formato HEIC no válido). Prueba con JPG o PNG." }, 400);
+      return json({ error: "Nolan no pudo procesar esta foto (formato HEIC no válido). Prueba con JPG o PNG." }, 400);
     }
 
     const message = await anthropic.beta.messages.parse({
@@ -136,6 +136,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error en /api/blu/analizar-foto:", error);
-    return json({ error: "Chucho Bot no pudo analizar la foto. Intenta de nuevo en un momento." }, 500);
+    return json({ error: "Nolan no pudo analizar la foto. Intenta de nuevo en un momento." }, 500);
   }
 }

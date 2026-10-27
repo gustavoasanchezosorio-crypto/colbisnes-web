@@ -195,7 +195,7 @@ function ImagePicker({ files, previews, onChange, disabled }: ImagePickerProps) 
       // así que primero se convierte con una librería dedicada (heic2any) a JPEG real.
       try { finalFile = await normalizarHeic(finalFile); } catch { /* sigue con el original */ }
       // Luego normalizamos siempre a JPEG (no solo cuando pesa mucho): esto evita que otros
-      // formatos lleguen con un mediaType que Chucho Bot no reconoce, y de paso comprime
+      // formatos lleguen con un mediaType que Nolan no reconoce, y de paso comprime
       // las fotos que pesan más de 350KB.
       try { finalFile = await comprimirImagen(finalFile, finalFile.size > 350 * 1024 ? 1600 : 2400); } catch { /* sigue con el archivo normalizado */ }
       nf[slot] = finalFile; np[slot] = URL.createObjectURL(finalFile);
@@ -287,7 +287,7 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
   });
 
   // Analiza automaticamente todas las fotos del producto para sugerir titulo, descripcion,
-  // categoria y condicion (asistente Chucho Bot), al estilo de apps como Wallapop.
+  // categoria y condicion (asistente Nolan), al estilo de apps como Wallapop.
   useEffect(() => {
     if (!imageFiles.length) {
       bluAnalizadoRef.current = null;
@@ -323,7 +323,7 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
           setBluError(data?.error || "No pudimos analizar la foto. Puedes seguir publicando escribiendo el título manualmente.");
         }
       } catch {
-        // La sugerencia de Chucho Bot es opcional: si falla, no bloquea publicar
+        // La sugerencia de Nolan es opcional: si falla, no bloquea publicar
         if (bluAnalizadoRef.current === firma) setBluError("No pudimos analizar la foto (sin conexión). Puedes seguir publicando escribiendo el título manualmente.");
       } finally {
         if (bluAnalizadoRef.current === firma) setBluAnalizando(false);
@@ -1078,19 +1078,19 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                   <ImagePicker files={imageFiles} previews={imagePreviews} onChange={(f,p) => { setImageFiles(f); setImagePreviews(p); }} disabled={uploadingImages} />
                   {bluAnalizando && (
                     <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-                      <img src="/chucho-avatar.png" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
-                      Chucho Bot está mirando la foto…
+                      <img src="/nolan-avatar.svg" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
+                      Nolan está mirando la foto…
                     </p>
                   )}
                   {bluError && !bluAnalizando && (
                     <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-                      <img src="/chucho-avatar.png" alt="" style={{ width: 16, height: 16, borderRadius: "50%", opacity: 0.6 }} />
+                      <img src="/nolan-avatar.svg" alt="" style={{ width: 16, height: 16, borderRadius: "50%", opacity: 0.6 }} />
                       {bluError}
                     </p>
                   )}
                   {bluSugerencia && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginTop: 8, padding: "10px 14px", borderRadius: 12, background: THEME.surfaceAlt, border: `1.5px solid ${THEME.border}`, fontFamily: "inherit" }}>
-                      <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 2 }} />
+                      <img src="/nolan-avatar.svg" alt="Nolan" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 2 }} />
                       <div style={{ flex: 1, minWidth: 140, fontFamily: "inherit" }}>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark, lineHeight: 1.4, letterSpacing: "normal" }}>
                           {bluSugerencia.tituloSugerido}
@@ -1117,7 +1117,7 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                       <button
                         type="button"
                         onClick={() => setBluSugerencia(null)}
-                        aria-label="Descartar sugerencia de Chucho Bot"
+                        aria-label="Descartar sugerencia de Nolan"
                         style={{ border: "none", background: "transparent", color: THEME.muted, fontSize: 15, fontFamily: "inherit", cursor: "pointer", fontWeight: 900, padding: "0 4px", flexShrink: 0 }}
                       >
                         ×

@@ -26,14 +26,14 @@ export default function BluWidget() {
   const [input, setInput] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  // Una vez que Chucho ofrece hablar con una persona, el botón verde se queda a la vista
+  // Una vez que Nolan ofrece hablar con una persona, el botón verde se queda a la vista
   // hasta que se cierre el chat. Si desapareciera al mensaje siguiente, el cliente que
   // duda un momento y escribe otra cosa perdería la única salida que tiene hacia alguien.
   const [whatsapp, setWhatsapp] = useState<ContactoWhatsapp | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const cargoHistorial = useRef(false);
 
-  // Si la ruta actual es /product/<id>, la usamos como contexto para Chucho Bot (escalamientos con producto)
+  // Si la ruta actual es /product/<id>, la usamos como contexto para Nolan (escalamientos con producto)
   const productId = pathname?.startsWith("/product/") ? pathname.split("/")[2] : null;
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function BluWidget() {
       setQuickReplies(Array.isArray(data.quickReplies) ? data.quickReplies : []);
       if (data.whatsapp?.url) setWhatsapp(data.whatsapp);
     } catch {
-      setMensajes(prev => [...prev, { autor: "BLU", texto: "Uy, no me pude conectar 🐾 intenta otra vez en un momentico, o escribe \"hablar con soporte\" y te paso con una persona." }]);
+      setMensajes(prev => [...prev, { autor: "BLU", texto: "Uy, no me pude conectar ✨ intenta otra vez en un momentico, o escribe \"hablar con soporte\" y te paso con una persona." }]);
     } finally {
       setEnviando(false);
     }
@@ -94,7 +94,7 @@ export default function BluWidget() {
 
   // En la pantalla de mensajes, el botón "Enviar" del chat con la otra persona queda
   // pegado a la esquina inferior DERECHA, que es exactamente donde vive este círculo.
-  // Y como el círculo va por encima (z-index 1900), tocar "Enviar" tocaba a Chucho: el
+  // Y como el círculo va por encima (z-index 1900), tocar "Enviar" tocaba a Nolan: el
   // mensaje no salía nunca. No es cosa de móvil —ese chat ocupa todo el ancho, así que
   // chocaban igual en computador—, por eso se resuelve aquí y no con una media query.
   // Se sube en lugar de esconderse para no dejar sin salida a quien está negociando y
@@ -110,7 +110,7 @@ export default function BluWidget() {
       {!abierto && (
         <button
           onClick={() => setAbierto(true)}
-          aria-label="Abrir chat con Chucho Bot"
+          aria-label="Abrir chat con Nolan"
           // La clase la lee globals.css para subir el botón cuando en esa pantalla hay
           // barra de compra fija (solo pasa en la ficha de producto vista en teléfono).
           className="blu-lanzador"
@@ -121,7 +121,7 @@ export default function BluWidget() {
             padding: 4, display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+          <img src="/nolan-avatar.svg" alt="Nolan" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           <span style={{ position: "absolute", right: 2, bottom: 2, width: 14, height: 14, borderRadius: "50%", background: THEME.success, border: "2.5px solid #fff" }} />
         </button>
       )}
@@ -145,9 +145,9 @@ export default function BluWidget() {
             background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
             padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
           }}>
-            <img src="/chucho-avatar.png" alt="Chucho Bot" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
+            <img src="/nolan-avatar.svg" alt="Nolan" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, color: "#fff", fontWeight: 800, fontSize: 14.5 }}>Chucho Bot 🐾</p>
+              <p style={{ margin: 0, color: "#fff", fontWeight: 800, fontSize: 14.5 }}>Nolan ✨</p>
               <p style={{ margin: 0, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600 }}>Asistente de Colbisnes</p>
             </div>
             <button onClick={() => setAbierto(false)} aria-label="Cerrar chat" style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 15, cursor: "pointer", flexShrink: 0 }}>×</button>
@@ -171,7 +171,7 @@ export default function BluWidget() {
             {enviando && (
               <div style={{ display: "flex", justifyContent: "flex-start" }}>
                 <div style={{ padding: "9px 13px", borderRadius: "4px 14px 14px 14px", background: THEME.surfaceAlt, color: THEME.muted, fontSize: 13 }}>
-                  Chucho Bot está escribiendo…
+                  Nolan está escribiendo…
                 </div>
               </div>
             )}
@@ -236,7 +236,7 @@ export default function BluWidget() {
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Escríbele a Chucho Bot…"
+              placeholder="Escríbele a Nolan…"
               disabled={enviando}
               style={{ flex: 1, padding: "10px 14px", borderRadius: 14, border: `1.5px solid ${THEME.border}`, background: THEME.surfaceAlt, color: THEME.text, fontSize: 13, minWidth: 0 }}
             />

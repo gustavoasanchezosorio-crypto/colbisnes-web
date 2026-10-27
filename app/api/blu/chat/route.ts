@@ -71,7 +71,7 @@ function historialParaIA(historial: { autor: string; texto: string }[]): { role:
 /**
  * Respaldo con IA real para cuando el mensaje del cliente no calzo con ninguna de las
  * preguntas fijas de BLU_INTENTS. Antes esto caia directo en BLU_FALLBACK ("no te
- * entendi"); ahora Chucho intenta entender el mensaje de verdad — parafraseos, errores de
+ * entendi"); ahora Nolan intenta entender el mensaje de verdad — parafraseos, errores de
  * tipeo, preguntas de seguimiento — pero SIEMPRE anclado a construirSystemPromptIA() (ver
  * lib/bluFaq.ts), nunca a lo que el modelo "sepa" de memoria.
  *
@@ -101,7 +101,7 @@ async function responderConIA(historial: { autor: string; texto: string }[]): Pr
     if (!resultado || !resultado.respuesta.trim()) return null;
     return { respuesta: resultado.respuesta.trim(), escalar: !!resultado.escalar };
   } catch (e) {
-    console.error("Error en el respaldo de IA de Chucho Bot:", e);
+    console.error("Error en el respaldo de IA de Nolan:", e);
     return null;
   }
 }
@@ -150,22 +150,22 @@ async function notificarEscalada(params: { conversationId: string; contacto: str
     const adminEmail = process.env.ADMIN_EMAIL;
     if (adminEmail) {
       const html = colbisnesEmailTemplate({
-        preheader: "Nueva conversacion escalada por Chucho Bot",
-        titulo: "🐾 Chucho Bot escaló una conversación a soporte",
+        preheader: "Nueva conversacion escalada por Nolan",
+        titulo: "✨ Nolan escaló una conversación a soporte",
         cuerpo: `Contacto: <strong>${contacto}</strong><br/>Motivo: <strong>${motivo}</strong>${productoTitulo ? `<br/>Producto: <strong>${productoTitulo}</strong>` : ""}<br/><br/>Último mensaje del usuario:<br/><em>"${ultimoMensaje}"</em><br/><br/>ID de conversación: ${conversationId}`,
         ctaTexto: "Ir al panel admin",
         ctaUrl: "https://colbisnes.com/admin",
       });
-      await sendEmail({ to: adminEmail, subject: "🐾 Chucho Bot: nueva conversación escalada", html });
+      await sendEmail({ to: adminEmail, subject: "✨ Nolan: nueva conversación escalada", html });
     }
     if (process.env.ADMIN_WHATSAPP) {
       await sendWhatsapp({
         to: process.env.ADMIN_WHATSAPP,
-        body: `🐾 *Chucho Bot* escaló una conversación\n\nContacto: ${contacto}\nMotivo: ${motivo}${productoTitulo ? `\nProducto: ${productoTitulo}` : ""}\n\n"${ultimoMensaje}"`,
+        body: `✨ *Nolan* escaló una conversación\n\nContacto: ${contacto}\nMotivo: ${motivo}${productoTitulo ? `\nProducto: ${productoTitulo}` : ""}\n\n"${ultimoMensaje}"`,
       });
     }
   } catch (e) {
-    console.error("Error notificando escalada de Chucho Bot:", e);
+    console.error("Error notificando escalada de Nolan:", e);
   }
 }
 
@@ -221,7 +221,7 @@ export async function POST(request: Request) {
           productoTitulo: producto?.title,
         });
         const respuesta =
-          "¡Listo! Ya le pasé tu correo al equipo de Colbisnes, te contactan pronto 🐾\n\nY si tienes afán, escríbenos de una por WhatsApp con el botón de aquí abajo 👇";
+          "¡Listo! Ya le pasé tu correo al equipo de Colbisnes, te contactan pronto ✨\n\nY si tienes afán, escríbenos de una por WhatsApp con el botón de aquí abajo 👇";
         await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: respuesta } });
         return json({
           conversationId: conversation.id,
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
         });
       } else {
         const respuesta =
-          "Mmm, ahí no alcancé a ver un correo bien escrito 🐾 ¿me lo repites? (así: nombre@correo.com)\n\nO si prefieres no dejarlo, escríbenos de una por WhatsApp 👇";
+          "Mmm, ahí no alcancé a ver un correo bien escrito ✨ ¿me lo repites? (así: nombre@correo.com)\n\nO si prefieres no dejarlo, escríbenos de una por WhatsApp 👇";
         await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: respuesta } });
         return json({
           conversationId: conversation.id,
@@ -309,7 +309,7 @@ export async function POST(request: Request) {
       await prisma.bluConversation.update({ where: { id: conversation.id }, data: { estado: "ESPERANDO_CONTACTO" } });
       // Se guarda solo el añadido: intent.respuesta ya quedó registrada unas lineas
       // arriba, y guardarla otra vez completa dejaba el mensaje duplicado en el historial.
-      const invitacionCorreo = "Y si prefieres que te escribamos nosotros, déjame tu correo por aquí y le paso el dato al equipo 🐾";
+      const invitacionCorreo = "Y si prefieres que te escribamos nosotros, déjame tu correo por aquí y le paso el dato al equipo ✨";
       await prisma.bluMessage.create({ data: { conversationId: conversation.id, autor: "BLU", texto: invitacionCorreo } });
       return json({
         conversationId: conversation.id,
@@ -323,7 +323,7 @@ export async function POST(request: Request) {
     return json({ conversationId: conversation.id, respuesta: intent.respuesta, quickReplies: QUICK_REPLIES_DEFAULT, escalado: false });
   } catch (error) {
     console.error("Error en /api/blu/chat:", error);
-    return json({ error: "Chucho Bot tuvo un problema para responder. Intenta de nuevo en un momento." }, 500);
+    return json({ error: "Nolan tuvo un problema para responder. Intenta de nuevo en un momento." }, 500);
   }
 }
 

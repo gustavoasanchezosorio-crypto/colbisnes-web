@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Nolan, asistente de Colbisnes">
+  <defs>
+    <radialGradient id="nolanFondo" cx="50%" cy="50%" r="75%">
+      <stop offset="0%"  stop-color="#0c1a33"/>
+      <stop offset="60%" stop-color="#070f22"/>
+      <stop offset="100%" stop-color="#030712"/>
+    </radialGradient>
+    <radialGradient id="nolanNubePurpura" cx="30%" cy="35%" r="55%">
+      <stop offset="0%"  stop-color="#a855f7" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#7c3aed" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNubeAzul" cx="68%" cy="38%" r="50%">
+      <stop offset="0%"  stop-color="#1F6BFF" stop-opacity="0.9"/>
+      <stop offset="55%" stop-color="#1455cc" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#1455cc" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNubeMagenta" cx="55%" cy="72%" r="50%">
+      <stop offset="0%"  stop-color="#ec4899" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#be185d" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#be185d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNubeCian" cx="22%" cy="70%" r="42%">
+      <stop offset="0%"  stop-color="#22d3ee" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nolanNucleo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#e9d5ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#e9d5ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="nolanBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+
+  <!-- Fondo: cielo profundo -->
+  <rect x="0" y="0" width="200" height="200" fill="url(#nolanFondo)"/>
+
+  <!-- Nubes de gas de la nebulosa, difuminadas y superpuestas -->
+  <g filter="url(#nolanBlur)">
+    <circle cx="60" cy="70" r="70" fill="url(#nolanNubePurpura)"/>
+    <circle cx="136" cy="76" r="62" fill="url(#nolanNubeAzul)"/>
+    <circle cx="110" cy="144" r="64" fill="url(#nolanNubeMagenta)"/>
+    <circle cx="44" cy="140" r="48" fill="url(#nolanNubeCian)"/>
+  </g>
+
+  <!-- Nucleo brillante, como el corazon de la nebulosa -->
+  <circle cx="98" cy="96" r="26" fill="url(#nolanNucleo)"/>
+
+  <!-- Estrellas -->
+  <circle cx="174.1" cy="161.0" r="1.60" fill="#ffffff" opacity="0.81"/>
+  <circle cx="111.9" cy="142.4" r="1.12" fill="#ffffff" opacity="0.38"/>
+  <circle cx="139.0" cy="153.9" r="1.27" fill="#ffffff" opacity="0.54"/>
+  <circle cx="146.3" cy="185.9" r="1.64" fill="#ffffff" opacity="0.89"/>
+  <circle cx="39.1" cy="29.9" r="1.20" fill="#ffffff" opacity="0.85"/>
+  <circle cx="35.3" cy="88.8" r="0.76" fill="#ffffff" opacity="0.65"/>
+  <circle cx="132.7" cy="11.8" r="1.06" fill="#ffffff" opacity="0.80"/>
+  <circle cx="87.1" cy="144.9" r="0.51" fill="#ffffff" opacity="0.89"/>
+  <circle cx="95.3" cy="37.9" r="1.49" fill="#ffffff" opacity="0.46"/>
+  <circle cx="69.4" cy="150.5" r="0.72" fill="#ffffff" opacity="0.37"/>
+  <circle cx="192.1" cy="39.5" r="1.21" fill="#ffffff" opacity="0.92"/>
+  <circle cx="62.7" cy="129.2" r="0.44" fill="#ffffff" opacity="0.39"/>
+  <circle cx="84.3" cy="154.1" r="1.49" fill="#ffffff" opacity="0.58"/>
+  <circle cx="97.9" cy="33.7" r="1.58" fill="#ffffff" opacity="0.72"/>
+  <circle cx="65.8" cy="106.8" r="1.08" fill="#ffffff" opacity="0.83"/>
+  <circle cx="113.4" cy="150.7" r="1.63" fill="#ffffff" opacity="0.63"/>
+  <circle cx="124.7" cy="63.4" r="1.17" fill="#ffffff" opacity="0.69"/>
+  <circle cx="40.4" cy="98.6" r="0.37" fill="#ffffff" opacity="0.37"/>
+  <circle cx="92.7" cy="76.1" r="0.71" fill="#ffffff" opacity="0.92"/>
+  <circle cx="16.3" cy="64.6" r="0.86" fill="#ffffff" opacity="0.65"/>
+  <circle cx="114.5" cy="40.6" r="0.48" fill="#ffffff" opacity="0.63"/>
+  <circle cx="150.3" cy="58.4" r="0.90" fill="#ffffff" opacity="0.67"/>
+  <circle cx="92.8" cy="165.4" r="1.52" fill="#ffffff" opacity="0.38"/>
+  <circle cx="32.2" cy="60.8" r="0.98" fill="#ffffff" opacity="0.80"/>
+  <circle cx="30.1" cy="33.5" r="0.46" fill="#ffffff" opacity="0.85"/>
+  <circle cx="98.2" cy="109.8" r="1.40" fill="#ffffff" opacity="0.90"/>
+  <circle cx="113.5" cy="95.2" r="1.42" fill="#ffffff" opacity="0.69"/>
+  <circle cx="52.0" cy="129.6" r="1.56" fill="#ffffff" opacity="0.68"/>
+  <circle cx="160.5" cy="25.7" r="1.38" fill="#ffffff" opacity="0.78"/>
+  <circle cx="102.3" cy="79.9" r="1.39" fill="#ffffff" opacity="0.68"/>
+  <circle cx="152.3" cy="90.6" r="1.18" fill="#ffffff" opacity="0.55"/>
+  <circle cx="23.7" cy="41.2" r="1.03" fill="#ffffff" opacity="0.45"/>
+  <circle cx="126.6" cy="142.8" r="0.44" fill="#ffffff" opacity="0.58"/>
+  <circle cx="74.7" cy="44.4" r="1.46" fill="#ffffff" opacity="0.87"/>
+</svg>

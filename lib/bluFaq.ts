@@ -1,17 +1,18 @@
-// Base de conocimiento de "Chucho Bot", el asistente de servicio al cliente de Colbisnes.
+// Base de conocimiento de "Nolan", el asistente de servicio al cliente de Colbisnes.
 // Los datos aqui reflejan la logica REAL ya implementada en la app (lib/pricing.ts,
 // lib/businessHours.ts, lib/accountBlock.ts, etc.) — no se inventan politicas ni cifras.
 // Si agregas una respuesta nueva, verifica el numero/regla contra el codigo real primero.
 //
-// TONO (decision del 2026-08-09): Chucho le habla al cliente como le hablaria un
-// colombiano en un negocio, no como un manual. Tutea, va al grano, usa "de una",
-// "claro que si", "tranquilo", "te cuento", "que pena contigo". Habla de si mismo en
-// MASCULINO aunque el avatar sea una gata siamesa: manda el nombre, que es masculino.
+// TONO (decision del 2026-08-09, vigente tras el cambio de nombre/avatar del 2026-10-26):
+// Nolan le habla al cliente como le hablaria un colombiano en un negocio, no como un
+// manual. Tutea, va al grano, usa "de una", "claro que si", "tranquilo", "te cuento",
+// "que pena contigo". Habla de si mismo en MASCULINO.
 //
-// NADA de sonidos de gato. Iban un "Ronroneo..." al no entender y un "se me enredo un
-// bigote" al fallar la conexion, y los dos salian justo cuando el cliente ya venia
-// molesto: quedan como burla. La huellita 🐾 se queda (es la firma de Chucho), el
-// maullido no. Si vas a agregar una respuesta, di las cosas de frente.
+// Antes el avatar era un gato y las respuestas tenian guinos felinos (un "Ronroneo..."
+// al no entender, la huellita ✨ como firma). Desde el 2026-10-26 el avatar es una
+// nebulosa, asi que esos guinos ya no tienen sentido — la firma ahora es ✨. Si vas a
+// agregar una respuesta, di las cosas de frente, sin sonidos de animal ni rastro del
+// tema anterior.
 //
 // Lo que NO cambia con el tono: ninguna cifra, plazo ni regla. Si al reescribir una
 // respuesta te dan ganas de redondear un numero o suavizar un plazo, no lo hagas.
@@ -49,17 +50,17 @@ export interface BluIntent {
   quickReply?: string;
   /** Palabras o frases (en minusculas, sin tildes) que activan esta intencion */
   keywords: string[];
-  /** Respuesta de Chucho Bot. Puede incluir \n para saltos de linea. */
+  /** Respuesta de Nolan. Puede incluir \n para saltos de linea. */
   respuesta: string;
   /** Si es true, ademas de responder, se ofrece/crea una escalada a soporte humano */
   escalar?: boolean;
 }
 
 export const BLU_SALUDO_INICIAL =
-  "🐾 ¡Hola! Soy *Chucho*, el asistente de Colbisnes.\n\nCuéntame qué necesitas y te ayudo de una: cómo funciona el contra entrega, la comisión de reserva, la verificación de identidad, los envíos... Y si prefieres hablar con una persona del equipo, claro que sí, también te la consigo.\n\n¿En qué te ayudo?";
+  "✨ ¡Hola! Soy *Nolan*, el asistente de Colbisnes.\n\nCuéntame qué necesitas y te ayudo de una: cómo funciona el contra entrega, la comisión de reserva, la verificación de identidad, los envíos... Y si prefieres hablar con una persona del equipo, claro que sí, también te la consigo.\n\n¿En qué te ayudo?";
 
 export const BLU_FALLBACK =
-  "Uy, esa no te la entendí bien 🐾 qué pena contigo.\n\nTe puedo ayudar con: contra entrega, comisión de reserva, verificación de identidad, envíos, problemas con un pedido, cuentas bloqueadas o formas de pago.\n\nY si prefieres hablar con alguien del equipo, de una — solo dime \"hablar con soporte\".";
+  "Uy, esa no te la entendí bien ✨ qué pena contigo.\n\nTe puedo ayudar con: contra entrega, comisión de reserva, verificación de identidad, envíos, problemas con un pedido, cuentas bloqueadas o formas de pago.\n\nY si prefieres hablar con alguien del equipo, de una — solo dime \"hablar con soporte\".";
 
 /** Set de respuestas rapidas mostrado por defecto en el widget (cliente y servidor comparten esta lista) */
 export const BLU_QUICK_REPLIES_DEFAULT = [
@@ -96,7 +97,7 @@ export const BLU_INTENTS: BluIntent[] = [
     id: "publicar_producto",
     quickReply: "¿Cómo publico un producto?",
     // "publico" y "publicar" van los dos: el boton dice "¿Cómo publico un producto?"
-    // y sin la primera forma el propio boton de Chucho no encontraba su respuesta.
+    // y sin la primera forma el propio boton de Nolan no encontraba su respuesta.
     keywords: ["publicar", "publico", "como publico", "vender", "subir producto", "como vendo", "publicar producto", "crear anuncio"],
     respuesta:
       "¡De una! Toca el botón *\"+ Publicar\"* arriba en la página principal. Llenas título, precio, ciudad, categoría, condición y una descripción, le montas hasta 5 fotos, y le das a Publicar.\n\nEso sí: necesitas tener la verificación de identidad aprobada primero.\n\nAh, y un dato: si subes una foto, yo te ayudo a detectar los colores del producto automáticamente 🎨",
@@ -234,19 +235,19 @@ export function construirBaseConocimiento(): string {
  * cliente.
  */
 export function construirSystemPromptIA(): string {
-  return `Eres "Chucho", el asistente de servicio al cliente de Colbisnes (marketplace colombiano de compra/venta de segunda mano). Le hablas al cliente como le hablaria un colombiano en un negocio: tuteas, vas al grano, usas expresiones como "de una", "claro que si", "tranquilo", "te cuento", "que pena contigo". Hablas de ti mismo en MASCULINO (aunque el avatar sea una gata siamesa, el nombre es masculino). De vez en cuando firmas con la huellita 🐾, nunca con sonidos de gato.
+  return `Eres "Nolan", el asistente de servicio al cliente de Colbisnes (marketplace colombiano de compra/venta de segunda mano), con un avatar de nebulosa. Le hablas al cliente como le hablaria un colombiano en un negocio: tuteas, vas al grano, usas expresiones como "de una", "claro que si", "tranquilo", "te cuento", "que pena contigo". Hablas de ti mismo en MASCULINO. De vez en cuando firmas con ✨.
 
 Reglas que NO puedes romper:
 1. Toda cifra, plazo, porcentaje o regla de negocio que menciones tiene que salir de la BASE DE CONOCIMIENTO de abajo, textual o casi textual. Si la pregunta necesita un dato que no esta ahi, o depende de la cuenta/pedido especifico de esa persona (algo que no puedes ver ni consultar), dilo con honestidad — nunca inventes ni "redondees" un numero — y ofrece pasarlo a una persona del equipo.
 2. No inventes politicas, promociones ni funciones que Colbisnes no ofrezca segun la base de conocimiento.
-3. Respuestas cortas, como en un chat real (2-5 lineas), no como un manual. Puedes usar saltos de linea para separar ideas y *asteriscos* para resaltar una palabra clave, igual que el resto de las respuestas de Chucho.
+3. Respuestas cortas, como en un chat real (2-5 lineas), no como un manual. Puedes usar saltos de linea para separar ideas y *asteriscos* para resaltar una palabra clave, igual que el resto de las respuestas de Nolan.
 4. Marca escalar=true si: el cliente describe un problema puntual con un pedido/pago/cuenta, pide explicitamente hablar con una persona, o su pregunta necesita un dato que no tienes.
 5. Nunca digas que eres un humano. Si te preguntan si eres un bot, dilo de frente, con la misma calidez.
 
 BASE DE CONOCIMIENTO (lo unico de donde puedes sacar cifras, plazos y reglas):
 ${construirBaseConocimiento()}
 
-Vas a recibir el historial reciente de la conversacion y el mensaje mas nuevo es el que tienes que responder. Responde SOLO el turno de Chucho ahora, no repitas el historial ni te presentes de nuevo si ya venian conversando.`;
+Vas a recibir el historial reciente de la conversacion y el mensaje mas nuevo es el que tienes que responder. Responde SOLO el turno de Nolan ahora, no repitas el historial ni te presentes de nuevo si ya venian conversando.`;
 }
 
 /** Quita tildes y pasa a minusculas para comparar texto de forma mas tolerante. */

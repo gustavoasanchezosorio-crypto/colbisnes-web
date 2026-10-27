@@ -204,7 +204,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             // pantalla. El `safe-area-inset-top` la baja bajo la muesca del iPhone.
             position: 'fixed', top: 'calc(14px + env(safe-area-inset-top))',
             left: '50%', transform: 'translateX(-50%)',
-            // Por encima de todo lo demás (el chat de Chucho va en 1900).
+            // Por encima de todo lo demás (el chat de Nolan va en 1900).
             zIndex: 9900, cursor: 'pointer', width: 'min(360px, calc(100vw - 32px))',
             background: '#fff', borderRadius: 16, padding: 12,
             // Borde dorado metálico: anillos superpuestos (oro oscuro → oro claro)
