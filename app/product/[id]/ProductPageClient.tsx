@@ -524,7 +524,7 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
           {/* Tags atributos */}
           <div style={{display:"flex",flexWrap:"wrap",gap:"0.35rem"}}>
             {[product.condition, product.city,
-              product.tipoEntrega==="ENVIO"?"Envíos a todo el país":product.tipoEntrega==="EN_PERSONA"?"Entrega en persona":"Envíos a todo el país o en persona"
+              product.tipoEntrega==="ENVIO"?"Envíos a todo Colombia":product.tipoEntrega==="EN_PERSONA"?"Venta en persona":"Envíos a todo Colombia, venta en persona"
             ].map((t,i)=>(
               <span key={i} style={{background:"#eef3fb",color:THEME.textSoft,padding:"0.2rem 0.65rem",
                 borderRadius:"20px",fontSize:"0.75rem",fontWeight:"600",border:`1px solid ${THEME.border}`}}>{t}</span>
@@ -963,7 +963,7 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
             {[
               ["Condición",product.condition],
               ["Ciudad",product.city],
-              ["Entrega",product.tipoEntrega==="ENVIO"?"Envíos a todo el país":product.tipoEntrega==="EN_PERSONA"?"Entrega en persona":"Envíos a todo el país o en persona"],
+              ["Entrega",product.tipoEntrega==="ENVIO"?"Envíos a todo Colombia":product.tipoEntrega==="EN_PERSONA"?"Venta en persona":"Envíos a todo Colombia, venta en persona"],
               ...(product.precioEnvio?[["Costo de envío",`$${product.precioEnvio.toLocaleString("es-CO")} COP`]]:[]),
             ].map(([l,v],i,a)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"0.5rem 0",borderBottom:i<a.length-1?`1px solid ${THEME.border}`:"none"}}>
