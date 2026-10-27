@@ -1078,19 +1078,19 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                   <ImagePicker files={imageFiles} previews={imagePreviews} onChange={(f,p) => { setImageFiles(f); setImagePreviews(p); }} disabled={uploadingImages} />
                   {bluAnalizando && (
                     <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-                      <img src="/nolan-avatar.svg" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
+                      <img src="/nolan-avatar.jpg" alt="" style={{ width: 16, height: 16, borderRadius: "50%" }} />
                       Nolan está mirando la foto…
                     </p>
                   )}
                   {bluError && !bluAnalizando && (
                     <p style={{ fontSize: 12, color: THEME.muted, margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-                      <img src="/nolan-avatar.svg" alt="" style={{ width: 16, height: 16, borderRadius: "50%", opacity: 0.6 }} />
+                      <img src="/nolan-avatar.jpg" alt="" style={{ width: 16, height: 16, borderRadius: "50%", opacity: 0.6 }} />
                       {bluError}
                     </p>
                   )}
                   {bluSugerencia && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginTop: 8, padding: "10px 14px", borderRadius: 12, background: THEME.surfaceAlt, border: `1.5px solid ${THEME.border}`, fontFamily: "inherit" }}>
-                      <img src="/nolan-avatar.svg" alt="Nolan" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 2 }} />
+                      <img src="/nolan-avatar.jpg" alt="Nolan" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 2 }} />
                       <div style={{ flex: 1, minWidth: 140, fontFamily: "inherit" }}>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark, lineHeight: 1.4, letterSpacing: "normal" }}>
                           {bluSugerencia.tituloSugerido}

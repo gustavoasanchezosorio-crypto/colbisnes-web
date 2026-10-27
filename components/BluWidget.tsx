@@ -121,7 +121,7 @@ export default function BluWidget() {
             padding: 4, display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <img src="/nolan-avatar.svg" alt="Nolan" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+          <img src="/nolan-avatar.jpg" alt="Nolan" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           <span style={{ position: "absolute", right: 2, bottom: 2, width: 14, height: 14, borderRadius: "50%", background: THEME.success, border: "2.5px solid #fff" }} />
         </button>
       )}
@@ -145,7 +145,7 @@ export default function BluWidget() {
             background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`,
             padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
           }}>
-            <img src="/nolan-avatar.svg" alt="Nolan" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
+            <img src="/nolan-avatar.jpg" alt="Nolan" style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, color: "#fff", fontWeight: 800, fontSize: 14.5 }}>Nolan ✨</p>
               <p style={{ margin: 0, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600 }}>Asistente de Colbisnes</p>
