@@ -1145,29 +1145,29 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                 (que son muchas y se reconocen por ícono) son las que se mandan al tramo que
                 sí requiere deslizar; los controles de uso frecuente quedan a la vista sin
                 desplazar nada. */}
-            {/* "Todos" sin recuadro (2026-10-26): a diferencia de las categorías, no lleva
-                borde ni fondo — es texto+ícono plano, para distinguirlo visualmente de los
-                chips reales. El color azul corporativo de abajo lo sigue marcando como
-                clickeable aunque no tenga caja. */}
+            {/* "Todos" con el mismo recuadro que las categorías (2026-10-26, corregido: la
+                petición de "quitar el recuadro" era sobre el SELECT de estado, no sobre este
+                botón — se restaura el mismo border/background que usan los chips de abajo). */}
             <button onClick={() => setFilters(prev => ({ ...prev, category: "" }))}
-              style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", border: "none", background: "transparent", cursor: "pointer", minWidth: 72 }}>
+              style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: !filters.category ? "2px solid #1466cc" : "1px solid " + THEME.border, background: !filters.category ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
               <span style={{ fontSize: 22 }}>🏷️</span>
               <span style={{ fontSize: 11, fontWeight: !filters.category ? 800 : 600, color: THEME.primary, whiteSpace: "nowrap" }}>Todos</span>
             </button>
-            {/* Ancho automático (2026-10-26): antes era un width fijo de 140px que recortaba
-                "Todas las ciudades"; ahora se ensancha solo hasta lo que ocupa el texto
-                seleccionado. */}
-            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: "auto", flexShrink: 0, color: THEME.primary }}>
+            {/* Ancho fijo al tamaño del texto (2026-10-26, corregido): width:"auto" hacía que
+                el navegador calculara el ancho del cerrado en base a la opción MÁS ANCHA de
+                toda la lista (ciudades largas como "Santander de Quilichao"), no en base al
+                texto realmente mostrado — por eso quedaba más ancho de lo normal. Con un
+                width fijo, calculado para que entre justo "Todas las ciudades", el cerrado
+                ya no se estira con las opciones largas. */}
+            <Select value={filters.city} onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))} style={{ width: 180, flexShrink: 0, color: THEME.primary }}>
               <option value="">Todas las ciudades</option>
               {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
-            <Select value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))} style={{ width: "auto", flexShrink: 0, color: THEME.primary }}>
-              <option value="">Todos</option>
-              <option value={PRODUCT_STATUS.AVAILABLE}>Disponible</option>
-              <option value={PRODUCT_STATUS.PAYMENT_PENDING}>Pago pendiente</option>
-              <option value={PRODUCT_STATUS.IN_ESCROW}>En custodia</option>
-              <option value={PRODUCT_STATUS.SOLD}>Vendido</option>
-            </Select>
+            {/* El filtro de estado (Disponible/Pago pendiente/En custodia/Vendido) se quitó
+                (2026-10-26): era el "recuadro que dice Todos" al que se refería el usuario —
+                no aporta lo suficiente para ocupar espacio en la fila. filters.status se deja
+                en el estado (clearFilters, hasActiveFilters) por si se repone más adelante;
+                simplemente ya no hay forma de ponerlo a otra cosa que "" desde la UI. */}
             {/* Limpiar ya no va al final de la fila, fijo. Solo se apaga visualmente (sin
                 desaparecer ni correr de lugar al resto de botones) cuando no hay nada que
                 limpiar. */}
