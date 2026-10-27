@@ -27,7 +27,7 @@ const COPY: Record<string, { nombre: string; titulo: string; descripcion: string
   Tecnologia: {
     nombre: "Tecnología",
     titulo: "Tecnología usada en Colombia",
-    descripcion: "Celulares, computadores y accesorios usados o reacondicionados, con IMEI verificado.",
+    descripcion: "iPhone usado, iPhone de segunda, iPhone 17 nuevo e iPhone 18 Pro Max: celulares, computadores y accesorios con IMEI verificado.",
   },
   Hogar: {
     nombre: "Hogar y jardín",
@@ -52,7 +52,7 @@ const COPY: Record<string, { nombre: string; titulo: string; descripcion: string
   Deportes: {
     nombre: "Deportes",
     titulo: "Artículos deportivos de segunda mano en Colombia",
-    descripcion: "Bicicletas, implementos y ropa deportiva usada o nueva a buen precio en toda Colombia.",
+    descripcion: "Bicicleta usada, implementos y ropa deportiva usada o nueva a buen precio en toda Colombia.",
   },
   Empleo: {
     nombre: "Empleo",
@@ -69,6 +69,15 @@ const COPY: Record<string, { nombre: string; titulo: string; descripcion: string
     titulo: "Otros artículos de segunda mano en Colombia",
     descripcion: "Artículos variados publicados por particulares en toda Colombia.",
   },
+};
+
+// Keywords propias por categoría (meta "keywords", bajo impacto real en Google pero
+// algunos buscadores/crawlers menores lo leen). Solo se declaran donde hay un término
+// de búsqueda concreto que el usuario pidió trackear; las demás categorías se quedan
+// sin este campo en vez de forzar keywords genéricas sin valor.
+const KEYWORDS: Partial<Record<string, string[]>> = {
+  Tecnologia: ["iphone usado", "iphone de segunda", "iphone 17 nuevo", "iphone 18 pro max"],
+  Deportes: ["bicicleta usada"],
 };
 
 // Mismo patrón que app/product/[id]/page.tsx: esta página le pega a su propio
@@ -116,6 +125,7 @@ export async function generateMetadata(
   return {
     title: copy.titulo, // el layout raíz le agrega "· Colbisnes" solo (title.template)
     description: descripcion,
+    ...(KEYWORDS[slug] ? { keywords: KEYWORDS[slug] } : {}),
     alternates: { canonical: url },
     openGraph: {
       title: `${copy.titulo} · Colbisnes`,

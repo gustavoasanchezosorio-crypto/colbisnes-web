@@ -21,6 +21,20 @@ export const metadata: Metadata = {
   title: { default: "Colbisnes", template: "%s · Colbisnes" },
   description: "El marketplace colombiano de segunda mano con pagos protegidos.",
   applicationName: "Colbisnes",
+  // Meta "keywords" ya no afecta el ranking en Google (lo confirmaron desde 2009), pero
+  // sigue sin hacer daño y algunos buscadores/crawlers menores todavía lo leen. El trabajo
+  // real de SEO para estos términos (iPhone usado, bicicleta usada, etc.) vive en el texto
+  // visible y las keywords propias de cada /categoria/[slug] — ver ese archivo.
+  keywords: [
+    "marketplace segunda mano colombia",
+    "comprar y vender usado",
+    "iphone usado",
+    "iphone de segunda",
+    "iphone 17 nuevo",
+    "iphone 18 pro max",
+    "bicicleta usada",
+    "colbisnes",
+  ],
   // Verificación de propiedad en Google Search Console (2026-10-01), cuenta
   // gustavoa.sanchezosorio@gmail.com — la propiedad anterior quedó verificada
   // con otra cuenta de Google a la que ya no se tiene acceso, así que se dio
