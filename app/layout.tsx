@@ -136,6 +136,14 @@ const organizationJsonLd = {
   url: SITE_URL,
   logo: SITE_URL + "/logo-google.png",
   description: "El marketplace colombiano de segunda mano con pagos protegidos.",
+  // `sameAs`: le dice a Google que estas cuentas y colbisnes.com son la MISMA entidad de
+  // marca (ayuda al panel de conocimiento y a que Google confíe más en el sitio).
+  // Cuentas confirmadas por el dueño el 2026-10-27: Instagram, TikTok y Facebook.
+  sameAs: [
+    "https://www.instagram.com/colbisnes",
+    "https://www.tiktok.com/@colbisnes",
+    "https://www.facebook.com/colbisnes.com",
+  ],
 };
 
 // Habilita el cuadro de búsqueda directo en los resultados de Google (sitelinks
