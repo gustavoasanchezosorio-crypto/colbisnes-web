@@ -78,6 +78,12 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
   const [product, setProduct]     = useState<Product | null>(initialProduct);
   const [offers, setOffers]       = useState<Offer[]>([]);
   const [imagenActual, setImagenActual] = useState(0);
+  // Índice de la vitrina automática (debajo de las miniaturas), separado de
+  // imagenActual a propósito: ese otro índice lo controla el comprador con las
+  // flechas/puntos/miniaturas, y no queremos que un auto-avance le mueva la foto
+  // grande mientras la está mirando. Ver el useEffect de abajo y el bloque
+  // "Vitrina automática" en el JSX.
+  const [vitrinaIdx, setVitrinaIdx] = useState(0);
   const [cargando, setCargando]   = useState(!initialProduct);
   const [countdown, setCountdown] = useState(0);
   const [esFavorito, setEsFavorito]     = useState(false);
@@ -175,6 +181,16 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
   }, [product?.paymentExpiresAt]);
 
   useEffect(() => { cargarProducto(); cargarFavoritos(); cargarOrden(); }, [productId]);
+  // Vitrina automática: con 2+ fotos, rota sola cada 3.5s para aprovechar el
+  // espacio que queda libre bajo la galería (la columna de info de la derecha
+  // suele ser más alta en escritorio, ver .galeria-col más abajo). Con 1 sola
+  // foto no hay nada que rotar, así que ni se monta el intervalo.
+  useEffect(() => {
+    const total = product?.images?.length ?? 0;
+    if (total <= 1) return;
+    const iv = setInterval(() => setVitrinaIdx(p => (p + 1) % total), 3500);
+    return () => clearInterval(iv);
+  }, [product?.images?.length]);
   useEffect(() => {
     if (product) { cargarOfertas(); setTabEntrega(product.tipoEntrega === "EN_PERSONA" ? "EN_PERSONA" : "ENVIO"); }
   }, [product?.id]);
@@ -503,6 +519,29 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
                     border:`2.5px solid ${i===imagenActual?AZUL:"transparent"}`,
                     boxShadow:i===imagenActual?`0 0 0 2px ${AZUL}33`:"none"}}/>
               ))}
+            </div>
+          )}
+
+          {/* Vitrina automática: aprovecha el espacio que queda libre bajo la galería
+              en escritorio (la columna de info de la derecha suele ser más alta que
+              esta, ver .galeria-col arriba) mostrando las mismas fotos del producto
+              en un segundo cuadro que rota solo, sin que el comprador tenga que
+              tocar nada. Es un crossfade (las fotos se superponen con opacity, no
+              se desmontan) para que no haya parpadeo en cada cambio. Clic en el
+              "Ver" lleva esa foto al visor grande de arriba, para quien sí quiera
+              detenerse en una en particular. */}
+          {product.images.length > 1 && (
+            <div style={{position:"relative",marginTop:"0.6rem",borderRadius:"16px",overflow:"hidden",aspectRatio:"16/9",background:"#eef2f7",cursor:"pointer"}}
+              onClick={() => setImagenActual(vitrinaIdx)}>
+              {product.images.map((img,i)=>(
+                <img key={i} src={cldOptimizar(img.url)} alt={`${product.title} - vitrina ${i + 1}`}
+                  style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",
+                    opacity:i===vitrinaIdx?1:0,transition:"opacity 0.9s ease"}}/>
+              ))}
+              <span style={{position:"absolute",bottom:10,right:10,...glass(0.7,12),borderRadius:"16px",
+                padding:"3px 9px",fontSize:"0.7rem",fontWeight:700,color:THEME.text,zIndex:2}}>
+                📷 {vitrinaIdx+1}/{product.images.length}
+              </span>
             </div>
           )}
         </div>
