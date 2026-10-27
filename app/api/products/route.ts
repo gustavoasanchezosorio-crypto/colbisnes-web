@@ -7,6 +7,7 @@ import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { normalizarEntrega } from "@/lib/entrega";
 import { normalizarTituloProducto } from "@/lib/normalizarTitulo";
+import { pingIndexNow } from "@/lib/indexNow";
 import {
   categoriaPideDatosDeDispositivo,
   validarImeisDeclarados,
@@ -304,6 +305,11 @@ export async function POST(request: Request) {
       },
       include: { images: true },
     });
+
+    // Sin `await`: avisarle a Bing/Yandex vía IndexNow no debe retrasar la respuesta
+    // al vendedor, y si el ping falla no debe tumbar la publicación (ver lib/indexNow.ts).
+    const siteUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://colbisnes.com";
+    pingIndexNow(`${siteUrl}/product/${product.id}`);
 
     return NextResponse.json(product, { status: 201 });
   } catch (error) {

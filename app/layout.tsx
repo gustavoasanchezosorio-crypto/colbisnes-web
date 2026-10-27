@@ -138,6 +138,22 @@ const organizationJsonLd = {
   description: "El marketplace colombiano de segunda mano con pagos protegidos.",
 };
 
+// Habilita el cuadro de búsqueda directo en los resultados de Google (sitelinks
+// search box) para quien busque "colbisnes" a secas. La plantilla apunta al mismo
+// "?q=" que ya lee app/HomeClient.tsx (useSearchParams().get("q")) — no es una ruta
+// nueva, es el filtro de búsqueda que ya existe en el home.
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Colbisnes",
+  url: SITE_URL,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${SITE_URL}/?q={search_term_string}`,
+    "query-input": "required name=search_term_string",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -153,6 +169,10 @@ export default function RootLayout({
           // estos campos pasa a venir de datos dinámicos, este patrón ya queda a salvo
           // de que un "</script>" literal rompa el tag (ver lib/jsonLd.ts).
           dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }}
         />
         {/* Cloudflare Web Analytics: gratis, sin cookies, sin banner de consentimiento.
             colbisnes.com no está proxiado por Cloudflare (confirmado: sin header cf-ray),
