@@ -1245,6 +1245,12 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                 <img src="/logo.svg?v=2" alt="Colbisnes" style={{ height: 30, width: "auto", display: "block" }} />
               </div>
               <p style={{ fontSize: 12, color: THEME.muted, margin: "3px 0 0" }}>© {new Date().getFullYear()} Colbisnes — La mejor tienda de segunda mano de Colombia</p>
+              {/* Mismo motivo que el nav de categorías de arriba: sin un enlace real desde
+                  la página de más autoridad del sitio, /ayuda (app/ayuda/page.tsx) queda
+                  "huérfana" aunque esté en el sitemap. */}
+              <Link href="/ayuda" style={{ fontSize: 12, color: THEME.primary, textDecoration: "none", fontWeight: 700 }}>
+                Centro de ayuda
+              </Link>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {PAYMENT_METHODS.map(m => (

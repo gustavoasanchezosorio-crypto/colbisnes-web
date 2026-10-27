@@ -49,6 +49,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     { url: SITE_URL, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    // Contenido estático (FAQPage, ver app/ayuda/page.tsx), no una fila de Prisma: misma
+    // lógica de lastModified que las categorías de arriba. Prioridad 0.5, por debajo de
+    // categorías: es una sola página de soporte, no un punto de entrada a más contenido.
+    { url: `${SITE_URL}/ayuda`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     ...paginasCategoria,
     ...paginasProducto,
   ];
