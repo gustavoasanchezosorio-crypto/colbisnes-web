@@ -1147,8 +1147,12 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                 desplazar nada. */}
             {/* "Todos" con el mismo recuadro que las categorías (2026-10-26, corregido: la
                 petición de "quitar el recuadro" era sobre el SELECT de estado, no sobre este
-                botón — se restaura el mismo border/background que usan los chips de abajo). */}
-            <button onClick={() => setFilters(prev => ({ ...prev, category: "" }))}
+                botón — se restaura el mismo border/background que usan los chips de abajo).
+                Dispara clearFilters() entero, no solo category="" (2026-10-26, 2da corrección):
+                si solo soltaba la categoría, la ciudad elegida antes se quedaba puesta y
+                "Todos" no se sentía como un reinicio real — igual que "Limpiar", debe vaciar
+                TODOS los filtros, no solo el de categoría. */}
+            <button onClick={clearFilters}
               style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", borderRadius: 16, border: !filters.category ? "2px solid #1466cc" : "1px solid " + THEME.border, background: !filters.category ? "rgba(20,102,204,0.12)" : "#f4f7fb", cursor: "pointer", minWidth: 72 }}>
               <span style={{ fontSize: 22 }}>🏷️</span>
               <span style={{ fontSize: 11, fontWeight: !filters.category ? 800 : 600, color: THEME.primary, whiteSpace: "nowrap" }}>Todos</span>

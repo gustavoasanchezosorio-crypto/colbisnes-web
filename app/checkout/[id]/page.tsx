@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, nivelParaDescuento, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
-import { computeProfileCompletion } from "@/lib/profileCompletion";
 import { limpiarDireccion, validarDireccionEnvio, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 import { THEME } from "@/lib/theme";
 import NequiPushModal from "@/components/NequiPushModal";
@@ -64,18 +63,20 @@ export default function CheckoutPage() {
         if (!u || u.error) { setPerfilFaltantes([]); return; }
         setNequiPrefill(u.nequiNumber || null);
         setDireccionPerfil(u.direccionEnvio || "");
-        // El código anti fraude ya viene dentro de los críticos (lib/profileCompletion.ts).
-        // Antes se añadía aquí a mano, porque allá no estaba marcado como crítico; ahora sí
-        // lo está, y repetirlo haría que saliera dos veces en la lista de "te falta".
-        //
-        // "kycStatus" se descarta a propósito (2026-10-26): esa lista es compartida con el
-        // flujo de publicar, donde el KYC sí sigue siendo obligatorio, pero el COMPRADOR ya
-        // no necesita identidad verificada para pagar — la garantía de la compra es el propio
-        // escrow del pago (ver lib/requireKyc.ts y los checkouts, que ya no llaman a
-        // requireKyc()). Sin este filtro, a cualquier comprador sin KYC se le bloqueaba aquí
-        // el botón "Continuar" aunque el servidor ya no fuera a exigírselo.
-        const { faltantesCriticos } = computeProfileCompletion(u);
-        setPerfilFaltantes(faltantesCriticos.filter(f => f.key !== "kycStatus"));
+        // Decisión 2026-10-26 (2da ronda): el comprador ya NO se bloquea aquí por nada del
+        // perfil — ni KYC (desde la 1ra ronda, mismo día) ni código anti fraude ni datos de
+        // cobro (Nequi/Bre-B), que antes también venían en faltantesCriticos como "críticos".
+        // Un comprador real se topó con el bloqueo por no tener la llave Bre-B puesta —ese
+        // dato ni siquiera es suyo, es del VENDEDOR para poder cobrar— y no pudo completar una
+        // compra que no tenía nada que ver con eso. Los checkouts del servidor (ver el
+        // comentario largo en lib/checkoutOnline.ts) ya dejaron de exigir esto mismo, así que
+        // mantenerlo bloqueado aquí solo habría sido una pared más estricta que la del propio
+        // servidor. Lo único que de verdad puede frenar el pago es el correo verificado (eso
+        // lo resuelve requireEmailVerified en el servidor y, si falta, cae a /auth/verify más
+        // abajo) y la dirección de envío (modal propio, independiente de esta lista — ver
+        // mostrarDireccion/confirmarDireccion). El perfil incompleto se sigue recordando en
+        // otras pantallas (ver lib/profileCompletion.ts), pero ya no aquí.
+        setPerfilFaltantes([]);
       })
       .catch(() => setPerfilFaltantes([]));
   }, [id]);
@@ -176,10 +177,11 @@ export default function CheckoutPage() {
     setLoading(false);
   };
 
+  // perfilFaltantes siempre llega vacío ahora (ver el efecto más arriba, 2026-10-26 2da
+  // ronda): perfilIncompleto queda en false y todo el bloque de aviso/bloqueo de abajo no se
+  // pinta. Se deja la variable y el bloque JSX tal cual (en vez de borrarlos) por si algún
+  // día vuelve a haber un requisito de perfil real que bloquee el pago.
   const perfilIncompleto = (perfilFaltantes?.length ?? 0) > 0;
-  // Ya no puede faltar "kycStatus" aquí (se descarta arriba, ver el efecto que llama a
-  // computeProfileCompletion): el comprador no necesita KYC para pagar desde 2026-10-26.
-  // Lo único que puede faltarle ahora (anti fraude, Nequi, Bre-B) se completa en el perfil.
   const destinoCompletar = "/perfil/editar?falta=pago";
 
   const seguirConElPago = () => {

@@ -5,9 +5,8 @@ import { requireSesion } from "@/lib/requireKyc";
 import { computeTrustScore } from "@/lib/trustScore";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
-import { requirePayoutInfo, vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/requirePayoutInfo";
+import { vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
-import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
 
 // Resultado de preparar una orden de pago ONLINE. Se comparte entre el checkout web de Wompi
@@ -51,12 +50,17 @@ export async function prepararOrdenOnline(
   const faltaVerif = await requireEmailVerified(session.user.id);
   if (faltaVerif) return { ok: false, code: "emailVerification", status: 403 };
 
-  const faltaAntiPhishing = await requireAntiPhishing(session.user.id);
-  if (faltaAntiPhishing) return { ok: false, code: "antiPhishing", status: 403 };
-
-  const faltaPago = await requirePayoutInfo(session.user.id);
-  if (faltaPago) return { ok: false, code: "payout", status: 403 };
-
+  // Decisión 2026-10-26 (2da ronda): se quitan también el código anti fraude y los datos de
+  // cobro (Nequi/Bre-B) como requisito para que el COMPRADOR pague. Un comprador real se topó
+  // con el bloqueo por no tener la llave Bre-B puesta y no pudo completar una compra que no
+  // tenía nada que ver con ese dato — Bre-B/Nequi del comprador solo sirve como destino de un
+  // reembolso eventual, no protege el pago en sí (eso lo hace el escrow). La única restricción
+  // dura que le queda al comprador es tener el correo verificado (arriba) y, dentro del propio
+  // checkout, una dirección de envío (se pide en la pantalla de pago, no aquí). El perfil
+  // incompleto se sigue recordando con avisos — ver lib/profileCompletion.ts — pero ya no
+  // bloquea. Los códigos "antiPhishing"/"payout" quedan en PrepararOnlineErrorCode y en los
+  // switch de app/api/checkout/wompi y .../nequi-online por compatibilidad, aunque esta función
+  // ya no los produce.
   if (!productoId) return { ok: false, code: "not_found", status: 400, message: "productoId requerido" };
 
   const producto = await prisma.product.findUnique({

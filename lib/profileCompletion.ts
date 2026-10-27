@@ -25,11 +25,16 @@ interface CampoPerfil {
   // del ayudante requireKyc: publicar hace la comprobación a mano y no lo usa):
   //   · publicar (POST /api/products) ....... KYC + código anti fraude
   //   · hacer una oferta (POST /api/offers) . código anti fraude
-  //   · pagar (los 3 checkouts) ............. código anti fraude + Nequi + Bre-B
-  //     (YA NO pide KYC al comprador desde el 2026-10-26: la garantía de la compra es el
-  //     propio escrow del pago, no el documento de quien compra; ver lib/requireKyc.ts.
-  //     checkout/[id]/page.tsx descarta "kycStatus" de faltantesCriticos a mano por este
-  //     mismo motivo, sin tocar esta lista — que publicar sí la sigue necesitando tal cual.)
+  //   · pagar (los 3 checkouts) ............. SOLO correo verificado + dirección de envío
+  //     (la dirección se pide en la propia pantalla de pago, no viene de este chequeo de
+  //     perfil). Desde el 2026-10-26 (2da ronda) el comprador ya NO necesita código anti
+  //     fraude ni datos de cobro (Nequi/Bre-B) para pagar — ver el comentario largo en
+  //     lib/checkoutOnline.ts: esos datos protegen al VENDEDOR o sirven de destino de un
+  //     reembolso, no protegen el pago en sí (eso lo hace el escrow). Tampoco pide KYC desde
+  //     la 1ra ronda ese mismo día, por el mismo motivo (ver lib/requireKyc.ts).
+  //     checkout/[id]/page.tsx ya ni siquiera lee faltantesCriticos para decidir si bloquea
+  //     el botón de pago — esta lista sigue viva solo para los avisos/recordatorios de
+  //     perfil incompleto en otras pantallas, y para lo que publicar sí sigue exigiendo.
   //   · que te compren (vendedorPuedeRecibirVentas) .. KYC + Nequi + Bre-B del vendedor
   //
   // Ojo con el significado de "crítico": marca lo que bloquea ALGUNA acción, no lo que hay

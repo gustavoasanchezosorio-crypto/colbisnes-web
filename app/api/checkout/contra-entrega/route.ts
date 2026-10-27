@@ -11,9 +11,8 @@ import { registrarAuditoria } from "@/lib/audit";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { calcularFechaLimiteEnvio } from "@/lib/businessHours";
 import { cancelarOrdenPendienteDeOtroMetodo } from "@/lib/checkoutSwitch";
-import { requirePayoutInfo, vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/requirePayoutInfo";
+import { vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/requirePayoutInfo";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
-import { requireAntiPhishing } from "@/lib/requireAntiPhishing";
 import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
 
@@ -37,11 +36,10 @@ export async function POST(req: NextRequest) {
     const faltaVerif = await requireEmailVerified(session.user.id);
     if (faltaVerif) return faltaVerif;
 
-    const faltaAntiPhishing = await requireAntiPhishing(session.user.id);
-    if (faltaAntiPhishing) return faltaAntiPhishing;
-
-    const faltaPago = await requirePayoutInfo(session.user.id);
-    if (faltaPago) return faltaPago;
+    // Decisión 2026-10-26 (2da ronda): se quitan el código anti fraude y los datos de cobro
+    // (Nequi/Bre-B) como requisito para que el COMPRADOR pague — ver el comentario largo en
+    // lib/checkoutOnline.ts. La única restricción dura que le queda es el correo verificado
+    // (arriba) y la dirección de envío, que se pide más abajo en este mismo flujo.
 
     const { productoId } = await req.json();
     if (!productoId) return NextResponse.json({ error: "productoId requerido" }, { status: 400 });
