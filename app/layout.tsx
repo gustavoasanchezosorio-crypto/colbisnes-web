@@ -190,6 +190,21 @@ export default function RootLayout({
           src="https://static.cloudflareinsights.com/beacon.min.js"
           data-cf-beacon='{"token": "76b8e7f07ad94e219b19ac6a892ccaf4"}'
         />
+        {/* Google Analytics 4 (gtag.js). Cuenta/propiedad dedicadas "Colbisnes" creadas el
+            2026-10-28 (no se reutilizó la cuenta "Default Account for Firebase" preexistente,
+            que tiene 4 propiedades de apps de Firebase sin relación con este sitio). */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-4RFT0HPVM8"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-4RFT0HPVM8');`,
+          }}
+        />
       </head>
       <body className={inter.className}>
         {/* Aviso de MODO PRUEBA. Va fuera de los providers a propósito: no depende
