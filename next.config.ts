@@ -14,12 +14,18 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://checkout.wompi.co https://www.paypalobjects.com https://www.paypal.com https://static.cloudflareinsights.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://checkout.wompi.co https://www.paypalobjects.com https://www.paypal.com https://static.cloudflareinsights.com https://www.googletagmanager.com",
       "worker-src 'self' blob:",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://www.googletagmanager.com",
       "font-src 'self'",
-      "connect-src 'self' blob: https://api.wompi.co https://sandbox.wompi.co https://cloudflareinsights.com wss: ws:",
+      // Google Analytics 4 (gtag.js) agregado el 2026-10-28: el script carga desde
+      // googletagmanager.com y envía los hits de medición a google-analytics.com (dominio
+      // fijo "www" y subdominios regionales tipo "region1.google-analytics.com" — por eso
+      // el comodín). Sin esto, el CSP bloquea tanto la carga del script como el envío de
+      // datos aunque el snippet esté bien instalado en el HTML (bug real: se agregó GA en
+      // layout.tsx sin tocar este archivo, y el navegador lo bloqueaba silenciosamente).
+      "connect-src 'self' blob: https://api.wompi.co https://sandbox.wompi.co https://cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com wss: ws:",
       "frame-src https://checkout.wompi.co https://www.paypal.com",
       "object-src 'none'",
       "base-uri 'self'",
