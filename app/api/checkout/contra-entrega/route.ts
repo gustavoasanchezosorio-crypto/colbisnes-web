@@ -131,17 +131,27 @@ export async function POST(req: NextRequest) {
     const exentoVendedor  = esCuentaMaster({ user: { role: producto.seller?.role, email: producto.seller?.email } });
     const exento = exentoComprador || exentoVendedor;
     const pricing = calcularPrecioContraEntrega(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount), exento);
+    const datosEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
     // Contra entrega NO ofrece protección extendida: el único cargo electrónico aquí es la
     // comisión de reserva por Nequi y el efectivo al mensajero es solo precio + envío, así que
     // la protección no tendría por dónde cobrarse (antes se sumaba a totalPagado sin cobrarse
     // nunca). Se fuerza a false aunque el cliente la mande. Sí se mantiene en pago online/USDT.
-    const extras = calcularExtrasCheckout(producto, false);
+    const extras = calcularExtrasCheckout(producto, false, false, datosEnvio.ciudadDestino);
+    // Red de seguridad: no se pudo calcular un costo de envío fiable (falta la ciudad
+    // de destino del comprador, o el vendedor nunca declaró un peso aproximado). Se
+    // bloquea el pago en vez de crear la orden con envioCobrado=0 sin que nadie lo
+    // haya decidido — ver el comentario largo en calcularExtrasCheckout.
+    if (extras.envioPendiente) {
+      return NextResponse.json(
+        { error: "No pudimos calcular el costo del envío para este producto. Agrega tu ciudad de destino en tu perfil, o contacta al vendedor por el chat, antes de pagar." },
+        { status: 409 }
+      );
+    }
     // RNG criptográfico, no Math.random(): este es el código que el comprador debería dar
     // para confirmar la entrega — que no sea predecible importa, aunque hoy ningún endpoint
     // lo esté verificando todavía (ver nota en el reporte de este hallazgo).
     const codigoSecreto = crypto.randomInt(100000, 1000000).toString();
     const ahora = new Date();
-    const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
 
     // El comprador debe pagar primero, por Nequi, la comisión de Colbisnes (garantía de reserva).
     // La orden queda en ESPERANDO_COMISION hasta que un admin confirme el comprobante Nequi.
@@ -173,7 +183,8 @@ export async function POST(req: NextRequest) {
           comision:       pricing.comisionColbisnes,
           recibeVendedor: pricing.recibeVendedor,
           codigoSecreto,
-          direccionEnvio,
+          direccionEnvio: datosEnvio.direccionEnvio,
+          ciudadDestino: datosEnvio.ciudadDestino,
           proteccionExtendida: extras.proteccionCosto > 0,
           proteccionCosto: extras.proteccionCosto,
           envioCobrado:   extras.envioCobrado,

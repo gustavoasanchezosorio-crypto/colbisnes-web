@@ -1,3 +1,5 @@
+import { calcularTarifaEnvioDefault } from "@/lib/tarifasEnvio";
+
 export const WOMPI_PCT            = 0.0265;
 export const WOMPI_FIXED          = 700;
 export const WOMPI_IVA            = 0.19;
@@ -179,34 +181,64 @@ export interface ExtrasCheckout {
   envioCobrado: number;
   margenEnvio: number;
   extraTotal: number;
+  // true cuando el producto se despacha siempre (ENVIO), el vendedor no fijó un
+  // precioEnvio propio, y tampoco se pudo calcular una tarifa de respaldo (ver
+  // lib/tarifasEnvio.ts) por falta de ciudad de destino y/o peso. Antes de este
+  // campo ese caso se resolvía en silencio como envioCobrado=0 — el incidente que
+  // motivó todo este archivo (café Bogotá→Medellín cobrado sin envío, 2026-10-27).
+  // Quien llama a esta función DEBE bloquear el checkout cuando esto sea true, en
+  // vez de dejar pasar la orden con envío gratis sin que nadie lo haya decidido.
+  envioPendiente: boolean;
 }
 
 // Calcula los add-ons opcionales del checkout: protección de compra extendida y margen de envío.
-// El "costo de envío" usado es el que el propio vendedor declaró en producto.precioEnvio
-// (no existe una API pública de cotización en tiempo real de las transportadoras colombianas).
+// El "costo de envío" preferido es el que el propio vendedor declaró en producto.precioEnvio;
+// si no lo fijó, cae a una tarifa de respaldo por zona/peso (lib/tarifasEnvio.ts) — no existe una
+// API pública de cotización en tiempo real de las transportadoras colombianas, así que esas
+// tarifas son de referencia pública, no negociadas con ninguna transportadora.
 //
 // exentoComprador (perfil MASTER): solo apaga proteccionCosto, y solo cuando el COMPRADOR es
 // la cuenta master (protección es un add-on que paga quien compra, no depende de quién vende).
 // El margen de envío NO se toca aquí a propósito: no está confirmado si el vendedor se
 // reembolsa contra envioCobrado o contra producto.precioEnvio, así que tocarlo a ciegas podría
 // cambiar sin querer cuánto le llega al vendedor por el envío. Queda pendiente si se confirma.
+//
+// ciudadDestino: la del COMPRADOR para ESTA orden (Order/User.ciudadDestino), solo se usa
+// cuando hace falta el fallback. Se recibe como parámetro aparte (no como parte de `producto`)
+// porque es un dato del comprador/la orden, no del producto.
 export function calcularExtrasCheckout(
-  producto: { tipoEntrega: string; precioEnvio?: number | null },
+  producto: { tipoEntrega: string; precioEnvio?: number | null; city?: string | null; pesoAprox?: string | null },
   proteccionExtendida: boolean,
-  exentoComprador: boolean = false
+  exentoComprador: boolean = false,
+  ciudadDestino?: string | null
 ): ExtrasCheckout {
   // En modo pruebas el cobro total siempre es TEST_AMOUNT — no se suman extras
-  if (TEST_MODE) return { proteccionCosto: 0, envioCobrado: 0, margenEnvio: 0, extraTotal: 0 };
+  if (TEST_MODE) return { proteccionCosto: 0, envioCobrado: 0, margenEnvio: 0, extraTotal: 0, envioPendiente: false };
 
   const proteccionCosto = (proteccionExtendida && !exentoComprador) ? PROTECCION_EXTENDIDA_PRECIO : 0;
 
   let envioCobrado = 0;
   let margenEnvio  = 0;
+  let envioPendiente = false;
   const tieneEnvio = producto.tipoEntrega === "ENVIO" || producto.tipoEntrega === "AMBOS";
+
   if (tieneEnvio && producto.precioEnvio && producto.precioEnvio > 0) {
     envioCobrado = Math.round(producto.precioEnvio * (1 + MARGEN_ENVIO_PCT));
     margenEnvio  = envioCobrado - producto.precioEnvio;
+  } else if (producto.tipoEntrega === "ENVIO") {
+    // Fallback solo para ENVIO, NUNCA para AMBOS: en AMBOS el comprador puede terminar
+    // recogiendo en persona (ver permiteCostoFijoDeEnvio en lib/entrega.ts), y esta
+    // función no sabe cuál de las dos escogió — cobrarle o exigirle un envío que tal
+    // vez no va a usar sería peor que el bug que esto viene a arreglar. AMBOS se queda
+    // con el comportamiento de siempre: "a coordinar por el chat", $0, sin pendiente.
+    const tarifaBase = calcularTarifaEnvioDefault(producto.city, ciudadDestino, producto.pesoAprox);
+    if (tarifaBase && tarifaBase > 0) {
+      envioCobrado = Math.round(tarifaBase * (1 + MARGEN_ENVIO_PCT));
+      margenEnvio  = envioCobrado - tarifaBase;
+    } else {
+      envioPendiente = true;
+    }
   }
 
-  return { proteccionCosto, envioCobrado, margenEnvio, extraTotal: proteccionCosto + envioCobrado };
+  return { proteccionCosto, envioCobrado, margenEnvio, extraTotal: proteccionCosto + envioCobrado, envioPendiente };
 }

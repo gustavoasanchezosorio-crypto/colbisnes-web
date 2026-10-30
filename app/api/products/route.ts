@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { bloqueoResponse } from "@/lib/accountBlock";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
-import { normalizarEntrega } from "@/lib/entrega";
+import { normalizarEntrega, normalizarPeso } from "@/lib/entrega";
 import { normalizarTituloProducto } from "@/lib/normalizarTitulo";
 import { pingIndexNow } from "@/lib/indexNow";
 import {
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
     const { imei, imei2, saludBateria, piezasReemplazadas } = body;
-    const { tipoEntrega, precioEnvio } = body;
+    const { tipoEntrega, precioEnvio, pesoAprox } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -224,6 +224,14 @@ export async function POST(request: Request) {
     const entrega = normalizarEntrega(tipoEntrega, precioEnvio);
     if (!entrega.ok) {
       return NextResponse.json({ error: entrega.error }, { status: 400 });
+    }
+
+    // Peso aproximado: obligatorio desde cero cuando el producto se despacha (ver el
+    // comentario largo en lib/entrega.ts). Es una publicación nueva, así que no hay
+    // valor previo al que caerle de vuelta — a diferencia del PATCH de abajo.
+    const peso = normalizarPeso(entrega.tipoEntrega, pesoAprox);
+    if (!peso.ok) {
+      return NextResponse.json({ error: peso.error }, { status: 400 });
     }
 
     // ── Datos declarados del dispositivo (solo categoría Tecnologia) ────────────
@@ -295,6 +303,7 @@ export async function POST(request: Request) {
         sellerId: session.user.id,
         tipoEntrega: entrega.tipoEntrega,
         precioEnvio: entrega.precioEnvio,
+        pesoAprox: peso.pesoAprox,
         imei: imeiFinal,
         imei2: imei2Final,
         saludBateria: bateriaFinal,

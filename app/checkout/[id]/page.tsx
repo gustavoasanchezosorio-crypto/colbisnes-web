@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, nivelParaDescuento, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
 import { limpiarDireccion, validarDireccionEnvio, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
+import { CIUDADES_PRINCIPALES } from "@/lib/ciudades";
 import { THEME } from "@/lib/theme";
 import NequiPushModal from "@/components/NequiPushModal";
 import { useModoPrueba } from "@/lib/useModoPrueba";
@@ -49,6 +50,12 @@ export default function CheckoutPage() {
   const [guardandoDireccion, setGuardandoDireccion] = useState(false);
   const [errorDireccion, setErrorDireccion]         = useState<string | null>(null);
   const [accionDireccion, setAccionDireccion]       = useState<"pago" | "nequi" | null>(null);
+  // Ciudad de destino (2026-10-29): mismo modal de arriba, dato aparte. Se guarda en el
+  // perfil (User.ciudadDestino) y de ahí se congela en la orden — ver lib/direccionOrden.ts.
+  // Sin esto el checkout no podía saber si cobrar envío LOCAL o NACIONAL cuando el vendedor
+  // no fijó un precioEnvio propio (incidente del café Bogotá→Medellín, 2026-10-27).
+  const [ciudadDestinoPerfil, setCiudadDestinoPerfil] = useState<string>("");
+  const [ciudadBorrador, setCiudadBorrador]           = useState<string>("");
   // Modo prueba del prelanzamiento: quien entró con el link secreto puede recorrer
   // todo el checkout y ver los precios, pero no puede pagar. El servidor bloquea
   // igual (ver lib/modoPrueba.ts); esto es para que no llegue a intentarlo.
@@ -63,6 +70,7 @@ export default function CheckoutPage() {
         if (!u || u.error) { setPerfilFaltantes([]); return; }
         setNequiPrefill(u.nequiNumber || null);
         setDireccionPerfil(u.direccionEnvio || "");
+        setCiudadDestinoPerfil(u.ciudadDestino || "");
         // Decisión 2026-10-26 (2da ronda): el comprador ya NO se bloquea aquí por nada del
         // perfil — ni KYC (desde la 1ra ronda, mismo día) ni código anti fraude ni datos de
         // cobro (Nequi/Bre-B), que antes también venían en faltantesCriticos como "críticos".
@@ -90,8 +98,15 @@ export default function CheckoutPage() {
   // obliga a envolver el componente en <Suspense> o el build falla al prerenderizar.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (new URLSearchParams(window.location.search).get("error") !== "vendedor-sin-cobro") return;
-    setErrorPago("Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos.");
+    const error = new URLSearchParams(window.location.search).get("error");
+    if (error === "vendedor-sin-cobro") {
+      setErrorPago("Este producto no se puede comprar ahora mismo: el vendedor todavía no ha terminado de configurar su cuenta para recibir pagos.");
+    } else if (error === "envio-pendiente") {
+      // Misma ruta de vuelta que vendedor-sin-cobro: app/api/checkout/wompi/route.ts
+      // redirige aquí (no puede contestar JSON) cuando no se pudo calcular el envío
+      // — ver el guard de "shipping_unknown" en lib/checkoutOnline.ts.
+      setErrorPago("No pudimos calcular el costo del envío para este producto. Agrega tu ciudad de destino arriba y vuelve a intentar, o contacta al vendedor por el chat.");
+    }
   }, []);
 
   useEffect(() => {
@@ -133,7 +148,13 @@ export default function CheckoutPage() {
   const online = calcularPrecioOnline(precio, nivelConDescuento);
   const contra = calcularPrecioContraEntrega(precio, nivelConDescuento);
   const usdt   = calcularPrecioUSDT(precio, tasa, nivelConDescuento);
-  const extras = calcularExtrasCheckout(producto, proteccionExtendida);
+  const extras = calcularExtrasCheckout(producto, proteccionExtendida, false, ciudadDestinoPerfil);
+  // Solo bloquea cuando el producto de verdad necesita este cálculo para cobrar algo
+  // (tipoEntrega ENVIO sin precioEnvio fijo — ver lib/pricing.ts). AMBOS nunca entra
+  // aquí (su envío se coordina por chat) y por eso extras.envioPendiente nunca sale
+  // true para ese caso, pero se deja la bandera del propio cálculo como fuente única
+  // de verdad en vez de repetir la condición aparte.
+  const envioPendienteBloquea = extras.envioPendiente;
   const extrasUSD = extras.extraTotal > 0 ? parseFloat((extras.extraTotal / tasa).toFixed(2)) : 0;
   const fmt    = (n: number) => "$" + n.toLocaleString("es-CO", { maximumFractionDigits: 0 });
   const tieneDescuento = !!nivelConDescuento && (nivelConDescuento === "Confiable" || nivelConDescuento === "Muy confiable" || nivelConDescuento === "Élite");
@@ -247,6 +268,7 @@ export default function CheckoutPage() {
     if (!necesitaDireccion || direccionConfirmada) { conGarantia(accion); return; }
     setAccionDireccion(accion);
     setDireccionBorrador(direccionPerfil);
+    setCiudadBorrador(ciudadDestinoPerfil);
     // Sin dirección guardada entra derecho en modo escritura: la alternativa era
     // mandarlo al perfil y devolverlo, y ahí es donde la gente abandona la compra.
     setEditandoDireccion(!direccionPerfil);
@@ -257,8 +279,17 @@ export default function CheckoutPage() {
   const confirmarDireccion = async () => {
     const accion = accionDireccion;
 
-    // Confirma la que ya tenía, sin tocarla: no hay nada que guardar.
-    if (!editandoDireccion) {
+    // Ciudad de destino: se exige SIEMPRE que se pida dirección (ENVIO/AMBOS), no solo
+    // cuando hace falta para calcular una tarifa — es el dato que evita el próximo
+    // incidente como el del café Bogotá→Medellín, y conviene tenerlo de una vez aunque
+    // hoy ese producto en concreto no lo necesite para el precio.
+    if (!ciudadBorrador) { setErrorDireccion("Selecciona tu ciudad de destino."); return; }
+
+    const hayQueGuardarDireccion = editandoDireccion;
+    const hayQueGuardarCiudad    = ciudadBorrador !== ciudadDestinoPerfil;
+
+    // No cambió nada respecto a lo que ya estaba confirmado: no hay nada que guardar.
+    if (!hayQueGuardarDireccion && !hayQueGuardarCiudad) {
       setMostrarDireccion(false);
       setDireccionConfirmada(true);
       setAccionDireccion(null);
@@ -268,24 +299,31 @@ export default function CheckoutPage() {
 
     // La escribió o la corrigió. Se revisa con la MISMA regla que usa el servidor
     // (lib/direccion.ts) para no mostrarle un error distinto al de siempre.
-    const dir = limpiarDireccion(direccionBorrador).trim();
-    if (!dir) { setErrorDireccion("Escribe la dirección a donde te llega el paquete."); return; }
-    const revision = validarDireccionEnvio(dir);
-    if (!revision.valido) { setErrorDireccion(revision.motivo || "Revisa la dirección."); return; }
+    let dir = direccionPerfil;
+    if (hayQueGuardarDireccion) {
+      dir = limpiarDireccion(direccionBorrador).trim();
+      if (!dir) { setErrorDireccion("Escribe la dirección a donde te llega el paquete."); return; }
+      const revision = validarDireccionEnvio(dir);
+      if (!revision.valido) { setErrorDireccion(revision.motivo || "Revisa la dirección."); return; }
+    }
 
     setGuardandoDireccion(true);
     setErrorDireccion(null);
     try {
+      const body: Record<string, string> = {};
+      if (hayQueGuardarDireccion) body.direccionEnvio = dir;
+      if (hayQueGuardarCiudad) body.ciudadDestino = ciudadBorrador;
       const res = await fetch("/api/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ direccionEnvio: dir }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar la dirección.");
 
-      setDireccionPerfil(dir);
+      if (hayQueGuardarDireccion) setDireccionPerfil(dir);
+      if (hayQueGuardarCiudad) setCiudadDestinoPerfil(ciudadBorrador);
       setGuardandoDireccion(false);
       setMostrarDireccion(false);
       setEditandoDireccion(false);
@@ -306,6 +344,7 @@ export default function CheckoutPage() {
   const handleContinuar = () => {
     if (perfilIncompleto) return;
     if (modoPrueba) return; // el botón ya está deshabilitado; esto es el cinturón
+    if (envioPendienteBloquea) { setErrorPago("No pudimos calcular el costo del envío para este producto. Agrega tu ciudad de destino arriba, o contacta al vendedor por el chat, antes de pagar."); return; }
     conDireccion("pago");
   };
 
@@ -317,17 +356,21 @@ export default function CheckoutPage() {
   const envioUSD       = extras.envioCobrado > 0 ? parseFloat((extras.envioCobrado / tasa).toFixed(2)) : 0;
   const proteccionUSD  = extras.proteccionCosto > 0 ? parseFloat((extras.proteccionCosto / tasa).toFixed(2)) : 0;
 
+  // `envioPendiente` (lib/pricing.ts) significa "no se pudo calcular", no "cuesta $0" —
+  // antes de este campo esos dos casos se veían idénticos en pantalla (la línea de envío
+  // simplemente no aparecía) y eso fue justo lo que dejó pasar el cobro de $0 silencioso
+  // del incidente del café Bogotá→Medellín. Ahora se avisa en vez de desaparecer.
   const desgloseExtrasCOP = [
-    ...(extras.envioCobrado > 0 ? [{ label: `Envío (costo + ${Math.round(0.10 * 100)}%)`, val: fmt(extras.envioCobrado) }] : []),
+    ...(envioPendienteBloquea ? [{ label: "Envío", val: "Por confirmar" }] : extras.envioCobrado > 0 ? [{ label: `Envío (costo + ${Math.round(0.10 * 100)}%)`, val: fmt(extras.envioCobrado) }] : []),
     ...(extras.proteccionCosto > 0 ? [{ label: "Protección extendida", val: fmt(extras.proteccionCosto) }] : []),
   ];
   // Contra entrega no incluye protección extendida (solo se cobra en pago online/USDT, donde el
   // cargo es electrónico). Su desglose y totales llevan únicamente el envío.
   const desgloseExtrasContraCOP = [
-    ...(extras.envioCobrado > 0 ? [{ label: `Envío (costo + ${Math.round(0.10 * 100)}%)`, val: fmt(extras.envioCobrado) }] : []),
+    ...(envioPendienteBloquea ? [{ label: "Envío", val: "Por confirmar" }] : extras.envioCobrado > 0 ? [{ label: `Envío (costo + ${Math.round(0.10 * 100)}%)`, val: fmt(extras.envioCobrado) }] : []),
   ];
   const desgloseExtrasUSD = [
-    ...(envioUSD > 0 ? [{ label: "Envío (costo + margen)", val: envioUSD + " USDT" }] : []),
+    ...(envioPendienteBloquea ? [{ label: "Envío", val: "Por confirmar" }] : envioUSD > 0 ? [{ label: "Envío (costo + margen)", val: envioUSD + " USDT" }] : []),
     ...(proteccionUSD > 0 ? [{ label: "Protección extendida", val: proteccionUSD + " USDT" }] : []),
   ];
 
@@ -477,7 +520,7 @@ export default function CheckoutPage() {
                       pegado a esta tarjeta porque es una forma de pagar CON "Pago online
                       seguro", no una alternativa aparte. */}
                   {m.id === "online" && !perfilIncompleto && !TEST_MODE && !modoPrueba && perfilFaltantes !== null && (
-                    <button onClick={(e) => { e.stopPropagation(); conDireccion("nequi"); }}
+                    <button onClick={(e) => { e.stopPropagation(); if (envioPendienteBloquea) { setErrorPago("No pudimos calcular el costo del envío para este producto. Agrega tu ciudad de destino arriba, o contacta al vendedor por el chat, antes de pagar."); return; } conDireccion("nequi"); }}
                       style={{ width: "100%", padding: 15, borderRadius: 16, border: `1.5px solid ${THEME.gold}`, background: "#fff", color: THEME.gold, fontSize: 15, fontWeight: 800, cursor: "pointer", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       💳 Pagar con Nequi (sin salir de la app)
                     </button>
@@ -508,6 +551,17 @@ export default function CheckoutPage() {
                         <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: THEME.text }}>🛡️ Protección de compra extendida</p>
                         <p style={{ margin: "2px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.4 }}>Tu reclamo se revisa con prioridad si algo sale mal — {fmt(PROTECCION_EXTENDIDA_PRECIO)}</p>
                       </div>
+                    </div>
+                  )}
+
+                  {envioPendienteBloquea && !modoPrueba && (
+                    <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: "16px 18px", marginTop: 14 }}>
+                      <p style={{ margin: 0, color: "#9a3412", fontSize: 14, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>📦</span> No pudimos calcular el envío
+                      </p>
+                      <p style={{ margin: "6px 0 0", color: "#9a3412", fontSize: 13, lineHeight: 1.5 }}>
+                        Agrega tu ciudad de destino en tu perfil para que podamos calcularte el costo, o contacta al vendedor por el chat antes de pagar.
+                      </p>
                     </div>
                   )}
 
@@ -633,6 +687,21 @@ export default function CheckoutPage() {
                   </div>
                 </>
               )}
+
+              <div style={{ marginTop: 14 }}>
+                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 700, color: THEME.text }}>Ciudad de destino</label>
+                <select
+                  value={ciudadBorrador}
+                  onChange={e => { setCiudadBorrador(e.target.value); setErrorDireccion(null); }}
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: `1.5px solid ${THEME.border}`, background: THEME.surfaceAlt, color: THEME.text, fontSize: 15, fontFamily: "inherit", boxSizing: "border-box" }}
+                >
+                  <option value="">Selecciona tu ciudad</option>
+                  {CIUDADES_PRINCIPALES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <p style={{ margin: "6px 0 0", fontSize: 11.5, color: THEME.muted }}>
+                  A dónde te llega el paquete. La usamos para calcularte el costo del envío.
+                </p>
+              </div>
 
               {errorDireccion && (
                 <div style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 12, padding: "10px 13px", marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { normalizarTelefonoCO } from "@/lib/phone";
 import { validarDireccionEnvio, limpiarDireccion } from "@/lib/direccion";
 import { validarBreb, limpiarBreb } from "@/lib/breb";
+import { CIUDADES_PRINCIPALES, mismaCiudad } from "@/lib/ciudades";
 import { sendEmail } from "@/lib/email";
 import { sendWhatsapp } from "@/lib/whatsapp";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
@@ -13,6 +14,7 @@ const SELECT_FIELDS = {
   id: true, name: true, email: true, phone: true, city: true, image: true,
   nequiNumber: true, brebId: true, createdAt: true,
   phoneWhatsapp: true, usdtWallet: true, usdtRed: true, direccionEnvio: true,
+  ciudadDestino: true,
   antiPhishingCode: true,
   // Necesario para el cálculo de perfil completo y los avisos contextuales:
   // sin KYC aprobado el usuario no puede publicar ni recibir pagos.
@@ -44,7 +46,7 @@ export async function PATCH(request: Request) {
     if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const body = await request.json();
-    const campos = ["name", "phone", "city", "image", "nequiNumber", "brebId", "phoneWhatsapp", "usdtWallet", "usdtRed", "direccionEnvio"];
+    const campos = ["name", "phone", "city", "image", "nequiNumber", "brebId", "phoneWhatsapp", "usdtWallet", "usdtRed", "direccionEnvio", "ciudadDestino"];
 
     const updateData: any = {};
     for (const campo of campos) {
@@ -65,6 +67,25 @@ export async function PATCH(request: Request) {
       // Vacío se guarda como null y no como "", para que el medidor de perfil completo
       // (lib/profileCompletion.ts) no cuente una cadena vacía como dirección puesta.
       updateData.direccionEnvio = dir || null;
+    }
+
+    // Ciudad de destino: es el dato que decide si al comprador le cobramos envío LOCAL
+    // o NACIONAL (lib/tarifasEnvio.ts) y a dónde se despacha el paquete — el incidente
+    // del café Bogotá→Medellín (2026-10-27) pasó justo por no tener esto como un campo
+    // aparte, confiable y explícito. Por eso no se acepta texto libre: solo una de
+    // CIUDADES_PRINCIPALES (lib/ciudades.ts). Se guarda la forma canónica de la lista
+    // (con tildes correctas) aunque el cliente mande otra variante de capitalización.
+    if (updateData.ciudadDestino !== undefined) {
+      const crudo = typeof updateData.ciudadDestino === "string" ? updateData.ciudadDestino.trim() : "";
+      if (!crudo) {
+        updateData.ciudadDestino = null;
+      } else {
+        const match = CIUDADES_PRINCIPALES.find((c) => mismaCiudad(c, crudo));
+        if (!match) {
+          return NextResponse.json({ error: "Escoge una ciudad de destino válida de la lista." }, { status: 400 });
+        }
+        updateData.ciudadDestino = match;
+      }
     }
 
     // Llave Bre-B: es a dónde le llega la plata al vendedor, así que no puede entrar

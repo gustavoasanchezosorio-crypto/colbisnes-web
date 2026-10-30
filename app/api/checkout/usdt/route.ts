@@ -158,7 +158,18 @@ export async function POST(req: NextRequest) {
     const exentoVendedor  = esCuentaMaster({ user: { role: producto.seller?.role, email: producto.seller?.email } });
     const exento = exentoComprador || exentoVendedor;
     const pricing = calcularPrecioUSDT(precioBase, tasaCOP, trust.label, exento);
-    const extras = calcularExtrasCheckout(producto, !!proteccionExtendida, exentoComprador);
+    const datosEnvioPreview = await direccionParaOrden(session.user.id, producto.tipoEntrega);
+    const extras = calcularExtrasCheckout(producto, !!proteccionExtendida, exentoComprador, datosEnvioPreview.ciudadDestino);
+    // Red de seguridad: no se pudo calcular un costo de envío fiable (falta la ciudad
+    // de destino del comprador, o el vendedor nunca declaró un peso aproximado). Se
+    // bloquea el pago en vez de crear la orden con envioCobrado=0 sin que nadie lo
+    // haya decidido — ver el comentario largo en calcularExtrasCheckout.
+    if (extras.envioPendiente) {
+      return NextResponse.json(
+        { error: "No pudimos calcular el costo del envío para este producto. Agrega tu ciudad de destino en tu perfil, o contacta al vendedor por el chat, antes de pagar." },
+        { status: 409 }
+      );
+    }
     const extrasUSD = parseFloat((extras.extraTotal / tasaCOP).toFixed(2));
     const totalUSDFinal = parseFloat((pricing.totalUSD + extrasUSD).toFixed(2));
 
@@ -175,7 +186,7 @@ export async function POST(req: NextRequest) {
     // (llamado desde GET /api/products y /api/products/[id]) libera el producto en cuanto
     // alguien carga esas rutas después de vencido el plazo; el cron diario es solo respaldo.
     const expiraEn = new Date(Date.now() + 10 * 60 * 1000);
-    const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
+    const datosEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
     const [orden] = await prisma.$transaction([
       prisma.order.create({
         data: {
@@ -187,7 +198,8 @@ export async function POST(req: NextRequest) {
           comision:       Math.round(pricing.comisionUSD * tasaCOP),
           recibeVendedor: precioBase,
           totalUSDT:      totalUSDFinal,
-          direccionEnvio,
+          direccionEnvio: datosEnvio.direccionEnvio,
+          ciudadDestino: datosEnvio.ciudadDestino,
           proteccionExtendida: extras.proteccionCosto > 0,
           proteccionCosto: extras.proteccionCosto,
           envioCobrado:   extras.envioCobrado,

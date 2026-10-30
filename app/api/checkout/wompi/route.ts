@@ -41,6 +41,13 @@ export async function GET(req: NextRequest) {
         // y `new URL("//evil.com", base)` resuelve a https://evil.com — sería un open
         // redirect. Codificado, cualquier cosa rara queda como un segmento de ruta inerte.
         case "seller_payout":     return NextResponse.redirect(new URL("/checkout/" + encodeURIComponent(productoId) + "?error=vendedor-sin-cobro", publicBase));
+        // Mismo motivo que seller_payout: se llega aquí NAVEGANDO, no por fetch, así
+        // que el `default` de abajo le mostraría al comprador un JSON crudo en vez de
+        // una pantalla. Puede ser por dos causas distintas (ver prep.message real):
+        // falta la ciudad de destino en el perfil del comprador, o el vendedor nunca
+        // declaró un peso aproximado — en ambos casos el checkout ya sabe pintar el
+        // aviso con el detalle, así que basta con volver ahí con la bandera.
+        case "shipping_unknown":  return NextResponse.redirect(new URL("/checkout/" + encodeURIComponent(productoId) + "?error=envio-pendiente", publicBase));
         default:                  return NextResponse.json({ error: prep.message || "No se pudo iniciar el pago" }, { status: prep.status });
       }
     }

@@ -24,6 +24,15 @@ model User {
   usdtWallet             String?
   usdtRed                String?
   direccionEnvio         String?
+  // Ciudad a donde se despacha el paquete (NO necesariamente la misma que `city`,
+  // que es "dónde vivo" y es la que ya existía). Separado a propósito: alguien puede
+  // vivir en una ciudad y pedir que le llegue el paquete a otra. Es obligatorio para
+  // poder pagar un producto con envío — ver lib/tarifasEnvio.ts, que lo cruza contra
+  // la ciudad del vendedor (Product.city) para calcular una tarifa cuando el vendedor
+  // no fijó un precioEnvio propio. Antes de este campo, esa combinación no existía y
+  // el checkout cobraba $0 de envío sin que nadie se enterara (incidente 2026-10-27,
+  // pedido de café Bogotá→Medellín cobrado como si fuera local).
+  ciudadDestino          String?
   resetToken             String?
   resetTokenExpiry       DateTime?
   emailVerifyToken       String?
@@ -135,6 +144,14 @@ model Product {
   messages       Message[]
   tipoEntrega    String         @default("ENVIO")
   precioEnvio    Int?
+  // Bracket de peso aproximado del producto ("MENOS_1KG" | "DE_1_A_5KG" | "DE_5_A_20KG" |
+  // "MAS_20KG"), ver PESOS_PRODUCTO en lib/entrega.ts. Sirve para calcular una tarifa de
+  // envío de respaldo (lib/tarifasEnvio.ts) cuando el vendedor no fijó su propio
+  // precioEnvio — antes de este campo esa combinación quedaba en precioEnvio: null y el
+  // checkout cobraba $0 de envío sin avisar a nadie (incidente 2026-10-27, café
+  // Bogotá→Medellín). Anulable porque los productos ya publicados no lo tienen y no se
+  // migran de golpe; se exige solo para publicaciones nuevas/editadas con envío.
+  pesoAprox      String?
   favoritesCount Int            @default(0)
 
   // Datos DECLARADOS POR EL VENDEDOR para dispositivos con IMEI (categoría
@@ -288,6 +305,13 @@ model Order {
   // Anulable porque las órdenes anteriores a este campo no la tienen, y porque en
   // las entregas EN_PERSONA no hay a dónde enviar.
   direccionEnvio String?
+  // Ciudad a la que va este paquete, copiada de User.ciudadDestino cuando se creó/refrescó
+  // la orden (mismo patrón congelado que direccionEnvio, ver lib/direccionOrden.ts). Se
+  // cruza contra Product.city para decidir zona LOCAL/NACIONAL en lib/tarifasEnvio.ts.
+  // Anulable solo por compatibilidad con órdenes previas a este campo; para órdenes nuevas
+  // con envío, el checkout la exige antes de dejar pagar (ver lib/checkoutOnline.ts y los
+  // routes de contra-entrega/usdt).
+  ciudadDestino  String?
   numeroGuia     String?
   transportadora String?
   comprobanteUrl String?

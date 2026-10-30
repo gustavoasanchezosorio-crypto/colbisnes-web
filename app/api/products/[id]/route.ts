@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { liberarProductosExpirados } from "@/lib/liberarExpirados";
 import { registrarAuditoria } from "@/lib/audit";
 import { esCuentaMaster } from "@/lib/adminAuth";
-import { normalizarEntrega } from "@/lib/entrega";
+import { normalizarEntrega, normalizarPeso, incluyeEnvio } from "@/lib/entrega";
 import { normalizarTituloProducto } from "@/lib/normalizarTitulo";
 import {
   categoriaPideDatosDeDispositivo,
@@ -139,7 +139,7 @@ export async function PATCH(
     const body = await req.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
     const { imei, imei2, saludBateria, piezasReemplazadas } = body;
-    const { tipoEntrega, precioEnvio } = body;
+    const { tipoEntrega, precioEnvio, pesoAprox } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -186,6 +186,35 @@ export async function PATCH(
     );
     if (!entrega.ok) {
       return NextResponse.json({ error: entrega.error }, { status: 400 });
+    }
+
+    // ── Peso aproximado ─────────────────────────────────────────────────────────
+    // Mismo espíritu de "no mandar el campo significa no tocarlo" que tipoEntrega/
+    // precioEnvio arriba, PERO con una diferencia a propósito: si el vendedor NO
+    // mandó `pesoAprox` en este PATCH, no se le exige retroactivamente. Si se exigiera
+    // igual que tipoEntrega, cualquier edición de un producto viejo (cambiar solo el
+    // precio, por ejemplo) quedaría bloqueada hasta que el vendedor completara un dato
+    // que nunca vino a tocar — justo lo que el comentario de arriba sobre
+    // "publicaciones anteriores a este cambio" existe para evitar.
+    //
+    // Sí se exige cuando el vendedor declaró `pesoAprox` explícitamente (el formulario
+    // de editar siempre lo manda, así que en la práctica toda edición hecha desde la
+    // pantalla de editar queda cubierta), o cuando el PATCH cambia `tipoEntrega` hacia
+    // un tipo que ahora necesita envío y el producto nunca tuvo un peso guardado — ahí
+    // sí es un caso nuevo, no uno viejo, y dejarlo pasar en null repetiría el mismo
+    // agujero que motivó este archivo (ver prisma/schema.prisma, Product.pesoAprox).
+    let pesoAproxFinal: string | null = product.pesoAprox;
+    if (pesoAprox !== undefined) {
+      const peso = normalizarPeso(entrega.tipoEntrega, pesoAprox);
+      if (!peso.ok) {
+        return NextResponse.json({ error: peso.error }, { status: 400 });
+      }
+      pesoAproxFinal = peso.pesoAprox;
+    } else if (tipoEntrega !== undefined && incluyeEnvio(entrega.tipoEntrega) && !product.pesoAprox) {
+      return NextResponse.json(
+        { error: "Dinos un peso aproximado del producto para poder calcularte el envío." },
+        { status: 400 }
+      );
     }
 
     // ── Datos declarados del dispositivo ───────────────────────────────────────
@@ -273,6 +302,7 @@ export async function PATCH(
           category: finalCategory,
           tipoEntrega: entrega.tipoEntrega,
           precioEnvio: entrega.precioEnvio,
+          pesoAprox: pesoAproxFinal,
           imei: imeiFinal,
           imei2: imei2Final,
           saludBateria: bateriaFinal,

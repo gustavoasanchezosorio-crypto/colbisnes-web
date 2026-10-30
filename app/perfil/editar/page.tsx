@@ -8,6 +8,7 @@ import { THEME } from "@/lib/theme";
 import { validarDireccionEnvio, limpiarDireccion, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 import { validarBreb, limpiarBreb, LARGO_MAX_BREB } from "@/lib/breb";
 import { cldOptimizar } from "@/lib/cloudinaryUrl";
+import { CIUDADES_PRINCIPALES } from "@/lib/ciudades";
 
 const AZUL = THEME.primary;
 
@@ -80,6 +81,7 @@ export default function EditarPerfilPage() {
     name: "", phone: "", city: "", image: "",
     nequiNumber: "", brebId: "",
     phoneWhatsapp: "", usdtWallet: "", usdtRed: "BEP20", direccionEnvio: "",
+    ciudadDestino: "",
     antiPhishingCode: "",
   });
 
@@ -146,6 +148,7 @@ export default function EditarPerfilPage() {
             nequiNumber: data.nequiNumber || "", brebId: data.brebId || "",
             phoneWhatsapp: data.phoneWhatsapp || "", usdtWallet: data.usdtWallet || "",
             usdtRed: data.usdtRed || "BEP20", direccionEnvio: data.direccionEnvio || "",
+            ciudadDestino: data.ciudadDestino || "",
             antiPhishingCode: data.antiPhishingCode || "",
           });
           setKycStatus(data.kycStatus || "none");
@@ -466,6 +469,18 @@ export default function EditarPerfilPage() {
                 placeholder="Calle 123 #45-67, Barrio, Ciudad" maxLength={DIRECCION_LARGO_MAXIMO} />
               <p style={hint}>Aquí es donde te llega el paquete. No pongas tu correo ni tu teléfono.</p>
               {errorDe("direccionEnvio")}
+            </div>
+
+            <div style={box} id="campo-ciudadDestino">
+              <label style={lbl}>Ciudad de destino</label>
+              <select style={inp}
+                value={formData.ciudadDestino}
+                onChange={e => setFormData({ ...formData, ciudadDestino: e.target.value })}>
+                <option value="">Selecciona tu ciudad</option>
+                {CIUDADES_PRINCIPALES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p style={hint}>A dónde te llega el paquete. La usamos para calcularte el costo del envío antes de pagar.</p>
+              {errorDe("ciudadDestino")}
             </div>
 
             {/* ── SEGURIDAD ── */}

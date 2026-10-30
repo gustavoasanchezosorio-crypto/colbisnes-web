@@ -24,8 +24,11 @@ import {
   TIPOS_ENTREGA,
   ETIQUETAS_ENTREGA,
   permiteCostoFijoDeEnvio,
+  incluyeEnvio,
   PISO_PRECIO_ENVIO,
   TECHO_PRECIO_ENVIO,
+  PESOS_PRODUCTO,
+  ETIQUETAS_PESO,
 } from "@/lib/entrega";
 
 const MAX_FOTOS = 10;
@@ -65,6 +68,11 @@ export default function EditarProductoPage() {
   const [tipoEntrega, setTipoEntrega] = useState<string>("");
   const [modoEnvio, setModoEnvio] = useState<"COORDINAR" | "FIJO">("COORDINAR");
   const [envioDisplay, setEnvioDisplay] = useState("");
+  // Peso aproximado: igual que tipoEntrega, los productos que ya existen pueden no
+  // tenerlo (nació después, ver prisma/schema.prisma). Se precarga con lo que haya;
+  // si el producto necesita envío y nunca se puso, el servidor bloquea el guardado
+  // de este campo en concreto (ver PATCH /api/products/[id]), no el resto de la edición.
+  const [pesoAprox, setPesoAprox] = useState<string>("");
 
   // Ficha del dispositivo (solo categoría Tecnologia)
   const [imei, setImei] = useState("");
@@ -111,6 +119,7 @@ export default function EditarProductoPage() {
         // precioEnvio null es un valor con significado ("lo coordino por el chat"),
         // no un campo vacío. Por eso se mira el número y no si viene o no viene.
         setTipoEntrega((TIPOS_ENTREGA as readonly string[]).includes(data.tipoEntrega) ? data.tipoEntrega : "");
+        setPesoAprox((PESOS_PRODUCTO as readonly string[]).includes(data.pesoAprox) ? data.pesoAprox : "");
         if (typeof data.precioEnvio === "number" && data.precioEnvio > 0) {
           setModoEnvio("FIJO");
           setEnvioDisplay(Number(data.precioEnvio).toLocaleString("es-CO"));
@@ -210,6 +219,13 @@ export default function EditarProductoPage() {
         showToast(`El costo del envío no puede superar $${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}. Revisa que no te haya sobrado un cero.`, "warning"); return;
       }
     }
+    // Mismo motivo que el bloque de abajo en el servidor (PATCH /api/products/[id]):
+    // si el producto pasa a necesitar envío y nunca tuvo un peso, hay que pedirlo
+    // antes de guardar — de lo contrario el checkout se queda sin poder calcular la
+    // tarifa de respaldo (lib/tarifasEnvio.ts) para este producto.
+    if (incluyeEnvio(tipoEntrega) && !pesoAprox) {
+      showToast("Dinos un peso aproximado del producto para poder calcularte el envío.", "warning"); return;
+    }
     // Nuevo se salta esta revisión entera: el guardar() de más abajo ignora lo que haya
     // en imei/imei2/saludBateria (ocultos por el `esNuevo` de la JSX) y manda directo
     // sin IMEI y con la batería al 100%, así que no tiene caso bloquear el guardado por
@@ -263,6 +279,9 @@ export default function EditarProductoPage() {
         body: JSON.stringify({
           title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images,
           tipoEntrega, precioEnvio,
+          // Igual que arriba: solo tiene sentido mandar un peso si el tipo de entrega
+          // de este guardado lo necesita. Si no, null — "no aplica", no "no sé".
+          pesoAprox: incluyeEnvio(tipoEntrega) ? pesoAprox : null,
           // Igual que en app/page.tsx: "Nuevo" fuerza estos tres campos sin importar qué
           // haya quedado en las casillas (ocultas por el `esNuevo` de la JSX más abajo) —
           // por ejemplo si el vendedor tenía la categoría en Tecnologia con Usado, escribió
@@ -402,6 +421,18 @@ export default function EditarProductoPage() {
               <option value="">Escoge una opción…</option>
               {TIPOS_ENTREGA.map((t) => <option key={t} value={t}>{ETIQUETAS_ENTREGA[t]}</option>)}
             </Select>
+
+            {incluyeEnvio(tipoEntrega) && (
+              <div>
+                <Select value={pesoAprox} onChange={(e) => setPesoAprox(e.target.value)}>
+                  <option value="">Peso aproximado del producto…</option>
+                  {PESOS_PRODUCTO.map((p) => <option key={p} value={p}>{ETIQUETAS_PESO[p]}</option>)}
+                </Select>
+                <p style={{ margin: "4px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                  Lo usamos para calcularle el envío al comprador si no fijas un costo propio.
+                </p>
+              </div>
+            )}
 
             {tipoEntrega === "AMBOS" && (
               <p style={{ margin: 0, fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>

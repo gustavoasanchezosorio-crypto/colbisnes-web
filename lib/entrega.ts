@@ -133,3 +133,60 @@ export function normalizarEntrega(
 
   return { ok: true, tipoEntrega, precioEnvio };
 }
+
+// ── Peso aproximado del producto ─────────────────────────────────────────────
+//
+// Por qué existe (2026-10-29): la tarifa de respaldo de envío (lib/tarifasEnvio.ts),
+// que entra en juego cuando el vendedor no fijó su propio precioEnvio, necesita
+// saber cuánto pesa el paquete para no inventar un número. Antes de este campo esa
+// combinación (envío + sin precioEnvio) simplemente cobraba $0 sin avisarle a nadie
+// — el mismo incidente documentado en el comentario de Product.pesoAprox del schema.
+//
+// Cuatro brackets, no un número exacto en gramos: nadie pesa su producto antes de
+// publicar, y pedir un número preciso generaría basura (la gente adivina). Un bracket
+// amplio es más honesto con lo que el vendedor de verdad sabe.
+export const PESOS_PRODUCTO = ["MENOS_1KG", "DE_1_A_5KG", "DE_5_A_20KG", "MAS_20KG"] as const;
+export type PesoProducto = (typeof PESOS_PRODUCTO)[number];
+
+export const ETIQUETAS_PESO: Record<PesoProducto, string> = {
+  MENOS_1KG: "Menos de 1 kg",
+  DE_1_A_5KG: "Entre 1 y 5 kg",
+  DE_5_A_20KG: "Entre 5 y 20 kg",
+  MAS_20KG: "Más de 20 kg",
+};
+
+export type ResultadoPeso =
+  | { ok: true; pesoAprox: PesoProducto | null }
+  | { ok: false; error: string };
+
+/**
+ * Exige un peso válido cuando el producto se despacha (incluyeEnvio), sin importar si
+ * el vendedor fijó o no un precioEnvio propio: aunque hoy solo lo use el fallback de
+ * lib/tarifasEnvio.ts, pedir el peso desde que se crea la publicación evita que
+ * publicaciones viejas de "antes del campo" sigan naciendo sin él — mismo espíritu que
+ * normalizarEntrega. Las publicaciones que ya existían antes de este campo NO se
+ * migran de golpe: se quedan con pesoAprox null hasta que alguien las edite.
+ *
+ * En EN_PERSONA el peso no aplica (no hay paquete que despachar) y se descarta en
+ * silencio, igual que precioEnvio en normalizarEntrega.
+ */
+export function normalizarPeso(
+  tipoEntregaCrudo: unknown,
+  pesoCrudo: unknown
+): ResultadoPeso {
+  const tipoEntrega = typeof tipoEntregaCrudo === "string" ? tipoEntregaCrudo : "";
+
+  if (!incluyeEnvio(tipoEntrega)) {
+    return { ok: true, pesoAprox: null };
+  }
+
+  if (pesoCrudo === null || pesoCrudo === undefined || pesoCrudo === "") {
+    return { ok: false, error: "Dinos un peso aproximado del producto para poder calcularte el envío." };
+  }
+
+  if (typeof pesoCrudo !== "string" || !(PESOS_PRODUCTO as readonly string[]).includes(pesoCrudo)) {
+    return { ok: false, error: "El peso aproximado no es válido." };
+  }
+
+  return { ok: true, pesoAprox: pesoCrudo as PesoProducto };
+}

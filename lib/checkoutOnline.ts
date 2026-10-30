@@ -28,6 +28,7 @@ export type PrepararOnlineErrorCode =
   | "seller_blocked"
   | "seller_payout"
   | "offer_forbidden"
+  | "shipping_unknown"
   | "internal";
 
 export async function prepararOrdenOnline(
@@ -149,6 +150,21 @@ export async function prepararOrdenOnline(
     return { ok: true, orden: actualizada, session, precioBase };
   }
 
+  // Ciudad de destino: hace falta ANTES de calcular los extras para que, si el
+  // vendedor no fijó precioEnvio, el fallback de lib/tarifasEnvio.ts tenga con qué
+  // calcular. Sin esto el checkout seguía el mismo camino que causó el incidente del
+  // café Bogotá→Medellín: cobrar $0 de envío porque faltaba un dato, sin decírselo a
+  // nadie. Ahora se bloquea el pago con un mensaje claro en vez de adivinar.
+  const datosEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
+  if (producto.tipoEntrega === "ENVIO" && !producto.precioEnvio && !datosEnvio.ciudadDestino) {
+    return {
+      ok: false,
+      code: "shipping_unknown",
+      status: 409,
+      message: "Antes de pagar, agrega tu ciudad de destino en tu perfil para poder calcularte el costo del envío.",
+    };
+  }
+
   const trust = await computeTrustScore(producto.sellerId);
   // El descuento por nivel se gana vendiendo, no verificándose (ver nivelParaDescuento
   // en lib/pricing.ts). Sin negocios cerrados el vendedor paga la comisión completa.
@@ -161,8 +177,19 @@ export async function prepararOrdenOnline(
   const exentoVendedor  = esCuentaMaster({ user: { role: producto.seller?.role, email: producto.seller?.email } });
   const exento = exentoComprador || exentoVendedor;
   const pricing = calcularPrecioOnline(precioBase, nivelParaDescuento(trust.label, trust.completedOrdersCount), exento);
-  const extras = calcularExtrasCheckout(producto, proteccionExtendida, exentoComprador);
-  const direccionEnvio = await direccionParaOrden(session.user.id, producto.tipoEntrega);
+  const extras = calcularExtrasCheckout(producto, proteccionExtendida, exentoComprador, datosEnvio.ciudadDestino);
+
+  // Red de seguridad por si el fallback de tarifas no pudo calcular nada (p.ej. el
+  // vendedor nunca declaró un peso aproximado): bloquear, NO crear la orden con
+  // envioCobrado=0 sin que nadie lo haya decidido.
+  if (extras.envioPendiente) {
+    return {
+      ok: false,
+      code: "shipping_unknown",
+      status: 409,
+      message: "No pudimos calcular el costo del envío para este producto. Contacta al vendedor por el chat antes de pagar.",
+    };
+  }
 
   const orden =
     await prisma.order.create({
@@ -174,7 +201,8 @@ export async function prepararOrdenOnline(
         totalPagado: pricing.totalComprador + extras.extraTotal,
         comision: pricing.comisionColbisnes,
         recibeVendedor: pricing.recibeVendedor,
-        direccionEnvio,
+        direccionEnvio: datosEnvio.direccionEnvio,
+        ciudadDestino: datosEnvio.ciudadDestino,
         proteccionExtendida: extras.proteccionCosto > 0,
         proteccionCosto: extras.proteccionCosto,
         envioCobrado: extras.envioCobrado,

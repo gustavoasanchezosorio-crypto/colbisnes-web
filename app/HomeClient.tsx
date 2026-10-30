@@ -35,8 +35,11 @@ import {
   TIPOS_ENTREGA,
   ETIQUETAS_ENTREGA,
   permiteCostoFijoDeEnvio,
+  incluyeEnvio,
   PISO_PRECIO_ENVIO,
   TECHO_PRECIO_ENVIO,
+  PESOS_PRODUCTO,
+  ETIQUETAS_PESO,
 } from "@/lib/entrega";
 
 // El precio se valida contra el piso de SU categoría, no contra un número fijo.
@@ -54,6 +57,7 @@ const extendedSchema = productSchema
     tipoEntrega: z.string(),
     modoEnvio: z.string(),
     precioEnvio: z.number().optional(),
+    pesoAprox: z.string().optional(),
     imei: z.string().optional(),
     imei2: z.string().optional(),
     saludBateria: z.string().optional(),
@@ -93,6 +97,23 @@ const extendedSchema = productSchema
           message: `Máximo $${TECHO_PRECIO_ENVIO.toLocaleString("es-CO")}. Revisa que no te haya sobrado un cero.`,
         });
       }
+    }
+
+    // Peso aproximado: hace falta para calcular la tarifa de envío de respaldo
+    // (lib/tarifasEnvio.ts) cuando quien publica no fija su propio precioEnvio. Antes
+    // de este campo esa combinación quedaba cobrando $0 de envío sin que nadie se
+    // enterara (incidente del café Bogotá→Medellín, 2026-10-27). Solo se exige si el
+    // tipo de entrega elegido incluye envío — a quien entrega en persona no le sirve.
+    if (
+      (TIPOS_ENTREGA as readonly string[]).includes(data.tipoEntrega) &&
+      incluyeEnvio(data.tipoEntrega) &&
+      !(PESOS_PRODUCTO as readonly string[]).includes(data.pesoAprox || "")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pesoAprox"],
+        message: "Dinos un peso aproximado del producto para poder calcularte el envío.",
+      });
     }
 
     // Los datos del dispositivo son opcionales; si se escriben, deben ser creíbles.
@@ -877,6 +898,20 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                       </Select>
                       {errors.tipoEntrega && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.tipoEntrega.message}</p>}
                     </div>
+
+                    {incluyeEnvio(tipoEntregaElegido || "") && (
+                      <div>
+                        <Select {...register("pesoAprox")}>
+                          <option value="">Peso aproximado del producto…</option>
+                          {PESOS_PRODUCTO.map(p => <option key={p} value={p}>{ETIQUETAS_PESO[p]}</option>)}
+                        </Select>
+                        {errors.pesoAprox
+                          ? <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.pesoAprox.message}</p>
+                          : <p style={{ margin: "4px 0 0", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                              Lo usamos para calcularle el envío al comprador si no fijas un costo propio.
+                            </p>}
+                      </div>
+                    )}
 
                     {tipoEntregaElegido === "AMBOS" && (
                       <p style={{ margin: 0, fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
