@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
 import { verificarCodigoTOTP } from "@/lib/totp";
 import { esAdminSession } from "@/lib/adminAuth";
+import { notificarVentaVendedor } from "@/lib/notificarVenta";
 
 // Igual que en app/api/admin/usuarios/[id]/route.ts: sin esto el navegador puede servir un
 // listado viejo de "esperando comisión" — el admin podría confirmar sobre datos que ya cambiaron.
@@ -80,6 +81,8 @@ export async function POST(req: NextRequest) {
       metadata: { productId: orden.productId },
       request: req,
     });
+
+    await notificarVentaVendedor(orderId);
 
     // Aviso en tiempo real: la factura en vivo del comprador y del vendedor pasa de
     // "Esperando comisión" a "Reservado — pendiente de despacho".

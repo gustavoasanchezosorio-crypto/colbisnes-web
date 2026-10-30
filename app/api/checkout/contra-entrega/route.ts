@@ -15,6 +15,7 @@ import { vendedorPuedeRecibirVentas, MENSAJE_VENDEDOR_NO_LISTO } from "@/lib/req
 import { requireEmailVerified } from "@/lib/requireEmailVerified";
 import { enModoPrueba, bloqueadoPorModoPrueba, MENSAJE_PAGO_BLOQUEADO } from "@/lib/modoPrueba";
 import { direccionParaOrden, refrescarDireccionOrden } from "@/lib/direccionOrden";
+import { notificarVentaVendedor } from "@/lib/notificarVenta";
 
 export async function POST(req: NextRequest) {
   try {
@@ -221,6 +222,7 @@ export async function POST(req: NextRequest) {
         const io = (global as any).io;
         if (io) io.to(`product-${producto.id}`).emit("product-status-changed", { productId: producto.id, status: "IN_ESCROW" });
       } catch {}
+      await notificarVentaVendedor(orden.id);
     }
 
     return NextResponse.json({

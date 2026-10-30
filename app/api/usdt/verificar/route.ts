@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
-import { sendWhatsapp } from "@/lib/whatsapp";
+import { notificarVentaVendedor } from "@/lib/notificarVenta";
 import { colbisnesEmailTemplate } from "@/lib/emailTemplate";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 
@@ -176,10 +176,8 @@ export async function GET(req: NextRequest) {
             ctaUrl: "https://colbisnes.com",
           });
           await sendEmail({ to: producto.seller.email, subject: "Pago recibido - Colbisnes", html: htmlVendedor });
-          await sendWhatsapp({
-            to: (producto.seller as any).phoneWhatsapp,
-            body: `💰 *Colbisnes* - Pago confirmado\n\nHola ${producto.seller.name || "Vendedor"}, se confirmó el pago en USDT por *${producto.title}*.\n\nAlista el envío desde la app.`,
-          });
+          // Mismo mensaje de WhatsApp que los demás 4 caminos de pago — ver lib/notificarVenta.ts.
+          await notificarVentaVendedor(orderId);
         }
         const htmlComprador = colbisnesEmailTemplate({
           preheader: "Tu pago fue confirmado",

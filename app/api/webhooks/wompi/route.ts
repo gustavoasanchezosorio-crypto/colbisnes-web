@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { DESTACADO_DIAS } from "@/lib/pricing";
+import { notificarVentaVendedor } from "@/lib/notificarVenta";
 
 // Pago de la COMISIÓN DE RESERVA de un pedido contra-entrega (referencia con prefijo "comision").
 // Espeja la lógica del admin en /api/admin/confirmar-comision-nequi, pero se dispara solo cuando
@@ -66,6 +67,7 @@ async function procesarWebhookComision(reference: string, status: string, transa
       }),
     ]);
     console.log("Comisión de reserva confirmada por Wompi para orden:", orden.id);
+    await notificarVentaVendedor(orden.id);
   }
   // Para DECLINED/VOIDED/ERROR no tocamos nada: la orden sigue ESPERANDO_COMISION y el comprador
   // puede reintentar (Wompi) o pagar por el método manual. El producto sigue reservado hasta que
@@ -286,6 +288,7 @@ export async function POST(req: NextRequest) {
           },
         }),
       ]);
+      await notificarVentaVendedor(orden.id);
     } else {
       await prisma.order.update({
         where: { id: orden.id },
