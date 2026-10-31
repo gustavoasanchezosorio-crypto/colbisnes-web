@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { calcularPrecioOnline, calcularPrecioContraEntrega, calcularPrecioUSDT, calcularExtrasCheckout, nivelParaDescuento, PROTECCION_EXTENDIDA_PRECIO, TEST_MODE, TEST_AMOUNT } from "@/lib/pricing";
 import { limpiarDireccion, validarDireccionEnvio, DIRECCION_LARGO_MAXIMO } from "@/lib/direccion";
 import { CIUDADES_PRINCIPALES } from "@/lib/ciudades";
@@ -462,8 +463,18 @@ export default function CheckoutPage() {
       {/* HEADER */}
       <div className="glass" style={{ background: `linear-gradient(135deg,${THEME.primaryLight},${THEME.primary} 52%,${THEME.primaryDark})`, padding: "24px 20px 28px", boxShadow: "0 8px 40px rgba(10,46,107,0.25)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto" }}>
+          {/* Volver: antes esta pantalla no tenía ninguna forma de salir salvo cerrar la
+              pestaña o usar el botón físico de "atrás" del navegador/celular — reportado
+              por el usuario el 2026-10-31 viendo el checkout en vivo. Va a la publicación
+              (no a home) porque es el punto más probable de origen de quien está pagando. */}
+          <Link href={`/product/${id}`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 14 }}>
+            ← Volver a la publicación
+          </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-            <img src="/logo-white.svg?v=2" alt="Colbisnes" style={{ height: 44, width: "auto" }} />
+            <Link href="/" style={{ display: "inline-flex" }}>
+              <img src="/logo-white.svg?v=2" alt="Colbisnes" style={{ height: 44, width: "auto" }} />
+            </Link>
             {TEST_MODE && <span style={{ fontSize: 10, color: "#fff", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", padding: "3px 8px", borderRadius: 20, fontWeight: 700, animation: "pulse 2s infinite" }}>PRUEBAS</span>}
             <span style={{ marginLeft: "auto", fontSize: 11, color: "#fff", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", padding: "4px 12px", borderRadius: 20, fontWeight: 600 }}>🔒 Pago seguro</span>
           </div>
