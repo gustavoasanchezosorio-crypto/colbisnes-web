@@ -88,14 +88,16 @@ export default function EditarPerfilPage() {
   const [geoErrorMsg, setGeoErrorMsg] = useState("");
   // Qué venía a completar, según el ?falta= con el que lo mandaron desde la portada.
   // Antes solo existía "pago", así que a quien únicamente le faltaba el código anti fraude
-  // le salía un aviso de Nequi y Bre-B que no tenía nada que ver con su caso.
-  const [faltaQue, setFaltaQue] = useState<"pago" | "antifraude" | null>(null);
+  // le salía un aviso de Nequi y Bre-B que no tenía nada que ver con su caso. "envio" se
+  // agregó el 2026-10-31: el checkout avisaba "agrega tu ciudad de destino en tu perfil"
+  // pero no daba ningún enlace para llegar hasta acá (bug reportado por el usuario).
+  const [faltaQue, setFaltaQue] = useState<"pago" | "antifraude" | "envio" | null>(null);
   const [kycStatus, setKycStatus] = useState<string>("none");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const falta = new URLSearchParams(window.location.search).get("falta");
-    if (falta === "pago" || falta === "antifraude") setFaltaQue(falta);
+    if (falta === "pago" || falta === "antifraude" || falta === "envio") setFaltaQue(falta);
   }, []);
 
   const detectarCiudad = () => {
@@ -279,6 +281,8 @@ export default function EditarPerfilPage() {
           {faltaQue && <div style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.40)", borderRadius: 10, padding: "0.8rem 1rem", marginBottom: "1rem", color: "#b45309", fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.5 }}>
             {faltaQue === "antifraude"
               ? <>⚠️ Te falta tu <b>código anti fraude</b>. Sin él no puedes publicar ni hacer una oferta. Escríbelo abajo (una palabra tuya, de 4 a 12 letras o números) y guarda tu perfil.</>
+              : faltaQue === "envio"
+              ? <>⚠️ No pudimos calcular el costo de envío porque falta tu <b>ciudad de destino</b>. Selecciónala abajo y guarda tu perfil para volver a intentar el pago.</>
               : <>⚠️ Para comprar o cobrar tus ventas necesitas registrar tu <b>número Nequi</b> y tu <b>llave Bre-B</b>. Complétalos abajo y guarda tu perfil.</>}
           </div>}
 

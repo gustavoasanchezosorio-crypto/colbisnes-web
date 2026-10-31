@@ -604,6 +604,10 @@ export default function CheckoutPage() {
                       <p style={{ margin: "6px 0 0", color: "#9a3412", fontSize: 13, lineHeight: 1.5 }}>
                         Agrega tu ciudad de destino en tu perfil para que podamos calcularte el costo, o contacta al vendedor por el chat antes de pagar.
                       </p>
+                      <a href="/perfil/editar?falta=envio#campo-ciudadDestino"
+                        style={{ display: "block", textAlign: "center", marginTop: 12, padding: "12px", borderRadius: 14, background: "#9a3412", color: "#fff", fontSize: 14, fontWeight: 800, textDecoration: "none" }}>
+                        Agregar mi ciudad de destino →
+                      </a>
                     </div>
                   )}
 
