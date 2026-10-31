@@ -160,6 +160,21 @@ export default function EditarPerfilPage() {
     }
   }, [session]);
 
+  // El formulario (y los id="campo-...") solo existen en el DOM una vez loading=false
+  // (mientras carga se renderiza únicamente "Cargando..."). Si el link trae un #ancla
+  // (ej. desde el checkout: /perfil/editar?falta=envio#campo-ciudadDestino), el salto
+  // nativo del navegador ya se intentó ANTES de que el elemento existiera y no hizo
+  // nada — comprobado en vivo el 2026-10-31, el usuario llegaba arriba del todo y
+  // tenía que buscar el campo a mano. Reintentamos el scroll nosotros mismos apenas
+  // el formulario queda montado.
+  useEffect(() => {
+    if (loading) return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const el = document.querySelector(hash);
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }, [loading]);
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
