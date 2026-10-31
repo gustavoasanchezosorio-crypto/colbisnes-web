@@ -28,6 +28,10 @@ export interface Product {
   paymentExpiresAt?: string | number | null;
   paidAt?: string | null;
   soldAt?: string | null;
+  // Unidades disponibles en esta publicación (ver prisma/schema.prisma,
+  // Product.stockQuantity). Opcional porque productos anteriores a este campo lo
+  // traen igual (default 1 desde el servidor), pero el tipo no lo garantizaba antes.
+  stockQuantity?: number;
   seller?: {
     id: string;
     name: string | null;

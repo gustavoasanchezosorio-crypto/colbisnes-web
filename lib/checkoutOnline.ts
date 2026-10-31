@@ -33,7 +33,8 @@ export type PrepararOnlineErrorCode =
 
 export async function prepararOrdenOnline(
   productoId: string,
-  proteccionExtendida: boolean
+  proteccionExtendida: boolean,
+  cantidad: number = 1
 ): Promise<PrepararOnlineResult> {
   // Decisión 2026-10-26: el comprador ya NO necesita identidad verificada (reconocimiento
   // facial) para pagar — la garantía de la compra es el propio escrow/custodia del pago, no
@@ -95,14 +96,38 @@ export async function prepararOrdenOnline(
   let acceptedOfferId = producto.acceptedOfferId;
   let precioBase = producto.priceCOP;
 
+  // Cuántas unidades de esta publicación cubre la compra. Solo tiene sentido en
+  // "compra directa" (sin negociar) — una oferta negociada siempre es por 1 unidad, se
+  // fuerza más abajo. Se acota a [1, stockQuantity] por si llega un valor fuera de rango
+  // (el frontend ya lo acota, esto es la validación de servidor).
+  const stockDisponible = Math.max(1, producto.stockQuantity || 1);
+  let cantidadFinal = Math.floor(Number(cantidad)) || 1;
+  if (cantidadFinal < 1) cantidadFinal = 1;
+
+  // Marca con la que se identifica, más abajo, a la oferta auto-creada por "compra
+  // directa" (a diferencia de una oferta negociada de verdad por el comprador).
+  const MENSAJE_COMPRA_DIRECTA = "Compra directa al precio publicado";
+
   if (acceptedOfferId) {
     const offer = await prisma.offer.findUnique({ where: { id: acceptedOfferId } });
     if (!offer || offer.userId !== session.user.id) {
       return { ok: false, code: "offer_forbidden", status: 403, message: "Solo el comprador con la oferta aceptada puede realizar este pago" };
     }
-    precioBase = offer.amountCOP;
+    if (offer.message === MENSAJE_COMPRA_DIRECTA) {
+      // Reintento de una compra directa ya iniciada (p.ej. cambió de método de pago y
+      // volvió a online): la cantidad sigue pudiendo ser > 1.
+      cantidadFinal = Math.min(cantidadFinal, stockDisponible);
+      precioBase = offer.amountCOP * cantidadFinal;
+    } else {
+      // Oferta negociada de verdad: siempre 1 unidad, sin importar lo que mande el cliente.
+      cantidadFinal = 1;
+      precioBase = offer.amountCOP;
+    }
   } else {
-    // COMPRA DIRECTA al precio publicado: crear oferta al precio completo y aceptarla automáticamente.
+    // COMPRA DIRECTA al precio publicado: crear oferta al precio completo (por unidad) y
+    // aceptarla automáticamente. cantidadFinal multiplica el precio más abajo, no el
+    // monto de la oferta — la oferta representa el precio de una unidad.
+    cantidadFinal = Math.min(cantidadFinal, stockDisponible);
     await prisma.$transaction([
       prisma.offer.create({
         data: {
@@ -110,7 +135,7 @@ export async function prepararOrdenOnline(
           userId: session.user.id,
           amountCOP: producto.priceCOP,
           status: "ACCEPTED",
-          message: "Compra directa al precio publicado",
+          message: MENSAJE_COMPRA_DIRECTA,
         },
       }),
       prisma.offer.updateMany({
@@ -134,6 +159,7 @@ export async function prepararOrdenOnline(
       data: { acceptedOfferId: ofertaCreada.id },
     });
     acceptedOfferId = ofertaCreada.id;
+    precioBase = producto.priceCOP * cantidadFinal;
   }
 
   // El comprador cambió a pago online: cancela cualquier orden pendiente suya con otro método.
@@ -207,6 +233,7 @@ export async function prepararOrdenOnline(
         proteccionCosto: extras.proteccionCosto,
         envioCobrado: extras.envioCobrado,
         margenEnvio: extras.margenEnvio,
+        cantidad: cantidadFinal,
       },
     });
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
+import { republicarStockRestante } from "@/lib/productLote";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +42,15 @@ export async function POST(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    // Cuántas unidades cubre esta venta externa. Solo relevante cuando el vendedor publicó
+    // varias unidades (Product.stockQuantity > 1, ver lib/productLote.ts); en el caso normal
+    // (1 unidad) no cambia nada de lo que ya hacía este endpoint.
+    const bodyJson = await req.json().catch(() => ({}));
+    const cantidadVendida = Math.max(1, Math.floor(Number(bodyJson?.cantidad)) || 1);
+
     const product = await prisma.product.findUnique({
       where: { id },
-      select: { id: true, sellerId: true, status: true, title: true },
+      select: { id: true, sellerId: true, status: true, title: true, stockQuantity: true },
     });
     if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     if (product.sellerId !== session.user.id) {
@@ -85,9 +92,13 @@ export async function POST(
       action: "MARCAR_VENDIDO_FUERA_DE_APP",
       entity: "Product",
       entityId: id,
-      metadata: { title: product.title },
+      metadata: { title: product.title, cantidadVendida, stockQuantity: product.stockQuantity },
       request: req,
     });
+
+    // "Varias unidades" (ver lib/productLote.ts): si quedó stock, se clona una publicación
+    // nueva AVAILABLE con el resto — esta fila ya quedó SOLD arriba.
+    await republicarStockRestante(id, cantidadVendida);
 
     // Aviso en tiempo real a quien tenga la ficha abierta (comprador con oferta pendiente,
     // etc.) — mismo canal que usa el resto de transiciones de estado. Si `global.io` no

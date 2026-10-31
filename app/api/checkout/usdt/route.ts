@@ -79,6 +79,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El producto no está disponible para pago" }, { status: 400 });
     }
 
+    // Fase 1 de "varias unidades" (ver prisma/schema.prisma, campo Product.stockQuantity):
+    // USDT todavía no sabe vender/reservar por cantidad — solo el pago online
+    // (lib/checkoutOnline.ts) lo soporta. Se bloquea con un mensaje claro en vez de vender
+    // de a 1 silenciosamente cuando el vendedor en realidad publicó varias unidades.
+    if (producto.stockQuantity > 1) {
+      return NextResponse.json(
+        { error: "Este producto tiene varias unidades disponibles. Por ahora, para comprar varias unidades debes usar pago en línea (tarjeta, PSE o Nequi)." },
+        { status: 400 }
+      );
+    }
+
     // El comprador cambió a USDT: cancela cualquier orden pendiente suya con otro método.
     await cancelarOrdenPendienteDeOtroMetodo(productoId, session.user.email, "USDT_BEP20");
 

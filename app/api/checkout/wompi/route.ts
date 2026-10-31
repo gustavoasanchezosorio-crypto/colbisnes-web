@@ -20,8 +20,9 @@ export async function GET(req: NextRequest) {
 
     const productoId = req.nextUrl.searchParams.get("productoId") || "";
     const proteccionExtendida = req.nextUrl.searchParams.get("proteccion") === "1";
+    const cantidad = parseInt(req.nextUrl.searchParams.get("cantidad") || "1", 10) || 1;
 
-    const prep = await prepararOrdenOnline(productoId, proteccionExtendida);
+    const prep = await prepararOrdenOnline(productoId, proteccionExtendida, cantidad);
     if (!prep.ok) {
       // Los guards de perfil redirigen al flujo que corresponda; el resto devuelve JSON.
       switch (prep.code) {

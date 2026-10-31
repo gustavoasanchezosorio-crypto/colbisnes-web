@@ -185,7 +185,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
     const { imei, imei2, saludBateria, piezasReemplazadas } = body;
-    const { tipoEntrega, precioEnvio, pesoAprox } = body;
+    const { tipoEntrega, precioEnvio, pesoAprox, stockQuantity } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -291,6 +291,19 @@ export async function POST(request: Request) {
       ? condition
       : "USADO";
 
+    // Unidades disponibles (ver prisma/schema.prisma, campo Product.stockQuantity): opcional,
+    // default 1 (artículo único, el caso normal). Se acota a un rango razonable — no hay
+    // negocio real en Colbisnes que venda miles de unidades idénticas en una sola publicación,
+    // y dejarlo sin techo abriría la puerta a abusar del precio mínimo por unidad del catálogo.
+    let stockQuantityFinal = 1;
+    if (stockQuantity !== undefined && stockQuantity !== null && String(stockQuantity).trim() !== "") {
+      const n = Math.floor(Number(stockQuantity));
+      if (!Number.isFinite(n) || n < 1 || n > 1000) {
+        return NextResponse.json({ error: "Cantidad disponible inválida (1-1000)" }, { status: 400 });
+      }
+      stockQuantityFinal = n;
+    }
+
     const product = await prisma.product.create({
       data: {
         title: normalizarTituloProducto(title),
@@ -304,6 +317,7 @@ export async function POST(request: Request) {
         tipoEntrega: entrega.tipoEntrega,
         precioEnvio: entrega.precioEnvio,
         pesoAprox: peso.pesoAprox,
+        stockQuantity: stockQuantityFinal,
         imei: imeiFinal,
         imei2: imei2Final,
         saludBateria: bateriaFinal,

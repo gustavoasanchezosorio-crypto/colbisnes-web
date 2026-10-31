@@ -27,6 +27,8 @@ interface Product {
   imeiParcial?: string | null; tieneImei?: boolean;
   imei2Parcial?: string | null; tieneImei2?: boolean;
   saludBateria?: number | null; piezasReemplazadas?: string | null;
+  // Unidades disponibles (ver prisma/schema.prisma, Product.stockQuantity).
+  stockQuantity?: number;
 }
 interface Offer {
   id: string; amountCOP: number; message?: string; status: string;
@@ -568,6 +570,15 @@ export default function ProductPageClient({ productId, initialProduct = null }: 
               <span key={i} style={{background:"#eef3fb",color:THEME.textSoft,padding:"0.2rem 0.65rem",
                 borderRadius:"20px",fontSize:"0.75rem",fontWeight:"600",border:`1px solid ${THEME.border}`}}>{t}</span>
             ))}
+            {/* "Varias unidades" (ver prisma/schema.prisma, Product.stockQuantity): solo se
+                pinta cuando el vendedor publicó más de una unidad idéntica (café, insumos,
+                etc.) — la gran mayoría de publicaciones son 1 y no muestran nada nuevo aquí. */}
+            {Number(product.stockQuantity) > 1 && product.status === "AVAILABLE" && (
+              <span style={{background:"#e8f6ec",color:VERDE,padding:"0.2rem 0.65rem",
+                borderRadius:"20px",fontSize:"0.75rem",fontWeight:"700",border:`1px solid ${VERDE}`}}>
+                {Number(product.stockQuantity)} disponibles
+              </span>
+            )}
           </div>
 
           {/* 2. INTERÉS — Precio destacado */}

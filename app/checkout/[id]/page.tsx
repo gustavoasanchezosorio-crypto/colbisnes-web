@@ -56,6 +56,10 @@ export default function CheckoutPage() {
   // no fijó un precioEnvio propio (incidente del café Bogotá→Medellín, 2026-10-27).
   const [ciudadDestinoPerfil, setCiudadDestinoPerfil] = useState<string>("");
   const [ciudadBorrador, setCiudadBorrador]           = useState<string>("");
+  // Cantidad a comprar cuando el producto tiene varias unidades disponibles (stockQuantity > 1).
+  // Solo aplica al pago ONLINE (tarjeta/PSE/Nequi) — fase 1, ver lib/checkoutOnline.ts. Si hay
+  // una oferta negociada aceptada, la cantidad queda fija en 1 (las ofertas no soportan cantidad).
+  const [cantidad, setCantidad] = useState(1);
   // Modo prueba del prelanzamiento: quien entró con el link secreto puede recorrer
   // todo el checkout y ver los precios, pero no puede pagar. El servidor bloquea
   // igual (ver lib/modoPrueba.ts); esto es para que no llegue a intentarlo.
@@ -136,7 +140,16 @@ export default function CheckoutPage() {
   const ofertaAceptada = producto.acceptedOfferId
     ? producto.offers?.find((o: any) => o.id === producto.acceptedOfferId)
     : null;
-  const precio = ofertaAceptada ? ofertaAceptada.amountCOP : producto.priceCOP;
+  // stockQuantity > 1 solo cuando el vendedor marcó varias unidades disponibles (café, etc.).
+  // Con oferta negociada aceptada la cantidad siempre es 1 (ver nota junto al estado `cantidad`).
+  const stockDisponible = Math.max(1, Number(producto.stockQuantity) || 1);
+  const cantidadEfectiva = ofertaAceptada ? 1 : Math.min(Math.max(1, cantidad), stockDisponible);
+  const precioUnitario = ofertaAceptada ? ofertaAceptada.amountCOP : producto.priceCOP;
+  // `precio` sigue siendo el precio de UNA unidad: lo siguen usando contraentrega/usdt (que en
+  // fase 1 solo venden de a 1, ver más abajo) y varios textos de la pantalla. El pago online usa
+  // `precioOnlineBase` aparte, multiplicado por la cantidad elegida.
+  const precio = precioUnitario;
+  const precioOnlineBase = precioUnitario * cantidadEfectiva;
   // "Contra entrega" en el fondo son dos operaciones distintas que comparten pantalla: si el
   // producto se despacha (ENVIO/AMBOS), una transportadora real cobra el efectivo al comprador
   // y se lo liquida al vendedor por fuera de Colbisnes — de ahí que el resto del checkout hable
@@ -145,7 +158,7 @@ export default function CheckoutPage() {
   // encuentran y el pago del saldo es directo entre ellos. Antes de esto el texto decía
   // "Total al mensajero" siempre, sin importar cuál de los dos casos era.
   const entregaEnPersona = producto.tipoEntrega === "EN_PERSONA";
-  const online = calcularPrecioOnline(precio, nivelConDescuento);
+  const online = calcularPrecioOnline(precioOnlineBase, nivelConDescuento);
   const contra = calcularPrecioContraEntrega(precio, nivelConDescuento);
   const usdt   = calcularPrecioUSDT(precio, tasa, nivelConDescuento);
   const extras = calcularExtrasCheckout(producto, proteccionExtendida, false, ciudadDestinoPerfil);
@@ -161,7 +174,7 @@ export default function CheckoutPage() {
   const notaDescuento = tieneDescuento ? `Vendedor ${nivelConDescuento} — comisión reducida por buen historial.` : undefined;
   // Comisión "sin descuento" (nivel neutro) para mostrarle al comprador cuánto se ahorra por
   // comprarle a un vendedor de buen nivel. USDT no aplica descuento por nivel, así que no entra.
-  const onlineSinDesc = calcularPrecioOnline(precio, null);
+  const onlineSinDesc = calcularPrecioOnline(precioOnlineBase, null);
   const contraSinDesc = calcularPrecioContraEntrega(precio, null);
   const ahorroOnline  = Math.max(0, onlineSinDesc.comisionColbisnes - online.comisionColbisnes);
   const ahorroContra  = Math.max(0, contraSinDesc.comisionColbisnes - contra.comisionColbisnes);
@@ -171,7 +184,7 @@ export default function CheckoutPage() {
     setErrorPago(null);
     try {
       if (metodo === "online") {
-        window.location.href = "/api/checkout/wompi?productoId=" + id + (proteccionExtendida ? "&proteccion=1" : "") + (TEST_MODE ? "&testAmount=" + TEST_AMOUNT : "");
+        window.location.href = "/api/checkout/wompi?productoId=" + id + "&cantidad=" + cantidadEfectiva + (proteccionExtendida ? "&proteccion=1" : "") + (TEST_MODE ? "&testAmount=" + TEST_AMOUNT : "");
         return;
       } else if (metodo === "contraentrega") {
         const res  = await fetch("/api/checkout/contra-entrega", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productoId: id, testMode: TEST_MODE, proteccionExtendida }) });
@@ -386,11 +399,16 @@ export default function CheckoutPage() {
     ? "La comisión de reserva se paga aparte por Nequi, antes de coordinar la entrega."
     : "La comisión de reserva se paga aparte por Nequi, antes del envío.";
 
-  const metodos = [
-    { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
+  // Fase 1 de "cantidad": con más de 1 unidad disponible, contraentrega y USDT todavía no saben
+  // reservar/vender por cantidad (ver lib/checkoutOnline.ts) — se ocultan y solo queda pago online,
+  // que sí soporta cantidadEfectiva > 1.
+  const soportaVariasUnidades = stockDisponible > 1 && !ofertaAceptada;
+  const metodosBase = [
+    { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: soportaVariasUnidades ? `Precio producto × ${cantidadEfectiva}` : "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
     { id: "contraentrega" as MetodoPago, icon: entregaEnPersona ? "🤝" : "📦", titulo: entregaEnPersona ? "Venta en persona" : "Contra entrega", sub: contraSub, badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: contraTotalLabel, totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: contraSteps, nota: [contraNota, notaDescuento].filter(Boolean).join(" — ") },
     { id: "usdt" as MetodoPago, icon: "🪙", titulo: "Pagar con USDT", sub: "BNB Chain BEP20 · Sin bancos", badge: fmtPct(pctUsdt), total: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", desglose: [{ label: "Precio producto", val: fmt(precio) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctUsdt)})`, val: TEST_MODE ? "0.01 USDT" : usdt.comisionUSD + " USDT" }, ...(TEST_MODE ? [] : desgloseExtrasUSD)], totalLabel: "Total USDT", totalVal: TEST_MODE ? "0.01 USDT" : (usdt.totalUSD + extrasUSD) + " USDT", nota: "Tasa: 1 USD = " + fmt(tasa) + " COP" },
   ];
+  const metodos = soportaVariasUnidades ? metodosBase.filter(m => m.id === "online") : metodosBase;
 
   return (
     <div style={{ minHeight: "100vh", background: THEME.background, fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif", paddingBottom: 80 }}>
@@ -411,7 +429,7 @@ export default function CheckoutPage() {
       {showNequiOnline && (
         <NequiPushModal
           endpoint="/api/checkout/nequi-online"
-          body={{ productoId: id, proteccionExtendida }}
+          body={{ productoId: id, proteccionExtendida, cantidad: cantidadEfectiva }}
           montoLabel={fmt(online.totalComprador + extras.extraTotal)}
           prefillTelefono={nequiPrefill}
           onClose={() => setShowNequiOnline(false)}
@@ -455,6 +473,23 @@ export default function CheckoutPage() {
               <p style={{ color: "#fff", fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: "-1px" }}>{fmt(precio)}</p>
               {TEST_MODE && <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: 700, margin: 0 }}>→ cobro real: {fmt(TEST_AMOUNT)}</p>}
             </div>
+            {/* Selector de cantidad: solo visible cuando el vendedor publicó varias unidades
+                (stockDisponible > 1) y no hay una oferta negociada aceptada (esas siempre son
+                de a 1). Fase 1: solo pago online sabe multiplicar por cantidad, ver nota junto
+                a `soportaVariasUnidades` más abajo. */}
+            {stockDisponible > 1 && !ofertaAceptada && (
+              <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>Cantidad:</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: 4 }}>
+                  <button type="button" onClick={() => setCantidad(c => Math.max(1, c - 1))} disabled={cantidadEfectiva <= 1}
+                    style={{ width: 30, height: 30, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: cantidadEfectiva <= 1 ? "default" : "pointer", opacity: cantidadEfectiva <= 1 ? 0.5 : 1 }}>−</button>
+                  <span style={{ color: "#fff", fontSize: 15, fontWeight: 800, width: 28, textAlign: "center" }}>{cantidadEfectiva}</span>
+                  <button type="button" onClick={() => setCantidad(c => Math.min(stockDisponible, c + 1))} disabled={cantidadEfectiva >= stockDisponible}
+                    style={{ width: 30, height: 30, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: cantidadEfectiva >= stockDisponible ? "default" : "pointer", opacity: cantidadEfectiva >= stockDisponible ? 0.5 : 1 }}>+</button>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({stockDisponible} disponibles)</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -462,6 +497,13 @@ export default function CheckoutPage() {
       {/* METODOS */}
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 0" }}>
         <p style={{ color: THEME.muted, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16, textAlign: "center" }}>Selecciona tu metodo de pago</p>
+
+        {soportaVariasUnidades && (
+          <div className="glass" style={{ background: THEME.surfaceAlt, border: `1px solid ${THEME.border}`, borderRadius: 14, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 16 }}>ℹ️</span>
+            <p style={{ color: THEME.textSoft, fontSize: 12, lineHeight: 1.5, margin: 0 }}>Este producto tiene varias unidades disponibles. Por ahora solo puedes comprar varias unidades con pago en línea (tarjeta, PSE o Nequi).</p>
+          </div>
+        )}
 
         {metodos.map(m => {
           const active = metodo === m.id;

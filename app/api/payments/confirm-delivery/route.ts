@@ -9,6 +9,7 @@ import { colbisnesEmailTemplate } from '@/lib/emailTemplate';
 import { generarComprobantePDF } from '@/lib/comprobante';
 import { registrarAuditoria } from '@/lib/audit';
 import { enModoPrueba, bloqueadoPorModoPrueba } from '@/lib/modoPrueba';
+import { republicarStockRestante } from '@/lib/productLote';
 
 export async function POST(request: Request) {
   try {
@@ -109,6 +110,12 @@ export async function POST(request: Request) {
         data: { estado: "COMPLETADO" },
       });
     }
+
+    // "Varias unidades" (ver lib/productLote.ts): si esta publicación tenía más stock que
+    // lo que cubrió esta orden, se clona una publicación nueva AVAILABLE con el resto, en
+    // vez de reabrir esta misma fila (que ya quedó SOLD arriba, con su propio escrow
+    // cerrado). No bloquea la respuesta si falla — ver el comentario del helper.
+    await republicarStockRestante(productId, orden?.cantidad ?? 1);
 
     // Rastro de auditoría: confirmar la entrega libera la custodia (producto SOLD, orden
     // COMPLETADA) y habilita el pago al vendedor — es la acción de plata más sensible del

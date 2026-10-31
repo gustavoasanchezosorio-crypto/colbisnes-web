@@ -139,7 +139,7 @@ export async function PATCH(
     const body = await req.json();
     const { title, description, priceCOP, city, condition, category, images } = body;
     const { imei, imei2, saludBateria, piezasReemplazadas } = body;
-    const { tipoEntrega, precioEnvio, pesoAprox } = body;
+    const { tipoEntrega, precioEnvio, pesoAprox, stockQuantity } = body;
 
     if (!title || typeof title !== "string" || title.trim().length < 3 || title.length > 200) {
       return NextResponse.json({ error: "Título inválido (3-200 caracteres)" }, { status: 400 });
@@ -287,6 +287,18 @@ export async function PATCH(
       ? condition
       : product.condition;
 
+    // ── Unidades disponibles ────────────────────────────────────────────────────
+    // Mismo espíritu de "no mandar el campo significa no tocarlo" que tipoEntrega/
+    // pesoAprox arriba: no mandar stockQuantity conserva el valor actual.
+    let stockQuantityFinal = product.stockQuantity;
+    if (stockQuantity !== undefined && stockQuantity !== null && String(stockQuantity).trim() !== "") {
+      const n = Math.floor(Number(stockQuantity));
+      if (!Number.isFinite(n) || n < 1 || n > 1000) {
+        return NextResponse.json({ error: "Cantidad disponible inválida (1-1000)" }, { status: 400 });
+      }
+      stockQuantityFinal = n;
+    }
+
     // Borra las fotos viejas y crea las nuevas en la MISMA transacción del update, para
     // no dejar el producto sin imágenes si algo falla a mitad de camino.
     const [, actualizado] = await prisma.$transaction([
@@ -303,6 +315,7 @@ export async function PATCH(
           tipoEntrega: entrega.tipoEntrega,
           precioEnvio: entrega.precioEnvio,
           pesoAprox: pesoAproxFinal,
+          stockQuantity: stockQuantityFinal,
           imei: imeiFinal,
           imei2: imei2Final,
           saludBateria: bateriaFinal,

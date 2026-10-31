@@ -177,6 +177,16 @@ model Product {
   featuredUntil    DateTime?
   featuredListings FeaturedListing[]
 
+  // Unidades disponibles en ESTA publicación (café, insumos, cualquier artículo no único
+  // que el vendedor repone). Casi todo sigue siendo 1 (artículos usados únicos). Cuando es
+  // > 1: solo el pago online (ver lib/checkoutOnline.ts) deja elegir cantidad > 1 — contra
+  // entrega y USDT siguen vendiendo de a 1 por ahora. Al completarse una venta con stock
+  // restante, se clona una nueva publicación AVAILABLE con el resto (ver lib/productLote.ts)
+  // en vez de intentar que una misma fila Product soporte varios compradores a la vez —
+  // el resto del modelo (status/paymentExpiresAt/etc.) sigue siendo un lock de una sola
+  // transacción por fila, sin tocar esa máquina de estados.
+  stockQuantity Int @default(1)
+
   @@index([sellerId])
   @@index([status])
   @@index([city])
@@ -342,6 +352,13 @@ model Order {
   comisionReservaConfirmadaAt   DateTime?
   fechaLimiteEnvio              DateTime?
   envioPenalizado               Boolean   @default(false)
+
+  // Cuántas unidades de Product.stockQuantity cubre esta orden (ver nota en el modelo
+  // Product). Casi siempre 1. Solo el checkout online (lib/checkoutOnline.ts) la deja
+  // mayor a 1 por ahora — contra entrega y USDT siguen rechazando cantidad > 1. Se usa
+  // en confirm-delivery/marcar-vendido para saber cuánto stock le queda a la publicación
+  // y si hay que clonar una nueva fila con el resto (lib/productLote.ts).
+  cantidad Int @default(1)
 
   @@index([estado, pagoLiberado])
   @@index([buyerEmail])

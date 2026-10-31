@@ -58,6 +58,10 @@ const extendedSchema = productSchema
     modoEnvio: z.string(),
     precioEnvio: z.number().optional(),
     pesoAprox: z.string().optional(),
+    // Unidades disponibles en esta publicación (café, insumos, cualquier artículo no
+    // único que el vendedor repone). Opcional, default 1 — ver prisma/schema.prisma,
+    // Product.stockQuantity.
+    stockQuantity: z.number().optional(),
     imei: z.string().optional(),
     imei2: z.string().optional(),
     saludBateria: z.string().optional(),
@@ -961,6 +965,29 @@ function PageInner({ initialProducts }: { initialProducts?: Product[] }) {
                       </>
                     )}
                   </div>
+                </div>
+
+                {/* Unidades disponibles: solo tiene sentido para artículos no únicos y
+                    reponibles (café, insumos, etc.) — casi todas las publicaciones son 1
+                    (artículo usado único) y pueden dejar este campo tal cual. Si queda en
+                    1, el checkout se comporta exactamente igual que siempre. Más de 1
+                    habilita, en el checkout, elegir cantidad al pagar — por ahora solo con
+                    pago en línea (ver app/checkout/[id]/page.tsx y lib/checkoutOnline.ts). */}
+                <div style={{ border: `1.5px solid ${THEME.border}`, borderRadius: 12, padding: "14px 14px 12px", background: THEME.surfaceAlt }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark }}>Unidades disponibles</p>
+                  <p style={{ margin: "4px 0 10px", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+                    Déjalo en 1 si es un artículo único. Si tienes varias unidades idénticas
+                    (café, insumos, etc.), pon cuántas — la publicación sigue disponible
+                    después de cada venta hasta agotarse.
+                  </p>
+                  <Input
+                    placeholder="1"
+                    type="number"
+                    min={1}
+                    max={1000}
+                    {...register("stockQuantity", { valueAsNumber: true })}
+                  />
+                  {errors.stockQuantity && <p style={{ color: "red", fontSize: 12, margin: "4px 0 0" }}>{errors.stockQuantity.message as string}</p>}
                 </div>
 
                 {/* Ficha del dispositivo. Aparece SOLO en Tecnologia y es toda

@@ -456,6 +456,13 @@ export const ProductCard = React.memo(function ProductCard({
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
             <span style={{ fontSize: "0.9rem", color: THEME.muted }}>📍 {product.city}</span>
             <span style={{ fontSize: "0.9rem", color: THEME.muted }}>📦 {status}</span>
+            {/* "Varias unidades" (ver prisma/schema.prisma, Product.stockQuantity): la
+                gran mayoría de publicaciones son 1 unidad y no muestran esta etiqueta. */}
+            {!isSold && Number((product as any).stockQuantity) > 1 && (
+              <span style={{ fontSize: "0.85rem", color: THEME.success || "#1a9c5a", fontWeight: 700 }}>
+                {Number((product as any).stockQuantity)} disponibles
+              </span>
+            )}
             {!isSold && isOwner && pendingOffersCount > 0 && (
               <span style={{
                 background: "linear-gradient(135deg,#1448A3,#1F6BFF)",

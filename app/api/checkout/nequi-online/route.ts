@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
     const productoId: string = body.productoId || "";
     const proteccionExtendida: boolean = body.proteccionExtendida === true;
     const telefonoRaw: string = String(body.telefono || "");
+    const cantidad: number = parseInt(body.cantidad, 10) || 1;
 
-    const prep = await prepararOrdenOnline(productoId, proteccionExtendida);
+    const prep = await prepararOrdenOnline(productoId, proteccionExtendida, cantidad);
     if (!prep.ok) {
       // Devolvemos banderas que el checkout ya sabe interpretar para redirigir al flujo correcto.
       switch (prep.code) {

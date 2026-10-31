@@ -73,6 +73,9 @@ export default function EditarProductoPage() {
   // si el producto necesita envío y nunca se puso, el servidor bloquea el guardado
   // de este campo en concreto (ver PATCH /api/products/[id]), no el resto de la edición.
   const [pesoAprox, setPesoAprox] = useState<string>("");
+  // Unidades disponibles en esta publicación (ver prisma/schema.prisma,
+  // Product.stockQuantity). "1" por defecto, casi siempre un artículo único.
+  const [stockQuantity, setStockQuantity] = useState<string>("1");
 
   // Ficha del dispositivo (solo categoría Tecnologia)
   const [imei, setImei] = useState("");
@@ -120,6 +123,7 @@ export default function EditarProductoPage() {
         // no un campo vacío. Por eso se mira el número y no si viene o no viene.
         setTipoEntrega((TIPOS_ENTREGA as readonly string[]).includes(data.tipoEntrega) ? data.tipoEntrega : "");
         setPesoAprox((PESOS_PRODUCTO as readonly string[]).includes(data.pesoAprox) ? data.pesoAprox : "");
+        setStockQuantity(String(data.stockQuantity && data.stockQuantity > 0 ? data.stockQuantity : 1));
         if (typeof data.precioEnvio === "number" && data.precioEnvio > 0) {
           setModoEnvio("FIJO");
           setEnvioDisplay(Number(data.precioEnvio).toLocaleString("es-CO"));
@@ -279,6 +283,7 @@ export default function EditarProductoPage() {
         body: JSON.stringify({
           title: title.trim(), description: description.trim(), priceCOP, city, condition, category, images,
           tipoEntrega, precioEnvio,
+          stockQuantity: Math.max(1, parseInt(stockQuantity, 10) || 1),
           // Igual que arriba: solo tiene sentido mandar un peso si el tipo de entrega
           // de este guardado lo necesita. Si no, null — "no aplica", no "no sé".
           pesoAprox: incluyeEnvio(tipoEntrega) ? pesoAprox : null,
@@ -406,6 +411,24 @@ export default function EditarProductoPage() {
             <option value="USADO">Usado</option>
             <option value="REACONDICIONADO">Reacondicionado</option>
           </Select>
+        </div>
+
+        {/* Unidades disponibles. Ver el mismo bloque en app/HomeClient.tsx (publicar). */}
+        <div style={{ border: `1.5px solid ${THEME.border}`, borderRadius: 12, padding: "14px 14px 12px", background: THEME.surfaceAlt }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: THEME.primaryDark }}>Unidades disponibles</p>
+          <p style={{ margin: "4px 0 10px", fontSize: 11.5, color: THEME.muted, lineHeight: 1.45 }}>
+            Déjalo en 1 si es un artículo único. Si tienes varias unidades idénticas
+            (café, insumos, etc.), pon cuántas — la publicación sigue disponible
+            después de cada venta hasta agotarse.
+          </p>
+          <Input
+            placeholder="1"
+            type="number"
+            min={1}
+            max={1000}
+            value={stockQuantity}
+            onChange={(e) => setStockQuantity(e.target.value)}
+          />
         </div>
 
         {/* Mismas dos preguntas que al publicar. Ver app/page.tsx. */}
