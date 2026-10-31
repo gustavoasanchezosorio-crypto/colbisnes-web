@@ -98,9 +98,22 @@ export async function prepararOrdenOnline(
 
   // Cuántas unidades de esta publicación cubre la compra. Solo tiene sentido en
   // "compra directa" (sin negociar) — una oferta negociada siempre es por 1 unidad, se
-  // fuerza más abajo. Se acota a [1, stockQuantity] por si llega un valor fuera de rango
-  // (el frontend ya lo acota, esto es la validación de servidor).
+  // fuerza más abajo. Se acota por un tope (ver topeCantidad abajo) por si llega un valor
+  // fuera de rango (el frontend ya lo acota, esto es la validación de servidor).
   const stockDisponible = Math.max(1, producto.stockQuantity || 1);
+  // stockQuantity=1 es ambiguo: puede ser que el vendedor de verdad tenga 1 unidad, o que
+  // nunca haya tocado el campo (es el default desde que se creó, ver prisma/schema.prisma)
+  // — no hay forma de distinguir los dos casos con el dato que existe hoy. Pedido del
+  // usuario el 2026-10-31: en ese caso ambiguo se deja elegir hasta
+  // CANTIDAD_MAX_SIN_CONFIRMAR unidades de todos modos (el checkout avisa "pendiente
+  // confirmación de stock con el vendedor", ver app/checkout/[id]/page.tsx), bajo el
+  // riesgo de que el vendedor no tenga tantas — algo que el chat/ordenes tendrá que
+  // resolver caso a caso. Si el vendedor SÍ declaró más de 1 (stockQuantity > 1 real),
+  // ese número no se toca: no tiene sentido inventarle más stock del que él mismo acotó,
+  // así que ahí se mantiene la protección anti-sobreventa de siempre.
+  const CANTIDAD_MAX_SIN_CONFIRMAR = 10;
+  const stockConfirmado = producto.stockQuantity > 1;
+  const topeCantidad = stockConfirmado ? stockDisponible : CANTIDAD_MAX_SIN_CONFIRMAR;
   let cantidadFinal = Math.floor(Number(cantidad)) || 1;
   if (cantidadFinal < 1) cantidadFinal = 1;
 
@@ -116,7 +129,7 @@ export async function prepararOrdenOnline(
     if (offer.message === MENSAJE_COMPRA_DIRECTA) {
       // Reintento de una compra directa ya iniciada (p.ej. cambió de método de pago y
       // volvió a online): la cantidad sigue pudiendo ser > 1.
-      cantidadFinal = Math.min(cantidadFinal, stockDisponible);
+      cantidadFinal = Math.min(cantidadFinal, topeCantidad);
       precioBase = offer.amountCOP * cantidadFinal;
     } else {
       // Oferta negociada de verdad: siempre 1 unidad, sin importar lo que mande el cliente.
@@ -127,7 +140,7 @@ export async function prepararOrdenOnline(
     // COMPRA DIRECTA al precio publicado: crear oferta al precio completo (por unidad) y
     // aceptarla automáticamente. cantidadFinal multiplica el precio más abajo, no el
     // monto de la oferta — la oferta representa el precio de una unidad.
-    cantidadFinal = Math.min(cantidadFinal, stockDisponible);
+    cantidadFinal = Math.min(cantidadFinal, topeCantidad);
     await prisma.$transaction([
       prisma.offer.create({
         data: {

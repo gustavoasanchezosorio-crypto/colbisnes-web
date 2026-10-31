@@ -144,7 +144,15 @@ export default function CheckoutPage() {
   // stockQuantity > 1 solo cuando el vendedor marcó varias unidades disponibles (café, etc.).
   // Con oferta negociada aceptada la cantidad siempre es 1 (ver nota junto al estado `cantidad`).
   const stockDisponible = Math.max(1, Number(producto.stockQuantity) || 1);
-  const cantidadEfectiva = ofertaAceptada ? 1 : Math.min(Math.max(1, cantidad), stockDisponible);
+  // stockQuantity=1 es ambiguo (puede ser el real, o el default de siempre si el vendedor
+  // nunca tocó el campo — ver prisma/schema.prisma). Pedido del usuario el 2026-10-31: en
+  // ese caso se deja elegir hasta CANTIDAD_MAX_SIN_CONFIRMAR igual, con un aviso de que el
+  // stock no está confirmado (mismo tope del lado servidor, ver lib/checkoutOnline.ts). Si
+  // el vendedor SÍ declaró más de 1 (número real), el tope sigue siendo ese número.
+  const CANTIDAD_MAX_SIN_CONFIRMAR = 10;
+  const stockConfirmado = Number(producto.stockQuantity) > 1;
+  const cantidadMaxSelector = stockConfirmado ? stockDisponible : CANTIDAD_MAX_SIN_CONFIRMAR;
+  const cantidadEfectiva = ofertaAceptada ? 1 : Math.min(Math.max(1, cantidad), cantidadMaxSelector);
   const precioUnitario = ofertaAceptada ? ofertaAceptada.amountCOP : producto.priceCOP;
   // `precio` sigue siendo el precio de UNA unidad: lo siguen usando contraentrega/usdt (que en
   // fase 1 solo venden de a 1, ver más abajo) y varios textos de la pantalla. El pago online usa
@@ -400,10 +408,14 @@ export default function CheckoutPage() {
     ? "La comisión de reserva se paga aparte por Nequi, antes de coordinar la entrega."
     : "La comisión de reserva se paga aparte por Nequi, antes del envío.";
 
-  // Fase 1 de "cantidad": con más de 1 unidad disponible, contraentrega y USDT todavía no saben
-  // reservar/vender por cantidad (ver lib/checkoutOnline.ts) — se ocultan y solo queda pago online,
-  // que sí soporta cantidadEfectiva > 1.
-  const soportaVariasUnidades = stockDisponible > 1 && !ofertaAceptada;
+  // Fase 1 de "cantidad": en cuanto se elige más de 1 unidad, contraentrega y USDT todavía
+  // no saben reservar/vender por cantidad (ver lib/checkoutOnline.ts) — se ocultan y solo
+  // queda pago online, que sí soporta cantidadEfectiva > 1. Antes esto dependía de que el
+  // vendedor hubiera declarado stockDisponible > 1; desde que el selector quedó siempre
+  // visible (2026-10-31, incluso con stock sin confirmar) depende de lo que el COMPRADOR
+  // elija: con cantidad=1 (el default) las otras formas de pago siguen disponibles igual
+  // que siempre, y solo se ocultan si de verdad pide más de una unidad.
+  const soportaVariasUnidades = cantidadEfectiva > 1 && !ofertaAceptada;
   const metodosBase = [
     { id: "online" as MetodoPago, icon: "💳", titulo: "Pago online seguro", sub: "Tarjeta · PSE · Nequi · Daviplata", badge: fmtPct(pctOnline), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), desglose: [{ label: soportaVariasUnidades ? `Precio producto × ${cantidadEfectiva}` : "Precio producto", val: fmt(online.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctOnline)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.comisionColbisnes), ...(!TEST_MODE && ahorroOnline > 0 ? { was: fmt(onlineSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroOnline > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroOnline), highlight: true }] : []), ...(TEST_MODE ? [] : [{ label: "Costo de procesamiento", val: fmt(online.totalComprador - online.precioBase - online.comisionColbisnes) }]), ...(TEST_MODE ? [] : desgloseExtrasCOP)], totalLabel: "Total a pagar", totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(online.totalComprador + extras.extraTotal), nota: ["Tu dinero queda protegido hasta confirmar la entrega.", notaDescuento].filter(Boolean).join(" ") },
     { id: "contraentrega" as MetodoPago, icon: entregaEnPersona ? "🤝" : "📦", titulo: entregaEnPersona ? "Venta en persona" : "Contra entrega", sub: contraSub, badge: fmtPct(pctContra), total: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.totalComprador + extras.envioCobrado), desglose: [{ label: "Precio producto", val: fmt(contra.precioBase) }, { label: TEST_MODE ? "Modo pruebas" : `Comision (${fmtPct(pctContra)})`, val: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.comisionColbisnes), ...(!TEST_MODE && ahorroContra > 0 ? { was: fmt(contraSinDesc.comisionColbisnes) } : {}) }, ...(!TEST_MODE && ahorroContra > 0 ? [{ label: `Ahorras · vendedor ${nivelConDescuento}`, val: "−" + fmt(ahorroContra), highlight: true }] : []), ...(TEST_MODE ? [] : desgloseExtrasContraCOP)], totalLabel: contraTotalLabel, totalVal: TEST_MODE ? fmt(TEST_AMOUNT) : fmt(contra.precioBase + extras.envioCobrado), steps: contraSteps, nota: [contraNota, notaDescuento].filter(Boolean).join(" — ") },
@@ -484,21 +496,35 @@ export default function CheckoutPage() {
               <p style={{ color: "#fff", fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: "-1px" }}>{fmt(precio)}</p>
               {TEST_MODE && <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: 700, margin: 0 }}>→ cobro real: {fmt(TEST_AMOUNT)}</p>}
             </div>
-            {/* Selector de cantidad: solo visible cuando el vendedor publicó varias unidades
-                (stockDisponible > 1) y no hay una oferta negociada aceptada (esas siempre son
-                de a 1). Fase 1: solo pago online sabe multiplicar por cantidad, ver nota junto
-                a `soportaVariasUnidades` más abajo. */}
-            {stockDisponible > 1 && !ofertaAceptada && (
-              <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>Cantidad:</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: 4 }}>
-                  <button type="button" onClick={() => setCantidad(c => Math.max(1, c - 1))} disabled={cantidadEfectiva <= 1}
-                    style={{ width: 30, height: 30, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: cantidadEfectiva <= 1 ? "default" : "pointer", opacity: cantidadEfectiva <= 1 ? 0.5 : 1 }}>−</button>
-                  <span style={{ color: "#fff", fontSize: 15, fontWeight: 800, width: 28, textAlign: "center" }}>{cantidadEfectiva}</span>
-                  <button type="button" onClick={() => setCantidad(c => Math.min(stockDisponible, c + 1))} disabled={cantidadEfectiva >= stockDisponible}
-                    style={{ width: 30, height: 30, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: cantidadEfectiva >= stockDisponible ? "default" : "pointer", opacity: cantidadEfectiva >= stockDisponible ? 0.5 : 1 }}>+</button>
+            {/* Selector de cantidad: siempre visible salvo con oferta negociada aceptada
+                (esas siempre son de a 1 — ver `ofertaAceptada`). Antes solo aparecía cuando
+                el vendedor había declarado stockDisponible > 1; desde el 2026-10-31 se deja
+                elegir igual aunque el vendedor nunca haya puesto stock (stockQuantity=1 por
+                default), con un aviso de que ese número no está confirmado — pedido del
+                usuario tras notar que el selector no aparecía en una publicación de café que
+                sí tiene varias unidades, solo que nadie lo había declarado en el sistema.
+                Fase 1: solo pago online sabe multiplicar por cantidad, ver nota junto a
+                `soportaVariasUnidades` más abajo. */}
+            {!ofertaAceptada && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                  <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>Cantidad:</span>
+                  <select
+                    value={cantidadEfectiva}
+                    onChange={e => setCantidad(Number(e.target.value))}
+                    style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 12, padding: "6px 10px", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}
+                  >
+                    {Array.from({ length: cantidadMaxSelector }, (_, i) => i + 1).map(n => (
+                      <option key={n} value={n} style={{ color: "#0d1b2a" }}>{n}</option>
+                    ))}
+                  </select>
+                  {stockConfirmado && <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({stockDisponible} disponibles)</span>}
                 </div>
-                <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({stockDisponible} disponibles)</span>
+                {!stockConfirmado && (
+                  <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 11, textAlign: "center", margin: "6px 0 0" }}>
+                    ⚠️ Pendiente confirmación de stock con el vendedor
+                  </p>
+                )}
               </div>
             )}
           </div>
