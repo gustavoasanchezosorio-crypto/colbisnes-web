@@ -478,9 +478,12 @@ export default function CheckoutPage() {
           {/* Volver: antes esta pantalla no tenía ninguna forma de salir salvo cerrar la
               pestaña o usar el botón físico de "atrás" del navegador/celular — reportado
               por el usuario el 2026-10-31 viendo el checkout en vivo. Va a la publicación
-              (no a home) porque es el punto más probable de origen de quien está pagando. */}
+              (no a home) porque es el punto más probable de origen de quien está pagando.
+              Se pintó primero como texto suelto y casi no se notaba sobre el degradado
+              (mismo reporte del usuario, el mismo día); ahora es un chip con fondo propio
+              y borde para que se vea como botón, no como una etiqueta más. */}
           <Link href={`/product/${id}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 14 }}>
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 14, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 20, padding: "7px 14px" }}>
             ← Volver a la publicación
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
@@ -506,22 +509,26 @@ export default function CheckoutPage() {
                 Fase 1: solo pago online sabe multiplicar por cantidad, ver nota junto a
                 `soportaVariasUnidades` más abajo. */}
             {!ofertaAceptada && (
-              <div style={{ marginTop: 14 }}>
+              // Resaltado con fondo blanco propio (antes era texto suelto sobre el mismo
+              // degradado azul del header y se perdía ahí — pedido del usuario el
+              // 2026-10-31 al ver el checkout en vivo). El amarillo/warning del borde y del
+              // aviso es el mismo THEME.warning que usa el resto del sitio para "atención".
+              <div style={{ marginTop: 16, background: "#fff", borderRadius: 14, padding: "12px 14px", boxShadow: "0 4px 16px rgba(10,46,107,0.25)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                  <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>Cantidad:</span>
+                  <span style={{ color: THEME.primaryDark, fontSize: 13, fontWeight: 700 }}>Cantidad:</span>
                   <select
                     value={cantidadEfectiva}
                     onChange={e => setCantidad(Number(e.target.value))}
-                    style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 12, padding: "6px 10px", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}
+                    style={{ background: THEME.primary, border: `2px solid ${THEME.primaryDark}`, borderRadius: 10, padding: "6px 12px", color: "#fff", fontSize: 16, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
                   >
                     {Array.from({ length: cantidadMaxSelector }, (_, i) => i + 1).map(n => (
                       <option key={n} value={n} style={{ color: "#0d1b2a" }}>{n}</option>
                     ))}
                   </select>
-                  {stockConfirmado && <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>({stockDisponible} disponibles)</span>}
+                  {stockConfirmado && <span style={{ color: THEME.muted, fontSize: 11, fontWeight: 600 }}>({stockDisponible} disponibles)</span>}
                 </div>
                 {!stockConfirmado && (
-                  <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 11, textAlign: "center", margin: "6px 0 0" }}>
+                  <p style={{ color: THEME.warning, fontSize: 11, fontWeight: 700, textAlign: "center", margin: "8px 0 0" }}>
                     ⚠️ Pendiente confirmación de stock con el vendedor
                   </p>
                 )}
